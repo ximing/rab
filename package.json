@@ -1,7 +1,7 @@
 {
-  "name": "xm-components",
+  "name": "rab",
   "version": "0.0.1",
-  "description": "rab",
+  "description": "React and redux based framework.",
   "repository": "",
   "author": "yanzhi",
   "scripts": {
@@ -9,6 +9,13 @@
     "build": "webpack --config webpack.config.js",
     "dev": "./node_modules/.bin/webpack-dev-server "
   },
+  "keywords": [
+    "redux",
+    "react",
+    "rab",
+    "framework",
+    "xm"
+  ],
   "dependencies": {
     "classnames": "^2.2.5",
     "flux-standard-action": "^0.6.1",
@@ -23,7 +30,7 @@
     "warning": "^3.0.0"
   },
   "devDependencies": {
-     "babel-polyfill": "^6.9.1",
+    "babel-polyfill": "^6.9.1",
     "babel-runtime": "^6.9.2",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
