@@ -1,5 +1,6 @@
 import React from 'react';
-import rab,{ connect,Router, Route } from '../src/index.js';
+import rab, { connect } from 'dva';
+import { Router, Route } from 'dva/router';
 
 const app = rab();
 // 2. Model

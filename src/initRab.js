@@ -14,9 +14,9 @@ import isPlainObject from 'is-plain-object';
 import invariant from 'invariant';
 import warning from 'warning';
 import isFunction from 'lodash.isfunction';
-import handleActions from './handleActions';
 import Redux, {createStore, applyMiddleware, compose} from 'redux';
 import { isFSA } from 'flux-standard-action';
+import {handleActions,createAction} from 'redux-actions';
 
 function isPromise (val) {
     return val && typeof val.then === 'function';
@@ -38,6 +38,9 @@ function asyncMiddleware ({dispatch, getState}){
             }
             return next(action);
         }else{
+          if(action.mutation){
+            
+          }else{
             if(typeof action.payload === 'function'){
                 var res = action.payload(dispatch, getState);
                 if (isPromise(res)) {
@@ -55,6 +58,7 @@ function asyncMiddleware ({dispatch, getState}){
             }else{
                 next(action);
             }
+          }
         }
 
     };
@@ -66,6 +70,7 @@ const SEP = '.';
 export default function initRab(createOpts) {
   const {
     initialReducer,
+    initialActions,
     defaultHistory,
     routerMiddleware,
     setupHistory,
@@ -90,7 +95,7 @@ export default function initRab(createOpts) {
      * @param middleware
      */
     function use(middleware) {
-      _middleware.concat(middleware);
+      this._middleware.concat(middleware);
     }
 
     /**
@@ -99,23 +104,14 @@ export default function initRab(createOpts) {
      * @param model
      */
     function model(model) {
-      this._models.push(checkModel(model, mobile));
+      this._models.push(checkModel(model));
     }
 
     // inject model dynamically
     function injectModel(createReducer, onError, unlisteners, m) {
-      m = checkModel(m, mobile);
+      m = checkModel(m);
       this._models.push(m);
-      const store = this._store;
-
-      // reducers
-      store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
-      store.replaceReducer(createReducer(store.asyncReducers));
-
-      // subscriptions
-      if (m.subscriptions) {
-        unlisteners[m.namespace] = runSubscriptions(m.subscriptions, m, this, onError);
-      }
+      //TODO subscriptions
     }
 
     /**
@@ -131,9 +127,7 @@ export default function initRab(createOpts) {
     }
 
     /**
-     * Start the application. Selector is optional. If no selector
-     * arguments, it will return a function that return JSX elements.
-     *
+     * Start the app
      * @param container selector | HTMLElement
      */
     function start(container) {
@@ -146,32 +140,12 @@ export default function initRab(createOpts) {
       invariant(!container || isHTMLElement(container), 'app.start: container should be HTMLElement');
       invariant(this._router, 'app.start: router should be defined');
 
-      // error wrapper
-      const onError = plugin.apply('onError', (err) => {
-        throw new Error(err.stack || err);
-      });
-      const onErrorWrapper = (err) => {
-        if (err) {
-          if (typeof err === 'string') err = new Error(err);
-          onError(err, app._store.dispatch);
-        }
-      };
-
-      // internal model for destroy
-      model.call(this, {
-        namespace: '@@rab',
-        state: 0,
-        reducers: {
-          UPDATE(state) {
-            return state + 1;
-          },
-        },
-      });
-
       // get reducers from model
       const reducers = {...initialReducer};
+      const actions = {};
       for (const m of this._models) {
         reducers[m.namespace] = getReducer(m.reducers, m.state);
+        actions  = Object.assgin(actions,m.mou);
       }
 
       // create store
@@ -188,6 +162,7 @@ export default function initRab(createOpts) {
           applyMiddleware(asyncMiddleware,...middlewares),
            devtools()
         )(createStore);
+        
       const store = this._store = createStoreWithMiddleware(createReducer(),initialState);
 
       function createReducer() {
@@ -199,17 +174,16 @@ export default function initRab(createOpts) {
       // setup history
       if (setupHistory) setupHistory.call(this, history);
 
-      // run subscriptions
-      const unlisteners = {};
-      for (const model of this._models) {
-        if (model.subscriptions) {
-          unlisteners[model.namespace] = runSubscriptions(model.subscriptions, model, this,
-            onErrorWrapper);
-        }
-      }
+      // TODO　run subscriptions
+      // const unlisteners = {};
+      // for (const model of this._models) {
+      //   if (model.subscriptions) {
+      //     unlisteners[model.namespace] = runSubscriptions(model.subscriptions, model, this);
+      //   }
+      // }
 
       // inject model after start
-      this.model = injectModel.bind(this, createReducer, onErrorWrapper, unlisteners);
+      // this.model = injectModel.bind(this, createReducer, unlisteners);
 
       // If has container, render; else, return react component
       if (container) {
@@ -240,24 +214,25 @@ export default function initRab(createOpts) {
       const model = {...m};
       const {
         namespace,
-        reducers
+        reducers,
+        mutations
       } = model;
 
       invariant(
         namespace,
-        'app.model: namespace should be defined',
+        'app.model: namespace should be defined'
       );
       invariant(!app._models.some(model => model.namespace === namespace),
-        'app.model: namespace should be unique',
+        'app.model: namespace should be unique'
       );
       invariant(!model.subscriptions || isPlainObject(model.subscriptions),
-        'app.model: subscriptions should be Object',
+        'app.model: subscriptions should be Object'
       );
-      invariant(!reducers || isPlainObject(reducers) || Array.isArray(reducers),
-        'app.model: reducers should be Object or array',
+      invariant(!reducers || isPlainObject(reducers),
+        'app.model: reducers should be Object'
       );
-      invariant(!Array.isArray(reducers) || (isPlainObject(reducers[0]) && typeof reducers[1] === 'function'),
-        'app.model: reducers with array should be app.model({ reducers: [object, function] })',
+      invariant(!mutations || isPlainObject(mutations),
+        'app.model: reducers should be Object'
       );
 
       function applyNamespace(type) {
@@ -265,19 +240,40 @@ export default function initRab(createOpts) {
           return Object.keys(reducers).reduce((memo, key) => {
             warning(
               key.indexOf(`${namespace}${SEP}`) !== 0,
-              `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`,
+              `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`
             );
             memo[`${namespace}${SEP}${key}`] = reducers[key];
             return memo;
           }, {});
         }
+        function getNamespacedMutations(mutations) {
+          return Object.keys(mutations).reduce((memo, key) => {
+            warning(
+              key.indexOf(`${namespace}${SEP}`) !== 0,
+              `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`
+            );
+            /*
+            export let cancelShareMind = createAction(CONSTANT.CANCEL_SHARE_MIND, (fid,sid)=>async(dispatch, getState)=> {
+                let mind = await api.cancelShareMind(fid,sid);
+                return sid;
+            });
+            */
+            memo[`${namespace}${SEP}${key}`] =  createAction(`${namespace}${SEP}${key}`,mutations[key]);
+            return memo;
+          }, {});
+        }
 
-        if (model[type] && type === 'reducers' && Array.isArray(model[type])) {
-          model[type][0] = getNamespacedReducers(model[type][0]);
+        if (model[type]) {
+          if(type === 'reducers'){
+              model[type] =getNamespacedReducers(model[type]);
+          }else if (type === 'mutations'){
+              model[type] =getNamespacedMutations(model[type]);
+          }
         }
       }
 
       applyNamespace('reducers');
+      applyNamespace('mutations');
 
       return model;
     }
@@ -287,64 +283,10 @@ export default function initRab(createOpts) {
     }
 
     function getReducer(reducers, state) {
-      // Support reducer enhancer
-      // e.g. reducers: [realReducers, enhancer]
-      if (Array.isArray(reducers)) {
-        return reducers[1](handleActions(reducers[0], state));
-      }
-      else {
-        return handleActions(reducers || {}, state);
-      }
+      //TODO Support reducer enhancer
+      return handleActions(reducers || {}, state);
     }
 
-    function runSubscriptions(subs, model, app, onError) {
-      const unlisteners = [];
-      const noneFunctionSubscriptions = [];
-      for (const key in subs) {
-        if (Object.prototype.hasOwnProperty.call(subs, key)) {
-          const sub = subs[key];
-          invariant(typeof sub === 'function', 'app.start: subscription should be function');
-          const unlistener = sub({
-            dispatch: createDispatch(app._store.dispatch, model),
-            history: app._history,
-          }, onError);
-          if (isFunction(unlistener)) {
-            unlisteners.push(unlistener);
-          }
-          else {
-            noneFunctionSubscriptions.push(key);
-          }
-        }
-      }
-      return {
-        unlisteners,
-        noneFunctionSubscriptions
-      };
-    }
-
-    function prefixType(type, model) {
-      const prefixedType = `${model.namespace}${SEP}${type}`;
-      if ((model.reducers && model.reducers[prefixedType])) {
-        return prefixedType;
-      }
-      return type;
-    }
-
-    function createDispatch(dispatch, model) {
-      return (action) => {
-        const {
-          type
-        } = action;
-        invariant(type, 'dispatch: action should be a plain Object with type');
-        warning(
-          type.indexOf(`${model.namespace}${SEP}`) !== 0,
-          `dispatch: ${type} should not be prefixed with namespace ${model.namespace}`,
-        );
-        return dispatch({...action,
-          type: prefixType(type, model)
-        });
-      };
-    }
     const app = {
       // properties
       _models: [],

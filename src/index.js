@@ -1,4 +1,4 @@
-import hashHistory from 'react-router/lib/hashHistory';
+import { browserHistory } from 'react-router';
 import {
   routerMiddleware,
   syncHistoryWithStore,
@@ -6,12 +6,11 @@ import {
 } from 'react-router-redux';
 import initRab from './initRab';
 export default initRab({
-  initialReducer: {
-    routing,
-  },
-  defaultHistory: hashHistory,
+  initialReducer: {routing},
+  initialActions:{},
+  defaultHistory: browserHistory,
   routerMiddleware,
   setupHistory(history) {
     this._history = syncHistoryWithStore(history, this._store);
-  },
+  }
 });

@@ -18,9 +18,20 @@ app.start('#id')
 model
 
 {
-    name:'',
+    namespace:'users',
     state:{},
-    reducers:{},
-    effects:{}
+    reducers:{
+        hello:(state,action)=>{
+            
+        }
+    },
+    mutations:{
+        async getUser:({ payload: {id,arg} }, { getState, dispatch })=>{
+        }
+    }
     subscribe:(){}
 }
+
+components:
+
+this.props.dispatch('users.getUser',id,arg)
