@@ -1,2 +1,4 @@
-exports.connect =  require('react-redux').connect;
-exports.default = require('./src'); 
+export {connect} from 'react-redux';
+import rab from './src'
+
+export default rab;

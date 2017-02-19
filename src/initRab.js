@@ -14,55 +14,23 @@ import isPlainObject from 'is-plain-object';
 import invariant from 'invariant';
 import warning from 'warning';
 import isFunction from 'lodash.isfunction';
-import Redux, {createStore, applyMiddleware, compose} from 'redux';
-import { isFSA } from 'flux-standard-action';
-import {handleActions,createAction} from 'redux-actions';
+import {
+  isFSA
+}
+from 'flux-standard-action';
+import {
+  handleActions,
+  createAction
+}
+from 'redux-actions';
 
-function isPromise (val) {
-    return val && typeof val.then === 'function';
+function isPromise(val) {
+  return val && typeof val.then === 'function';
 }
 
 //()=>(dispatch, getState)=>async()=>{}
 //()=>(dispatch, getState)=>{}
 //()=>async(dispatch,getState)=>{}
-
-function asyncMiddleware ({dispatch, getState}){
-    return next => action =>{
-        if (!isFSA(action)) {
-            if (typeof action === 'function') {
-                if(isPromise(action)){
-                    action.then(dispatch,getState);
-                }else{
-                    return action(dispatch, getState);
-                }
-            }
-            return next(action);
-        }else{
-          if(action.mutation){
-            
-          }else{
-            if(typeof action.payload === 'function'){
-                var res = action.payload(dispatch, getState);
-                if (isPromise(res)) {
-                    res.then(
-                        (result) => {
-                            dispatch({...action, payload: result});
-                        },
-                        (error) => {
-                            dispatch({...action, payload: error, error: true});
-                        }
-                    );
-                }else{
-                    dispatch({...action, payload: res});
-                }
-            }else{
-                next(action);
-            }
-          }
-        }
-
-    };
-}
 
 
 const SEP = '.';
@@ -142,12 +110,12 @@ export default function initRab(createOpts) {
 
       // get reducers from model
       const reducers = {...initialReducer};
-      const actions = {};
+      let actions = {};
       for (const m of this._models) {
         reducers[m.namespace] = getReducer(m.reducers, m.state);
-        actions  = Object.assgin(actions,m.mou);
+        actions = Object.assign(actions, m.mutations);
       }
-
+      console.log(reducers,actions);
       // create store
       let middlewares = this._middleware;
       if (routerMiddleware) {
@@ -159,11 +127,11 @@ export default function initRab(createOpts) {
       }
 
       const createStoreWithMiddleware = compose(
-          applyMiddleware(asyncMiddleware,...middlewares),
-           devtools()
-        )(createStore);
-        
-      const store = this._store = createStoreWithMiddleware(createReducer(),initialState);
+        applyMiddleware(rabMiddleware(actions, reducers), ...middlewares),
+        devtools()
+      )(createStore);
+
+      const store = this._store = createStoreWithMiddleware(createReducer(), initialState);
 
       function createReducer() {
         return combineReducers({
@@ -175,15 +143,6 @@ export default function initRab(createOpts) {
       if (setupHistory) setupHistory.call(this, history);
 
       // TODO　run subscriptions
-      // const unlisteners = {};
-      // for (const model of this._models) {
-      //   if (model.subscriptions) {
-      //     unlisteners[model.namespace] = runSubscriptions(model.subscriptions, model, this);
-      //   }
-      // }
-
-      // inject model after start
-      // this.model = injectModel.bind(this, createReducer, unlisteners);
 
       // If has container, render; else, return react component
       if (container) {
@@ -191,6 +150,80 @@ export default function initRab(createOpts) {
       }
       else {
         return getProvider(store, this, this._router);
+      }
+    }
+
+    function rabMiddleware(actions, reducers) {
+      return ({
+        dispatch,
+        getState
+      }) => {
+        return next => action => {
+          if (actions[action.type]) {
+            let res = actions[action.type]({...action.payload},{dispatch, getState})
+            if (isPromise(res)) {
+              res.then(
+                (result) => {
+                  dispatch({...action,
+                    payload: result
+                  });
+                },
+                (error) => {
+                  dispatch({...action,
+                    payload: error,
+                    error: true
+                  });
+                }
+              );
+            }
+            else {
+              dispatch({...action,
+                payload: res
+              });
+            }
+          }
+          else {
+            if (!isFSA(action)) {
+              if (typeof action === 'function') {
+                if (isPromise(action)) {
+                  action.then(dispatch, getState);
+                }
+                else {
+                  return action(dispatch, getState);
+                }
+              }
+              return next(action);
+            }
+            else {
+              if (typeof action.payload === 'function') {
+                var res = action.payload(dispatch, getState);
+                if (isPromise(res)) {
+                  res.then(
+                    (result) => {
+                      dispatch({...action,
+                        payload: result
+                      });
+                    },
+                    (error) => {
+                      dispatch({...action,
+                        payload: error,
+                        error: true
+                      });
+                    }
+                  );
+                }
+                else {
+                  dispatch({...action,
+                    payload: res
+                  });
+                }
+              }
+              else {
+                next(action);
+              }
+            }
+          }
+        };
       }
     }
 
@@ -211,7 +244,8 @@ export default function initRab(createOpts) {
 
     function checkModel(m) {
       // Clone model to avoid prefixing namespace multiple times
-      const model = {...m};
+      const model = {...m
+      };
       const {
         namespace,
         reducers,
@@ -246,6 +280,7 @@ export default function initRab(createOpts) {
             return memo;
           }, {});
         }
+
         function getNamespacedMutations(mutations) {
           return Object.keys(mutations).reduce((memo, key) => {
             warning(
@@ -258,16 +293,17 @@ export default function initRab(createOpts) {
                 return sid;
             });
             */
-            memo[`${namespace}${SEP}${key}`] =  createAction(`${namespace}${SEP}${key}`,mutations[key]);
+            memo[`${namespace}${SEP}${key}`] = createAction(`${namespace}${SEP}${key}`, mutations[key]);
             return memo;
           }, {});
         }
 
         if (model[type]) {
-          if(type === 'reducers'){
-              model[type] =getNamespacedReducers(model[type]);
-          }else if (type === 'mutations'){
-              model[type] =getNamespacedMutations(model[type]);
+          if (type === 'reducers') {
+            model[type] = getNamespacedReducers(model[type]);
+          }
+          else if (type === 'mutations') {
+            model[type] = getNamespacedMutations(model[type]);
           }
         }
       }

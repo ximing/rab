@@ -21,17 +21,17 @@ model
     namespace:'users',
     state:{},
     reducers:{
-        hello:(state,action)=>{
+        getUser:(state,action)=>{
             
         }
     },
     mutations:{
-        async getUser:({ payload: {id,arg} }, { getState, dispatch })=>{
+        getUser:async ({ id,arg }, { getState, dispatch })=>{
+            return state;
         }
     }
-    subscribe:(){}
 }
 
 components:
 
-this.props.dispatch('users.getUser',id,arg)
+this.props.dispatch({type:'users.getUser',payload:{id,arg})

@@ -1,6 +1,6 @@
 import React from 'react';
-import rab, { connect } from 'dva';
-import { Router, Route } from 'dva/router';
+import rab, { connect } from '../index.js';
+import { Router, Route } from '../router';
 
 const app = rab();
 // 2. Model
@@ -10,7 +10,7 @@ app.model({
   reducers: {
     add(count) { return count + 1; },
     minus(count) { return count - 1; },
-  },
+  }
 });
 
 // 3. View
