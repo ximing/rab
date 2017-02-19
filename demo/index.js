@@ -1,7 +1,13 @@
+import 'babel-polyfill';
+
 import React from 'react';
 import rab, { connect } from '../index.js';
 import { Router, Route } from '../router';
-
+function stop(time){
+  return new Promise((res,rej)=>{
+    setTimeout(function(){res()},2000);
+  })
+}
 const app = rab();
 // 2. Model
 app.model({
@@ -10,6 +16,12 @@ app.model({
   reducers: {
     add(count) { return count + 1; },
     minus(count) { return count - 1; },
+    asyncAdd(count) { return count + 1; }
+  },
+  mutations:{
+    async asyncAdd({},{}){
+      await stop();
+    }
   }
 });
 
@@ -20,8 +32,9 @@ const App = connect(({ count }) => ({
   return (
     <div>
       <h2>{ props.count }</h2>
-      <button key="add" onClick={() => { props.dispatch({type: 'count/add' }); }}>+</button>
-      <button key="minus" onClick={() => { props.dispatch({type: 'count/minus' }); }}>-</button>
+      <button key="add" onClick={() => { props.dispatch({type: 'count.add' }); }}>+</button>
+      <button key="minus" onClick={() => { props.dispatch({type: 'count.minus' }); }}>-</button>
+      <button key="async" onClick={() => { props.dispatch({type: 'count.asyncAdd' }); }}>ASYNC ADD</button>
     </div>
   );
 });

@@ -159,26 +159,30 @@ export default function initRab(createOpts) {
         getState
       }) => {
         return next => action => {
-          if (actions[action.type]) {
+          if (actions[action.type] && !action.handled) {
             let res = actions[action.type]({...action.payload},{dispatch, getState})
+            console.log(actions[action.type],action,res,isPromise(res))
             if (isPromise(res)) {
               res.then(
                 (result) => {
                   dispatch({...action,
-                    payload: result
+                    payload: result,
+                    handled:true
                   });
                 },
                 (error) => {
                   dispatch({...action,
                     payload: error,
-                    error: true
+                    error: true,
+                    handled:true
                   });
                 }
               );
             }
             else {
               dispatch({...action,
-                payload: res
+                payload: res,
+                handled:true
               });
             }
           }
@@ -293,7 +297,7 @@ export default function initRab(createOpts) {
                 return sid;
             });
             */
-            memo[`${namespace}${SEP}${key}`] = createAction(`${namespace}${SEP}${key}`, mutations[key]);
+            memo[`${namespace}${SEP}${key}`] = mutations[key];//createAction(`${namespace}${SEP}${key}`, mutations[key]);
             return memo;
           }, {});
         }
