@@ -328,14 +328,14 @@ export default function initRab(createOpts) {
     }
 
     const app = {
-      // properties
+      //private member variable
       _models: [],
       _router: null,
       _store: null,
       _history: null,
       _middleware: [],
       _getProvider: null,
-      // methods
+      //public member function
       use,
       model,
       router,
