@@ -16,11 +16,16 @@ app.model({
   reducers: {
     add(count) { return count + 1; },
     minus(count) { return count - 1; },
-    asyncAdd(count) { return count + 1; }
+    asyncAdd(count,action) { return count + action.payload; }
   },
   mutations:{
     async asyncAdd({},{}){
       await stop();
+      return 100;
+    },
+    async asyncMinus(){
+      await stop();
+      return -100;
     }
   }
 });
@@ -34,7 +39,8 @@ const App = connect(({ count }) => ({
       <h2>{ props.count }</h2>
       <button key="add" onClick={() => { props.dispatch({type: 'count.add' }); }}>+</button>
       <button key="minus" onClick={() => { props.dispatch({type: 'count.minus' }); }}>-</button>
-      <button key="async" onClick={() => { props.dispatch({type: 'count.asyncAdd' }); }}>ASYNC ADD</button>
+      <button key="asyncadd" onClick={() => { props.dispatch({type: 'count.asyncAdd' }); }}>ASYNC ADD</button>
+      <button key="asyncminus" onClick={() => { props.dispatch({type: 'count.asyncMinus' }); }}>ASYNC Minus</button>
     </div>
   );
 });

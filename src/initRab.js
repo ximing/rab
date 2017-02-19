@@ -115,7 +115,7 @@ export default function initRab(createOpts) {
         reducers[m.namespace] = getReducer(m.reducers, m.state);
         actions = Object.assign(actions, m.mutations);
       }
-      console.log(reducers,actions);
+
       // create store
       let middlewares = this._middleware;
       if (routerMiddleware) {
@@ -298,6 +298,11 @@ export default function initRab(createOpts) {
             });
             */
             memo[`${namespace}${SEP}${key}`] = mutations[key];//createAction(`${namespace}${SEP}${key}`, mutations[key]);
+            
+            //set default mutation reducer
+            if(model['reducers'] && !model['reducers'][`${namespace}${SEP}${key}`]){
+              model['reducers'][`${namespace}${SEP}${key}`] = defaultMutationReducer;
+            }
             return memo;
           }, {});
         }
@@ -325,6 +330,17 @@ export default function initRab(createOpts) {
     function getReducer(reducers, state) {
       //TODO Support reducer enhancer
       return handleActions(reducers || {}, state);
+    }
+    
+    function defaultMutationReducer(state,action){
+      if(isPlainObject(state)){
+        return Object.assign({},state,action.payload);
+      }else if(Array.isArray(state)){
+        return action.payload;
+      }else{
+        return action.payload;
+      }
+      
     }
 
     const app = {
