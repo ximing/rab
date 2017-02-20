@@ -160,7 +160,7 @@ export default function initRab(createOpts) {
       }) => {
         return next => action => {
           if (actions[action.type] && !action.handled) {
-            let res = actions[action.type](isPlainObject(action.payload)?{...action.payload}:action.payload,{dispatch, getState})
+            let res = actions[action.type](isPlainObject(action.payload)?{...action.payload}:isEmpty(action.payload)?{}:action.payload,{dispatch, getState})
             // console.log(actions[action.type],action,res,isPromise(res))
             if (isPromise(res)) {
               res.then(
@@ -233,6 +233,9 @@ export default function initRab(createOpts) {
 
     // Helpers
 
+      function isEmpty(val){
+        return val === null || val === undefined;
+      }
     function getProvider(store, app, router) {
       return extraProps => (
         <Provider store={store}>
