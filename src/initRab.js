@@ -71,7 +71,7 @@ export default function initRab(createOpts) {
      *
      * @param model
      */
-    function model(model) {
+    function addModel(model) {
       this._models.push(checkModel(model));
     }
 
@@ -353,7 +353,7 @@ export default function initRab(createOpts) {
       _getProvider: null,
       //public member function
       use,
-      model,
+      addModel,
       router,
       start,
     };
