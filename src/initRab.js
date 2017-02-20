@@ -104,7 +104,7 @@ export default function initRab(createOpts) {
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
                 actions = Object.assign(actions, m.mutations);
             }
-            const extraReducers = options['extraReducers'];
+            const extraReducers = options['extraReducers'] || {};
             invariant(
                 Object.keys(extraReducers).every(key => !(key in reducers)),
                 'app.start: extraReducers is conflict with other reducers',
