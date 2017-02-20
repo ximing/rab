@@ -5,7 +5,8 @@ React and redux based framework.
 
 initialize:
 let app = rab({
-    
+    //支持旧项目已有的reducers
+    extraReducers:{}
 })
 
 //use redux middleware
@@ -39,6 +40,10 @@ model
     mutations:{
         getUser:async ({ id,arg }, { getState, dispatch })=>{
             return state;
+        }
+    },
+    subscriptions:{
+        path({dispatch,history,getState}){
         }
     }
 }
