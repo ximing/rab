@@ -161,7 +161,7 @@ export default function initRab(createOpts) {
         return next => action => {
           if (actions[action.type] && !action.handled) {
             let res = actions[action.type]({...action.payload},{dispatch, getState})
-            console.log(actions[action.type],action,res,isPromise(res))
+            // console.log(actions[action.type],action,res,isPromise(res))
             if (isPromise(res)) {
               res.then(
                 (result) => {
