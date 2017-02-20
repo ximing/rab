@@ -8,9 +8,18 @@ let app = rab({
     
 })
 
-app.use(plugins)
+//use redux middleware
+app.use(middleware)
 
-app.router()
+
+//use router
+app.router(({ history }) => {
+  return (
+    <Router history={history}>
+      <Route path="/" component={App} />
+    </Router>
+  );
+});
 
 app.start('#id')
 
