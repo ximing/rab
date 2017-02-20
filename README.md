@@ -21,6 +21,8 @@ app.router(({ history }) => {
   );
 });
 
+app.addModel(someMode);
+
 app.start('#id')
 
 

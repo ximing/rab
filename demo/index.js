@@ -10,7 +10,7 @@ function stop(time){
 }
 const app = rab();
 // 2. Model
-app.model({
+app.addModel({
   namespace: 'count',
   state: 0,
   reducers: {
