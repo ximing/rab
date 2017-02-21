@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 const {
     resolve
 } = require('path');
@@ -23,15 +23,15 @@ module.exports = {
     devtool: 'cheap-eval-source-map',
 
     devServer: {
-        contentBase: [path.join(__dirname, "html"), path.join(__dirname, "dist")],
+        contentBase: [path.join(__dirname, 'html'), path.join(__dirname, 'dist')],
         compress: true,
         port: parseInt(process.env.PORT) || 8765,
-        host: "0.0.0.0",
+        host: '0.0.0.0',
         hot: true,
         inline: true,
-        publicPath: "/dist/",
+        publicPath: '/dist/',
         headers: {
-            "XM-Component-Server": "webpack-dev-server@2.0.0"
+            'XM-Component-Server': 'webpack-dev-server@2.0.0'
         },
         historyApiFallback: {
             rewrites: [
@@ -54,19 +54,19 @@ module.exports = {
                 use:[{
                     loader: 'babel-loader',
                     options: {
-                        "presets": [
-                            ["es2015", {
-                                "modules": false
-                            }], "stage-0", "react"
+                        'presets': [
+                            ['es2015', {
+                                'modules': false
+                            }], 'stage-0', 'react'
                         ],
-                        "env": {},
-                        "ignore": [
-                            "node_modules/**",
-                            "dist"
+                        'env': {},
+                        'ignore': [
+                            'node_modules/**',
+                            'dist'
                         ],
-                        "plugins": [
-                            "react-hot-loader/babel",
-                            "transform-decorators-legacy"
+                        'plugins': [
+                            'react-hot-loader/babel',
+                            'transform-decorators-legacy'
                         ]
                     }
                 }],
@@ -77,8 +77,8 @@ module.exports = {
                 use: [
                     'style-loader',
                     'css-loader',
-                    'postcss-loader',
-                ],
+                    'postcss-loader'
+                ]
             },
             {
                 test: /\.scss$/,
@@ -87,7 +87,7 @@ module.exports = {
                     'css-loader',
                     'postcss-loader',
                     'sass-loader'
-                ],
+                ]
             }, {
                 test: /\.(png|jpg|jpeg|gif|woff|svg|eot|ttf|woff2)$/i,
                 use: ['url-loader']

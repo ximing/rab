@@ -1,27 +1,16 @@
 import React from 'react';
-import {
-    Provider
-}
-    from 'react-redux';
+import {Provider}from 'react-redux';
 import {
     createStore,
     applyMiddleware,
     compose,
     combineReducers
-}
-    from 'redux';
+}from 'redux';
 import isPlainObject from 'is-plain-object';
 import invariant from 'invariant';
 import warning from 'warning';
-import {
-    isFSA
-}
-    from 'flux-standard-action';
-import {
-    handleActions,
-    createAction
-}
-    from 'redux-actions';
+import {isFSA}from 'flux-standard-action';
+import {handleActions}from 'redux-actions';
 
 function isPromise(val) {
     return val && typeof val.then === 'function';
@@ -39,7 +28,7 @@ export default function initRab(createOpts) {
         initialReducer,
         defaultHistory,
         routerMiddleware,
-        setupHistory,
+        setupHistory
     } = createOpts;
 
     /**
@@ -52,6 +41,21 @@ export default function initRab(createOpts) {
         delete options.history;
         delete options.initialState;
 
+        const app = {
+            //private member variable
+            _models: [],
+            _router: null,
+            _store: null,
+            _history: null,
+            _middleware: [],
+            _getProvider: null,
+            //public member function
+            use,
+            addModel,
+            router,
+            start
+        };
+        return app;
         /**
          * Register middleware on the application.
          *
@@ -130,11 +134,13 @@ export default function initRab(createOpts) {
             function createReducer() {
                 return combineReducers({
                     ...reducers, ...extraReducers
-                })
+                });
             }
 
             // setup history
-            if (setupHistory) setupHistory.call(this, history);
+            if (setupHistory) {
+                setupHistory.call(this, history);
+            }
 
             // TODO　run subscriptions
 
@@ -158,8 +164,7 @@ export default function initRab(createOpts) {
             // If has container, render; else, return react component
             if (container) {
                 render(container, store, this, this._router);
-            }
-            else {
+            }            else {
                 return getProvider(store, this, this._router);
             }
         }
@@ -174,7 +179,7 @@ export default function initRab(createOpts) {
                         let res = actions[action.type](isPlainObject(action.payload) ? {...action.payload} : isEmpty(action.payload) ? {} : action.payload, {
                             dispatch,
                             getState
-                        })
+                        });
                         // console.log(actions[action.type],action,res,isPromise(res))
                         if (isPromise(res)) {
                             res.then(
@@ -194,32 +199,26 @@ export default function initRab(createOpts) {
                                     });
                                 }
                             );
-                        }
-                        else {
+                        }                        else {
                             dispatch({
                                 ...action,
                                 payload: res,
                                 handled: true
                             });
                         }
-                    }
-                    else {
-                        if (!isFSA(action)) {
-                            if (typeof action === 'function') {
-                                if (isPromise(action)) {
-                                    action.then(dispatch, getState);
-                                }
-                                else {
-                                    return action(dispatch, getState);
-                                }
+                    }                    else if (!isFSA(action)) {
+                        if (typeof action === 'function') {
+                            if (isPromise(action)) {
+                                action.then(dispatch, getState);
+                            }                                else {
+                                return action(dispatch, getState);
                             }
-                            return next(action);
                         }
-                        else {
-                            if (typeof action.payload === 'function') {
-                                var res = action.payload(dispatch, getState);
-                                if (isPromise(res)) {
-                                    res.then(
+                        return next(action);
+                    }                    else if (typeof action.payload === 'function') {
+                        var res = action.payload(dispatch, getState);
+                        if (isPromise(res)) {
+                            res.then(
                                         (result) => {
                                             dispatch({
                                                 ...action,
@@ -234,27 +233,23 @@ export default function initRab(createOpts) {
                                             });
                                         }
                                     );
-                                }
-                                else {
-                                    dispatch({
-                                        ...action,
-                                        payload: res
-                                    });
-                                }
-                            }
-                            else {
-                                next(action);
-                            }
+                        }                        else {
+                            dispatch({
+                                ...action,
+                                payload: res
+                            });
                         }
+                    }                    else {
+                        next(action);
                     }
                 };
-            }
+            };
         }
 
         // Helpers
 
         function isEmpty(val) {
-            return val === null || val === undefined;
+            return val === null || val === (void 0);
         }
 
         function getProvider(store, app, router) {
@@ -335,8 +330,7 @@ export default function initRab(createOpts) {
                 if (model[type]) {
                     if (type === 'reducers') {
                         model[type] = getNamespacedReducers(model[type]);
-                    }
-                    else if (type === 'mutations') {
+                    }                    else if (type === 'mutations') {
                         model[type] = getNamespacedMutations(model[type]);
                     }
                 }
@@ -367,20 +361,5 @@ export default function initRab(createOpts) {
             }
         }
 
-        const app = {
-            //private member variable
-            _models: [],
-            _router: null,
-            _store: null,
-            _history: null,
-            _middleware: [],
-            _getProvider: null,
-            //public member function
-            use,
-            addModel,
-            router,
-            start,
-        };
-        return app;
     };
 }

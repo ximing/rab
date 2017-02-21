@@ -9,4 +9,4 @@ module.exports = {
         require('postcss-position')(),
         require('postcss-size')()
     ]
-}
+};
