@@ -183,7 +183,7 @@ module.exports = {
         "no-path-concat": 1,
         "react/jsx-uses-react": 1,
         "react/jsx-uses-vars": 1,
-        "react/jsx-no-bind": 2,
+        "react/jsx-no-bind": 1,
         "react/react-in-jsx-scope": 1,
         "react/no-string-refs": 1,
         "react/jsx-indent": 1
