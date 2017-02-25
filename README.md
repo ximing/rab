@@ -8,8 +8,8 @@ React and redux based framework.
 # Examples
 ```
 import React from 'react';
-import rab, { connect } from 'rab';
-import { Router, Route } from 'rab/router';
+import rab, { connect } from 'rabjs';
+import { Router, Route } from 'rabjs/router';
 function stop(time) {
     return new Promise((res,rej)=>{
         setTimeout(function() {res();},2000);
