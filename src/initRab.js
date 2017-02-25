@@ -30,7 +30,7 @@ export default function initRab(createOpts) {
         routerMiddleware,
         setupHistory
     } = createOpts;
-
+    let typeNamespaceMap = {};
     /**
      * Create a dva instance.
      */
@@ -164,7 +164,7 @@ export default function initRab(createOpts) {
             // If has container, render; else, return react component
             if (container) {
                 render(container, store, this, this._router);
-            }            else {
+            } else {
                 return getProvider(store, this, this._router);
             }
         }
@@ -178,7 +178,8 @@ export default function initRab(createOpts) {
                     if (actions[action.type] && !action.handled) {
                         let res = actions[action.type](isPlainObject(action.payload) ? {...action.payload} : isEmpty(action.payload) ? {} : action.payload, {
                             dispatch,
-                            getState
+                            getState,
+                            state: getState()[typeNamespaceMap[action.type]]
                         });
                         // console.log(actions[action.type],action,res,isPromise(res))
                         if (isPromise(res)) {
@@ -199,47 +200,47 @@ export default function initRab(createOpts) {
                                     });
                                 }
                             );
-                        }                        else {
+                        } else {
                             dispatch({
                                 ...action,
                                 payload: res,
                                 handled: true
                             });
                         }
-                    }                    else if (!isFSA(action)) {
+                    } else if (!isFSA(action)) {
                         if (typeof action === 'function') {
                             if (isPromise(action)) {
                                 action.then(dispatch, getState);
-                            }                                else {
+                            } else {
                                 return action(dispatch, getState);
                             }
                         }
                         return next(action);
-                    }                    else if (typeof action.payload === 'function') {
+                    } else if (typeof action.payload === 'function') {
                         var res = action.payload(dispatch, getState);
                         if (isPromise(res)) {
                             res.then(
-                                        (result) => {
-                                            dispatch({
-                                                ...action,
-                                                payload: result
-                                            });
-                                        },
-                                        (error) => {
-                                            dispatch({
-                                                ...action,
-                                                payload: error,
-                                                error: true
-                                            });
-                                        }
-                                    );
-                        }                        else {
+                                (result) => {
+                                    dispatch({
+                                        ...action,
+                                        payload: result
+                                    });
+                                },
+                                (error) => {
+                                    dispatch({
+                                        ...action,
+                                        payload: error,
+                                        error: true
+                                    });
+                                }
+                            );
+                        } else {
                             dispatch({
                                 ...action,
                                 payload: res
                             });
                         }
-                    }                    else {
+                    } else {
                         next(action);
                     }
                 };
@@ -301,6 +302,7 @@ export default function initRab(createOpts) {
                             `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`
                         );
                         memo[`${namespace}${SEP}${key}`] = reducers[key];
+                        typeNamespaceMap[`${namespace}${SEP}${key}`] = namespace;
                         return memo;
                     }, {});
                 }
@@ -318,7 +320,7 @@ export default function initRab(createOpts) {
                          });
                          */
                         memo[`${namespace}${SEP}${key}`] = mutations[key];//createAction(`${namespace}${SEP}${key}`, mutations[key]);
-
+                        typeNamespaceMap[`${namespace}${SEP}${key}`] = namespace;
                         //set default mutation reducer
                         if (model['reducers'] && !model['reducers'][`${namespace}${SEP}${key}`]) {
                             model['reducers'][`${namespace}${SEP}${key}`] = defaultMutationReducer;
@@ -330,7 +332,7 @@ export default function initRab(createOpts) {
                 if (model[type]) {
                     if (type === 'reducers') {
                         model[type] = getNamespacedReducers(model[type]);
-                    }                    else if (type === 'mutations') {
+                    } else if (type === 'mutations') {
                         model[type] = getNamespacedMutations(model[type]);
                     }
                 }
