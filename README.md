@@ -90,8 +90,8 @@ model就是一个js对象， 融合了action和reducer，将很多单项数据�
         }
     },
     mutations:{
-        add(){},
-        async delete(){}
+        add({},{dispatch,getState,state}){},
+        async delete(dispatch,getState,state){}
     },
     subscriptions:{//可以在这里进行一些路由监听
         init({history,dispatch,getState}){
