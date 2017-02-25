@@ -6,17 +6,22 @@ const {
     resolve
 } = require('path');
 const webpack = require('webpack');
+var node_modules = resolve(__dirname, 'node_modules');
+var pathToReact = resolve(node_modules, 'react/dist/react.min.js');
+
 module.exports = {
     entry: {
         'rabjs': [
-            './demo/index.js'
+            './src/index.js'
         ]
     },
     output: {
         filename: '[name].js',
         sourceMapFilename: '[file].map',
         path: resolve(__dirname, 'dist'),
-        publicPath: '/dist'
+        publicPath: '/dist',
+        library: 'rabjs',
+        libraryTarget: 'umd'
     },
     devtool: 'cheap-module-source-map',
 
@@ -70,10 +75,17 @@ module.exports = {
             }
         ]
     },
-    externals: {
-        jquery: 'jQuery',
-        lodash: '_'
-    },
+    externals: [
+        {
+            react: {
+                root: 'React',
+                commonjs2: 'react',
+                commonjs: 'react',
+                amd: 'react'
+            },
+            'react-dom': 'ReactDOM'
+        }
+    ],
     plugins: [
         new webpack.NamedModulesPlugin()
     ]
