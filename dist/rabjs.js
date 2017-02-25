@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("react"), require("ReactDOM"));
+		module.exports = factory(require("react-dom"), require("react"));
 	else if(typeof define === 'function' && define.amd)
-		define(["react", "ReactDOM"], factory);
+		define(["react-dom", "react"], factory);
 	else if(typeof exports === 'object')
-		exports["rabjs"] = factory(require("react"), require("ReactDOM"));
+		exports["rabjs"] = factory(require("react-dom"), require("react"));
 	else
-		root["rabjs"] = factory(root["React"], root["ReactDOM"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_0__, __WEBPACK_EXTERNAL_MODULE_1__) {
+		root["rabjs"] = factory(root["ReactDOM"], root["React"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_0__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
