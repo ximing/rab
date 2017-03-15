@@ -6,7 +6,7 @@
   "author": "yanzhi",
   "scripts": {
     "i": "SASS_BINARY_SITE=http://npm.sankuai.com/dist/node-sass/ npm install",
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.build.config.js",
     "dev": "./node_modules/.bin/webpack-dev-server "
   },
   "keywords": [
