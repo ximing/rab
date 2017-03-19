@@ -9223,8 +9223,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_react_router_redux___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_react_router_redux__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__initRab__ = __webpack_require__("./src/initRab.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib__ = __webpack_require__("./src/lib.js");
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__lib__);
-/* harmony reexport (binding) */ if(__webpack_require__.o(__WEBPACK_IMPORTED_MODULE_3__lib__, "call")) __webpack_require__.d(__webpack_exports__, "call", function() { return __WEBPACK_IMPORTED_MODULE_3__lib__["call"]; });
+/* harmony namespace reexport (by provided) */ __webpack_require__.d(__webpack_exports__, "call", function() { return __WEBPACK_IMPORTED_MODULE_3__lib__["a"]; });
 
 
 
@@ -9677,15 +9676,16 @@ var _temp = function () {
 /***/ }),
 
 /***/ "./src/lib.js":
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* WEBPACK VAR INJECTION */(function(module) {/**
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return call; });
+/**
  * Created by yeanzhi on 17/3/9.
  */
 
 
-module.export.call = function (type, payload) {
+var call = function call(type, payload) {
     return {
         type: type,
         payload: payload
@@ -9697,10 +9697,11 @@ var _temp = function () {
     if (typeof __REACT_HOT_LOADER__ === 'undefined') {
         return;
     }
+
+    __REACT_HOT_LOADER__.register(call, 'call', '/Users/yeanzhi/project/mygithub/rab/src/lib.js');
 }();
 
 ;
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__("./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
