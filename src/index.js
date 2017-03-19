@@ -5,8 +5,7 @@ import {
   routerReducer as routing
 } from 'react-router-redux';
 import initRab from './initRab';
-import {call} from './lib';
-initRab.call = call;
+export {call} from './lib';
 export default initRab({
     initialReducer: {routing},
     initialActions:{},

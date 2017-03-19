@@ -9224,11 +9224,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__initRab__ = __webpack_require__("./src/initRab.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib__ = __webpack_require__("./src/lib.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__lib__);
+/* harmony reexport (binding) */ if(__webpack_require__.o(__WEBPACK_IMPORTED_MODULE_3__lib__, "call")) __webpack_require__.d(__webpack_exports__, "call", function() { return __WEBPACK_IMPORTED_MODULE_3__lib__["call"]; });
 
 
 
 
-__WEBPACK_IMPORTED_MODULE_2__initRab__["a" /* default */].call = __WEBPACK_IMPORTED_MODULE_3__lib__["call"];
 
 var _default = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__initRab__["a" /* default */])({
     initialReducer: { routing: __WEBPACK_IMPORTED_MODULE_1_react_router_redux__["routerReducer"] },
