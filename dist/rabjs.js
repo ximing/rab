@@ -9222,9 +9222,13 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_react_router_redux__ = __webpack_require__("./node_modules/react-router-redux/lib/index.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_react_router_redux___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_react_router_redux__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__initRab__ = __webpack_require__("./src/initRab.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib__ = __webpack_require__("./src/lib.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__lib__);
 
 
 
+
+__WEBPACK_IMPORTED_MODULE_2__initRab__["a" /* default */].call = __WEBPACK_IMPORTED_MODULE_3__lib__["call"];
 
 var _default = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__initRab__["a" /* default */])({
     initialReducer: { routing: __WEBPACK_IMPORTED_MODULE_1_react_router_redux__["routerReducer"] },
@@ -9669,6 +9673,34 @@ var _temp = function () {
 }();
 
 ;
+
+/***/ }),
+
+/***/ "./src/lib.js":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(module) {/**
+ * Created by yeanzhi on 17/3/9.
+ */
+
+
+module.export.call = function (type, payload) {
+    return {
+        type: type,
+        payload: payload
+    };
+};
+;
+
+var _temp = function () {
+    if (typeof __REACT_HOT_LOADER__ === 'undefined') {
+        return;
+    }
+}();
+
+;
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__("./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 

@@ -1,5 +1,4 @@
-export {connect} from 'react-redux';
-export {handleActions, createAction} from 'redux-actions';
-import rab from './dist/rabjs.js';
-export {call} from './src/lib'
-export default rab;
+module.exports.connect = require('react-redux').connect;
+module.exports.handleActions = require('redux-actions').handleActions;
+module.exports.createAction = require('redux-actions').createAction;
+module.exports = require('./dist/rabjs.js');
