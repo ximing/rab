@@ -5470,6 +5470,7 @@ function initRab(createOpts) {
         function render(container, store, app, router) {
             var ReactDOM = __webpack_require__(209);
             ReactDOM.render(__WEBPACK_IMPORTED_MODULE_0_react___default.a.createElement(getProvider(store, app, router)), container);
+            history.push(window.location);
         }
 
         function checkModel(m) {
