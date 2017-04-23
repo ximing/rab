@@ -1,4 +1,4 @@
-import { browserHistory } from 'react-router';
+import { browserHistory } from '../router';
 import {
   routerMiddleware,
   syncHistoryWithStore,
