@@ -88,11 +88,11 @@ module.exports = {
                 commonjs2: 'react-dom',
                 commonjs: 'react-dom',
                 amd: 'react-dom'
-            }
+            },
+            'prop-types':'prop-types'
         }
     ],
     plugins: [
-        new webpack.NamedModulesPlugin(),
         new webpack.DefinePlugin({
             'process.env': {
                 NODE_ENV: JSON.stringify('production')
