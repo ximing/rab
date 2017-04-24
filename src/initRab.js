@@ -263,8 +263,9 @@ export default function initRab(createOpts) {
 
         function render(container, store, app, router) {
             const ReactDOM = require('react-dom');
-            ReactDOM.render(React.createElement(getProvider(store, app, router)), container);
-            history.push(window.location);
+            ReactDOM.render(React.createElement(getProvider(store, app, router)), container,()=>{
+                history.push(window.location);
+            });
         }
 
         function checkModel(m) {

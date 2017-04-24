@@ -27,6 +27,14 @@ app.addModel({
             await stop();
             return -100;
         }
+    },
+    subscriptions:{
+        init({history, dispatch}){
+            console.log('history')
+            history.listen((location) => {
+                console.log('init',location)
+            })
+        }
     }
 });
 
