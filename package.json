@@ -1,6 +1,6 @@
 {
   "name": "rabjs",
-  "version": "2.0.0",
+  "version": "2.0.3",
   "description": "React and redux based framework.",
   "repository": "",
   "author": "yanzhi",
@@ -15,6 +15,12 @@
     "rab",
     "framework",
     "xm"
+  ],
+  "files":[
+    "dist",
+    "src",
+    "index.js",
+    "router.js"
   ],
   "dependencies": {
     "classnames": "^2.2.5",

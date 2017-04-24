@@ -78,6 +78,7 @@ app.start('#demo_container');
 ## model
 
 model就是一个js对象， 融合了action和reducer，将很多单项数据流的模板代码都封装起来
+
 ```
 {
     namespace:'demo',// state 的名称，同时也是领域模型的前缀,
@@ -104,16 +105,22 @@ model就是一个js对象， 融合了action和reducer，将很多单项数据�
     }
 }
 ```
+
 ## mutations
 支持函数和对象两种写法
+
 ### 函数
-```apple js
+
+```javascript
 mutations:{
     demo(payloadObject,{dispatch,getState,state}){}
 }
 ```
+
 ### mutations
-```apple js
+
+```javascript
+
 mutations:{
     demo:{
         /* 异步流程之前调用 可以用来处理loading之类 */
@@ -129,6 +136,7 @@ mutations:{
     }
 }
 ```
+
 ## dispatch
 
 ```js

@@ -55,7 +55,7 @@ app.addModel({
         init({history, dispatch}){
             console.log('history')
             history.listen((location) => {
-                console.log('init',location)
+                console.log('init------------>',location)
             })
         }
     }
