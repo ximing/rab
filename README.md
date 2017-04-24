@@ -104,7 +104,31 @@ model就是一个js对象， 融合了action和reducer，将很多单项数据�
     }
 }
 ```
-
+## mutations
+支持函数和对象两种写法
+### 函数
+```apple js
+mutations:{
+    demo(payloadObject,{dispatch,getState,state}){}
+}
+```
+### 对象
+```apple js
+mutations:{
+    demo:{
+        /* 异步流程之前调用 可以用来处理loading之类 */
+        start(state,action){},  
+        /* 成功后回调 */
+        next(state,action){
+            
+        },   
+        /* 失败后回调 */
+        throw(state,action){},  
+        /* 不论成功或者失败都会回调 */
+        finish(state,action){}   
+    }
+}
+```
 ## dispatch
 
 ```js
@@ -112,7 +136,10 @@ model就是一个js对象， 融合了action和reducer，将很多单项数据�
 //如果 只有mutations下面有add方法的话，返回的js对象会直接替换 state，
 //如果 mutations和reducer下面都有add方法，先执行mutations下的，返回的js对象会放到 reducer下的add方法参数中的action.payload 字段里面
 //如果只有reducer有add方法的话 payload 会直接赋值给add方法中action.payload字段里面
-dispatch({type:'demo.add',payload:{}})
+dispatch({type:'demo.add',payload:{}});
+
+// import {call} from 'rabjs''
+dispatch(call('type','payload'));
 ```
 
 ## router

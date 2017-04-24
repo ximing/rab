@@ -34,7 +34,6 @@ app.addModel({
             finish(state,action){
                 console.log('run finish')
                 return Object.assign({},state,{loading:false});
-
             }
         }
     },
