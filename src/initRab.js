@@ -10,7 +10,7 @@ import isPlainObject from 'is-plain-object';
 import invariant from 'invariant';
 import warning from 'warning';
 import {isFSA}from 'flux-standard-action';
-import {handleActions}from 'redux-actions';
+import {handleActions,CONSTANTS}from 'xm-redux-actions';
 
 function isPromise(val) {
     return val && typeof val.then === 'function';
@@ -175,14 +175,25 @@ export default function initRab(createOpts) {
                 getState
             }) => {
                 return next => action => {
-                    if (actions[action.type] && !action.handled) {
-                        let res = actions[action.type](isPlainObject(action.payload) ? {...action.payload} : isEmpty(action.payload) ? {} : action.payload, {
-                            dispatch,
-                            getState,
-                            state: getState()[typeNamespaceMap[action.type]]
-                        });
+                    if (actions[action.type] && !action.handled && (action.meta? !action.meta[CONSTANTS.KEY.LIFECYCLE]:true)) {
+                        let res = actions[action.type](
+                            isPlainObject(action.payload) ?
+                                {...action.payload} :
+                                isEmpty(action.payload) ?
+                                    {} :
+                                    action.payload,
+                            {dispatch, getState, state: getState()[typeNamespaceMap[action.type]]}
+                        );
                         // console.log(actions[action.type],action,res,isPromise(res))
                         if (isPromise(res)) {
+                            dispatch({
+                                type:action.type,
+                                payload:{},
+                                meta:{
+                                    ...action.meta,
+                                    [CONSTANTS.KEY.LIFECYCLE]:'start'
+                                }
+                            });
                             res.then(
                                 (result) => {
                                     dispatch({
@@ -210,12 +221,27 @@ export default function initRab(createOpts) {
                     } else if (!isFSA(action)) {
                         if (typeof action === 'function') {
                             if (isPromise(action)) {
-                                action.then(dispatch, getState);
+                                action.then(
+                                    (result) => {
+                                        dispatch({
+                                            ...action,
+                                                ...result
+                                        });
+                                    },
+                                    (error) => {
+                                        dispatch({
+                                            error: true,
+                                            ...action,
+                                            ...error
+                                        });
+                                    }
+                                );
                             } else {
                                 return action(dispatch, getState);
                             }
+                        }else{
+                            return next(action);
                         }
-                        return next(action);
                     } else if (typeof action.payload === 'function') {
                         var res = action.payload(dispatch, getState);
                         if (isPromise(res)) {
