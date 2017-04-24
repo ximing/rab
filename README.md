@@ -112,7 +112,7 @@ mutations:{
     demo(payloadObject,{dispatch,getState,state}){}
 }
 ```
-### 对象
+### mutations
 ```apple js
 mutations:{
     demo:{
