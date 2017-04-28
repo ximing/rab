@@ -25,7 +25,10 @@ const call = function(type, ...args) {
     if(getAction(type)){
         dispatch(getAction(type)(args))
     }else{
-        throw new Error(`could not get action: ${type} `)
+        dispatch({
+            type,
+            payload:args
+        })
     }
 }
 

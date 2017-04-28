@@ -5468,14 +5468,17 @@ var getState = function getState(args) {
 };
 
 var call = function call(type) {
-    if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
-        for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-            args[_key - 1] = arguments[_key];
-        }
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        args[_key - 1] = arguments[_key];
+    }
 
+    if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
         dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(args));
     } else {
-        throw new Error('could not get action: ' + type + ' ');
+        dispatch({
+            type: type,
+            payload: args
+        });
     }
 };
 
