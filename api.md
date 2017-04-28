@@ -23,11 +23,11 @@ The code is further encapsulated
 
 The code is further encapsulated
  
-call('namespace.hello',args);
+√ call('namespace.hello',args);
 
 ## call reducers
 
-dispatch({type:'namespace.hello',payload:{}});
+√ dispatch({type:'namespace.hello',payload:{}});
 
 
 

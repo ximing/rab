@@ -5446,6 +5446,8 @@ function initRab(createOpts) {
  */
 
 
+function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; }
+
 
 
 
@@ -5465,9 +5467,13 @@ var getState = function getState(args) {
     }
 };
 
-var call = function call(type, payload) {
+var call = function call(type) {
     if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
-        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(payload));
+        for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+            args[_key - 1] = arguments[_key];
+        }
+
+        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(args));
     } else {
         throw new Error('could not get action: ' + type + ' ');
     }
@@ -5475,9 +5481,9 @@ var call = function call(type, payload) {
 
 var put = function put(_ref) {
     var type = _ref.type,
-        payload = _ref.payload;
+        args = _objectWithoutProperties(_ref, ['type']);
 
-    call(type, payload);
+    call(type, args);
 };
 /* harmony default export */ __webpack_exports__["a"] = ({
     dispatch: dispatch, getState: getState, call: call, put: put
