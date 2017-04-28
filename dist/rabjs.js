@@ -5155,7 +5155,6 @@ var isPlainObject = __WEBPACK_IMPORTED_MODULE_0_lodash_isPlainObject___default.a
                  });
                   */
                 memo['' + key] = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_3__redux_createAction__["a" /* default */])('' + namespace + __WEBPACK_IMPORTED_MODULE_5__constants__["b" /* SEP */] + key, actions[key]);
-                console.log('fdsafdsa', memo['' + key], key);
                 __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_4__actions__["b" /* setAction */])('' + namespace + __WEBPACK_IMPORTED_MODULE_5__constants__["b" /* SEP */] + key, memo['' + key]);
 
                 return memo;
@@ -5446,7 +5445,7 @@ function initRab(createOpts) {
  */
 
 
-function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; }
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 
 
@@ -5473,20 +5472,27 @@ var call = function call(type) {
     }
 
     if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
-        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(args));
+        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type).apply(undefined, args));
     } else {
         dispatch({
             type: type,
-            payload: args
+            payload: _extends({}, args)
         });
     }
 };
 
 var put = function put(_ref) {
     var type = _ref.type,
-        args = _objectWithoutProperties(_ref, ['type']);
+        payload = _ref.payload;
 
-    call(type, args);
+    if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
+        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(payload));
+    } else {
+        dispatch({
+            type: type,
+            payload: payload
+        });
+    }
 };
 /* harmony default export */ __webpack_exports__["a"] = ({
     dispatch: dispatch, getState: getState, call: call, put: put

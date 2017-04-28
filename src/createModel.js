@@ -46,7 +46,6 @@ export default function (model) {
 
                  */
                 memo[`${key}`] = createAction(`${namespace}${SEP}${key}`, actions[key]);
-                console.log('fdsafdsa',memo[`${key}`],key)
                 setAction(`${namespace}${SEP}${key}`,memo[`${key}`]);
 
                 return memo;

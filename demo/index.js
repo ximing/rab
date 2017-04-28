@@ -1,7 +1,7 @@
 import 'babel-polyfill';
 
 import React from 'react';
-import rab, { connect,createModel, put, call} from '../index.js';
+import rab, { connect,createModel, put, call} from '../main.js';
 import { Router, Route } from '../router';
 function stop(time) {
     return new Promise((res,rej)=>{
@@ -17,7 +17,10 @@ let count = createModel({
         loading:false
     },
     reducers: {
-        add(state) { return Object.assign({},state,{num:state.num + 1}) },
+        add(state,action) {
+            console.log(action.payload);
+            return Object.assign({},state,{num:state.num + 1})
+        },
         minus(state) { return Object.assign({},state,{num:state.num - 1})  },
         asyncAdd(state,action) { return Object.assign({},state,{num:state.num + action.payload})  },
         asyncMinus(state,action) { return Object.assign({},state,{num:state.num + action.payload})  },
@@ -72,11 +75,11 @@ const App = connect(({ count }) => ({
         <div>
             <h2>{ props.count.num }</h2>
             <h2>{ !props.count.loading?'finish':'loading' }</h2>
-            <button key="add" onClick={() => { props.dispatch({type: 'count.add' }); }}>+</button>
+            <button key="add" onClick={() => { put({type: 'count.add' ,payload:{a:1}});}}>+</button>
             <button key="minus" onClick={() => { props.dispatch({type: 'count.minus' }); }}>-</button>
             <button key="asyncadd" onClick={() => { props.dispatch(count.actions.asyncAdd()); }}>ASYNC ADD</button>
-            <button key="asyncminus" onClick={() => { put({type: 'count.asyncMinus' }); }}>ASYNC Minus</button>
-            <button key="asyncNewApi" onClick={() => {put({type: 'count.asyncNewApi' }); }}>asyncNewApi</button>
+            <button key="asyncminus" onClick={() => { put({type: 'count.asyncMinus',payload:{a:1,n:2} }); }}>ASYNC Minus</button>
+            <button key="asyncNewApi" onClick={() => {put({type: 'count.asyncNewApi'}); }}>asyncNewApi</button>
         </div>
     );
 });
