@@ -1,28 +1,10 @@
 import React from 'react';
 import {Provider}from 'react-redux';
-import {
-    createStore,
-    applyMiddleware,
-    compose,
-    combineReducers
-}from 'redux';
-import isPlainObject from 'is-plain-object';
+import _ from 'lodash';
 import invariant from 'invariant';
-import warning from 'warning';
-import {isFSA}from 'flux-standard-action';
-import {handleActions,CONSTANTS}from 'xm-redux-actions';
-
-function isPromise(val) {
-    return val && typeof val.then === 'function';
-}
-
-//()=>(dispatch, getState)=>async()=>{}
-//()=>(dispatch, getState)=>{}
-//()=>async(dispatch,getState)=>{}
-
-
-const SEP = '.';
-
+import handleActions from './redux/handleActions';
+import {createReduxStore} from './store'
+const isPlainObject = _.isPlainObject;
 export default function initRab(createOpts) {
     const {
         initialReducer,
@@ -30,7 +12,6 @@ export default function initRab(createOpts) {
         routerMiddleware,
         setupHistory
     } = createOpts;
-    let typeNamespaceMap = {};
     /**
      * Create a dva instance.
      */
@@ -56,6 +37,7 @@ export default function initRab(createOpts) {
             start
         };
         return app;
+
         /**
          * Register middleware on the application.
          *
@@ -71,7 +53,8 @@ export default function initRab(createOpts) {
          * @param model
          */
         function addModel(model) {
-            this._models.push(checkModel(model));
+            model = checkModel(model);
+            this._models.push(model);
         }
 
 
@@ -104,45 +87,35 @@ export default function initRab(createOpts) {
             // get reducers from model
             const reducers = {...initialReducer};
             let actions = {};
-            for (const m of this._models) {
+
+            this._models.forEach(m => {
+                console.log(m)
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
-                actions = Object.assign(actions, m.mutations);
-            }
+                // actions = Object.assign(actions, m.mutations);
+            })
+
             const extraReducers = options['extraReducers'] || {};
             invariant(
                 Object.keys(extraReducers).every(key => !(key in reducers)),
                 'app.start: extraReducers is conflict with other reducers',
             );
+            const extraEnhancers = options['extraEnhancers'] || [];
+            invariant(
+                Array.isArray(extraEnhancers),
+                'app.start: extraEnhancers should be array',
+            );
 
             // create store
-            let middlewares = this._middleware;
+            let storeOptions = {extraEnhancers, extraReducers};
             if (routerMiddleware) {
-                middlewares = [routerMiddleware(history), ...middlewares];
+                storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            let devtools = () => noop => noop;
-            if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-                devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-            }
-
-            const createStoreWithMiddleware = compose(
-                applyMiddleware(rabMiddleware(actions, reducers), ...middlewares),
-                devtools()
-            )(createStore);
-
-            const store = this._store = createStoreWithMiddleware(createReducer(), initialState);
-
-            function createReducer() {
-                return combineReducers({
-                    ...reducers, ...extraReducers
-                });
-            }
+            const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions);
 
             // setup history
             if (setupHistory) {
                 setupHistory.call(this, history);
             }
-
-            // TODO　run subscriptions
 
             // run subscriptions
             for (let model of this._models) {
@@ -169,110 +142,6 @@ export default function initRab(createOpts) {
             }
         }
 
-        function rabMiddleware(actions, reducers) {
-            return ({
-                dispatch,
-                getState
-            }) => {
-                return next => action => {
-                    if (actions[action.type] && !action.handled && (action.meta? !action.meta[CONSTANTS.KEY.LIFECYCLE]:true)) {
-                        let res = actions[action.type](
-                            isPlainObject(action.payload) ?
-                                {...action.payload} :
-                                isEmpty(action.payload) ?
-                                    {} :
-                                    action.payload,
-                            {dispatch, getState, state: getState()[typeNamespaceMap[action.type]]}
-                        );
-                        // console.log(actions[action.type],action,res,isPromise(res))
-                        if (isPromise(res)) {
-                            dispatch({
-                                type:action.type,
-                                payload:{},
-                                meta:{
-                                    ...action.meta,
-                                    [CONSTANTS.KEY.LIFECYCLE]:'start'
-                                }
-                            });
-                            res.then(
-                                (result) => {
-                                    dispatch({
-                                        ...action,
-                                        payload: result,
-                                        handled: true
-                                    });
-                                },
-                                (error) => {
-                                    dispatch({
-                                        ...action,
-                                        payload: error,
-                                        error: true,
-                                        handled: true
-                                    });
-                                }
-                            );
-                        } else {
-                            dispatch({
-                                ...action,
-                                payload: res,
-                                handled: true
-                            });
-                        }
-                    } else if (!isFSA(action)) {
-                        if (typeof action === 'function') {
-                            if (isPromise(action)) {
-                                action.then(
-                                    (result) => {
-                                        dispatch({
-                                            ...action,
-                                                ...result
-                                        });
-                                    },
-                                    (error) => {
-                                        dispatch({
-                                            error: true,
-                                            ...action,
-                                            ...error
-                                        });
-                                    }
-                                );
-                            } else {
-                                return action(dispatch, getState);
-                            }
-                        }else{
-                            return next(action);
-                        }
-                    } else if (typeof action.payload === 'function') {
-                        var res = action.payload(dispatch, getState);
-                        if (isPromise(res)) {
-                            res.then(
-                                (result) => {
-                                    dispatch({
-                                        ...action,
-                                        payload: result
-                                    });
-                                },
-                                (error) => {
-                                    dispatch({
-                                        ...action,
-                                        payload: error,
-                                        error: true
-                                    });
-                                }
-                            );
-                        } else {
-                            dispatch({
-                                ...action,
-                                payload: res
-                            });
-                        }
-                    } else {
-                        next(action);
-                    }
-                };
-            };
-        }
-
         // Helpers
 
         function isEmpty(val) {
@@ -289,8 +158,10 @@ export default function initRab(createOpts) {
 
         function render(container, store, app, router) {
             const ReactDOM = require('react-dom');
-            ReactDOM.render(React.createElement(getProvider(store, app, router)), container,()=>{
-                setTimeout(()=>{history.push(window.location);},100);
+            ReactDOM.render(React.createElement(getProvider(store, app, router)), container, () => {
+                setTimeout(() => {
+                    history.push(window.location);
+                }, 100);
             });
         }
 
@@ -302,7 +173,7 @@ export default function initRab(createOpts) {
             const {
                 namespace,
                 reducers,
-                mutations
+                actions
             } = model;
 
             invariant(
@@ -318,56 +189,9 @@ export default function initRab(createOpts) {
             invariant(!reducers || isPlainObject(reducers),
                 'app.model: reducers should be Object'
             );
-            invariant(!mutations || isPlainObject(mutations),
-                'app.model: reducers should be Object'
+            invariant(!actions || isPlainObject(actions),
+                'app.model: actions should be Object'
             );
-
-            function applyNamespace(type) {
-                function getNamespacedReducers(reducers) {
-                    return Object.keys(reducers).reduce((memo, key) => {
-                        warning(
-                            key.indexOf(`${namespace}${SEP}`) !== 0,
-                            `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`
-                        );
-                        memo[`${namespace}${SEP}${key}`] = reducers[key];
-                        typeNamespaceMap[`${namespace}${SEP}${key}`] = namespace;
-                        return memo;
-                    }, {});
-                }
-
-                function getNamespacedMutations(mutations) {
-                    return Object.keys(mutations).reduce((memo, key) => {
-                        warning(
-                            key.indexOf(`${namespace}${SEP}`) !== 0,
-                            `app.model: ${type.slice(0, -1)} ${key} should not be prefixed with namespace ${namespace}`
-                        );
-                        /*
-                         export let cancelShareMind = createAction(CONSTANT.CANCEL_SHARE_MIND, (fid,sid)=>async(dispatch, getState)=> {
-                         let mind = await api.cancelShareMind(fid,sid);
-                         return sid;
-                         });
-                         */
-                        memo[`${namespace}${SEP}${key}`] = mutations[key];//createAction(`${namespace}${SEP}${key}`, mutations[key]);
-                        typeNamespaceMap[`${namespace}${SEP}${key}`] = namespace;
-                        //set default mutation reducer
-                        if (model['reducers'] && !model['reducers'][`${namespace}${SEP}${key}`]) {
-                            model['reducers'][`${namespace}${SEP}${key}`] = defaultMutationReducer;
-                        }
-                        return memo;
-                    }, {});
-                }
-
-                if (model[type]) {
-                    if (type === 'reducers') {
-                        model[type] = getNamespacedReducers(model[type]);
-                    } else if (type === 'mutations') {
-                        model[type] = getNamespacedMutations(model[type]);
-                    }
-                }
-            }
-
-            applyNamespace('reducers');
-            applyNamespace('mutations');
 
             return model;
         }
@@ -377,8 +201,12 @@ export default function initRab(createOpts) {
         }
 
         function getReducer(reducers, state) {
-            //TODO Support reducer enhancer
-            return handleActions(reducers || {}, state);
+            console.log(reducers, state, Array.isArray(reducers))
+            if (Array.isArray(reducers)) {
+                return reducers[1](handleActions(reducers[0], state));
+            } else {
+                return handleActions(reducers || {}, state);
+            }
         }
 
         function defaultMutationReducer(state, action) {

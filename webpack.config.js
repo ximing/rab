@@ -21,7 +21,9 @@ module.exports = {
         publicPath: '/dist'
     },
     devtool: 'cheap-eval-source-map',
+    resolve: {
 
+    },
     devServer: {
         contentBase: [path.join(__dirname, 'html'), path.join(__dirname, 'dist')],
         compress: true,
@@ -66,7 +68,8 @@ module.exports = {
                         ],
                         'plugins': [
                             'react-hot-loader/babel',
-                            'transform-decorators-legacy'
+                            'transform-decorators-legacy',
+                            'lodash'
                         ]
                     }
                 }],

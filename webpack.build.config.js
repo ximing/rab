@@ -46,7 +46,7 @@ module.exports = {
                             'dist'
                         ],
                         'plugins': [
-                            'react-hot-loader/babel',
+                            'lodash',
                             'transform-decorators-legacy'
                         ]
                     }
