@@ -34,7 +34,7 @@ const call = function(type, ...args) {
 
 const put = function({type,payload}) {
     if(getAction(type)){
-        dispatch(getAction(type)(payload))
+        dispatch(getAction(type)(payload||{}))
     }else{
         dispatch({
             type,

@@ -200,7 +200,6 @@ export default function initRab(createOpts) {
         }
 
         function getReducer(reducers, state) {
-            console.log(reducers, state, Array.isArray(reducers))
             if (Array.isArray(reducers)) {
                 return reducers[1](handleActions(reducers[0], state));
             } else {

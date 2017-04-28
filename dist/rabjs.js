@@ -5413,7 +5413,6 @@ function initRab(createOpts) {
         }
 
         function getReducer(reducers, state) {
-            console.log(reducers, state, Array.isArray(reducers));
             if (Array.isArray(reducers)) {
                 return reducers[1](__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_4__redux_handleActions__["a" /* default */])(reducers[0], state));
             } else {
@@ -5486,7 +5485,7 @@ var put = function put(_ref) {
         payload = _ref.payload;
 
     if (__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)) {
-        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(payload));
+        dispatch(__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__actions__["a" /* getAction */])(type)(payload || {}));
     } else {
         dispatch({
             type: type,
@@ -5649,11 +5648,13 @@ function isPromise(obj) {
             if (!__webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1_flux_standard_action__["isFSA"])(action)) {
                 if (typeof action === 'function') {
                     if (isPromise(action)) {
-                        dispatch({
-                            type: action.type,
-                            payload: {},
-                            meta: _extends({}, action.meta, _defineProperty({}, __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* KEY */].LIFECYCLE, 'start'))
-                        });
+                        if (action.type) {
+                            dispatch({
+                                type: action.type,
+                                payload: {},
+                                meta: _extends({}, action.meta, _defineProperty({}, __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* KEY */].LIFECYCLE, 'start'))
+                            });
+                        }
                         action.then(function (result) {
                             dispatch(_extends({}, action, result));
                         }, function (error) {
@@ -5669,11 +5670,13 @@ function isPromise(obj) {
                 }
             } else {
                 if (isPromise(action.payload)) {
-                    dispatch({
-                        type: action.type,
-                        payload: {},
-                        meta: _extends({}, action.meta, _defineProperty({}, __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* KEY */].LIFECYCLE, 'start'))
-                    });
+                    if (action.type) {
+                        dispatch({
+                            type: action.type,
+                            payload: {},
+                            meta: _extends({}, action.meta, _defineProperty({}, __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* KEY */].LIFECYCLE, 'start'))
+                        });
+                    }
                     action.payload.then(function (result) {
                         dispatch(_extends({}, action, {
                             payload: result

@@ -10,14 +10,16 @@ export default ({dispatch, getState}) => next => action => {
     if (!isFSA(action)) {
         if (typeof action === 'function') {
             if (isPromise(action)) {
-                dispatch({
-                    type:action.type,
-                    payload:{},
-                    meta:{
-                        ...action.meta,
-                        [KEY.LIFECYCLE]:'start'
-                    }
-                });
+                if(action.type){
+                    dispatch({
+                        type:action.type,
+                        payload:{},
+                        meta:{
+                            ...action.meta,
+                            [KEY.LIFECYCLE]:'start'
+                        }
+                    });
+                }
                 action.then(
                     (result) => {
                         dispatch({
@@ -41,14 +43,16 @@ export default ({dispatch, getState}) => next => action => {
         }
     } else  {
         if (isPromise(action.payload)) {
-            dispatch({
-                type:action.type,
-                payload:{},
-                meta:{
-                    ...action.meta,
-                    [KEY.LIFECYCLE]:'start'
-                }
-            });
+            if(action.type){
+                dispatch({
+                    type:action.type,
+                    payload:{},
+                    meta:{
+                        ...action.meta,
+                        [KEY.LIFECYCLE]:'start'
+                    }
+                });
+            }
             action.payload.then(
                 (result) => {
                     dispatch({
