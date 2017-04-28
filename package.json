@@ -1,12 +1,13 @@
 {
   "name": "rabjs",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "React and redux based framework.",
   "repository": "",
   "author": "yanzhi",
   "scripts": {
     "i": "SASS_BINARY_SITE=https://npm.taobao.org/mirrors/node-sass/ yarn install --registry=https://registry.npm.taobao.org",
-    "build": "webpack --config webpack.build.config.js",
+    "build": "rimraf lib && babel src --out-dir dist",
+    "build1": "webpack --config webpack.build.config.js",
     "dev": "./node_modules/.bin/webpack-dev-server "
   },
   "keywords": [
@@ -64,6 +65,7 @@
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
     "react-hot-loader": "^3.0.0-beta.6",
+    "rimraf": "^2.6.1",
     "style-loader": "^0.16.1",
     "url-loader": "^0.5.8",
     "webpack": "^2.4.1",
