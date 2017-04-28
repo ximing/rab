@@ -7,6 +7,7 @@ import invariant from 'invariant';
 import _ from 'lodash';
 
 import createAction from './redux/createAction';
+import {setAction} from './actions';
 import {SEP} from './constants';
 const isPlainObject = _.isPlainObject;
 
@@ -46,7 +47,9 @@ export default function (model) {
 
                  */
                 memo[`${key}`] = createAction(`${namespace}${SEP}${key}`, actions[key]);
-                console.log('9999', memo[`${key}`], actions, key)
+                console.log('fdsafdsa',memo[`${key}`],key)
+                setAction(`${namespace}${SEP}${key}`,memo[`${key}`]);
+
                 return memo;
             }, {});
         }

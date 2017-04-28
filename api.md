@@ -15,11 +15,11 @@ model
 
 ## call actions
 
-dispatch(model.actions.hello(args));
+√ dispatch(model.actions.hello(args));
 
 The code is further encapsulated
 
-put({type:'namespace.hello',args});
+√ put({type:'namespace.hello',args});
 
 The code is further encapsulated
  

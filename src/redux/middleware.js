@@ -6,7 +6,7 @@ function isPromise(obj) {
 }
 
 export default ({dispatch, getState}) => next => action => {
-    // console.log(action,'dd'.repeat(10));
+    console.log(action,'dd'.repeat(10));
     if (!isFSA(action)) {
         // console.log('sss')
         if (typeof action === 'function') {
