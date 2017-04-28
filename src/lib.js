@@ -21,16 +21,16 @@ const getState = function (args) {
     }
 };
 
-const call = function(type, payload) {
+const call = function(type, ...args) {
     if(getAction(type)){
-        dispatch(getAction(type)(payload))
+        dispatch(getAction(type)(args))
     }else{
         throw new Error(`could not get action: ${type} `)
     }
 }
 
-const put = function({type,payload}) {
-    call(type,payload);
+const put = function({type,...args}) {
+    call(type,args);
 }
 export default {
     dispatch,getState,call,put
