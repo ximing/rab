@@ -13,7 +13,6 @@ const isPlainObject = _.isPlainObject;
 
 
 export default function (model) {
-    console.log(model,'model'.repeat(10))
     const {
         namespace,
         reducers,
@@ -59,7 +58,6 @@ export default function (model) {
                 model[type] = getNamespacedReducers(model[type]);
             } else if (type === 'actions') {
                 model[type] = getNamespacedMutations(model[type]);
-                console.log(model[type])
             }
         }
     }

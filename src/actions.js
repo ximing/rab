@@ -8,7 +8,6 @@ import warning from 'warning';
 let actions = {};
 
 export const setAction = function (type,action) {
-    console.log('aa',type, action())
     warning(!actions[type], `action ${type} init multiple times`);
     actions[type] = action;
 }

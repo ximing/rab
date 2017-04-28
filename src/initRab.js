@@ -89,7 +89,6 @@ export default function initRab(createOpts) {
             let actions = {};
 
             this._models.forEach(m => {
-                console.log(m)
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
                 // actions = Object.assign(actions, m.mutations);
             })

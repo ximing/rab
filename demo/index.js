@@ -61,14 +61,13 @@ let count = createModel({
         }
     }
 })
-console.log(count,'count'.repeat(10));
+
 app.addModel(count);
 
 // 3. View
 const App = connect(({ count }) => ({
     count
 }))((props) => {
-    console.log('render',props.count.loading,put)
     return (
         <div>
             <h2>{ props.count.num }</h2>

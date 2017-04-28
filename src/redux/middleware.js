@@ -1,16 +1,23 @@
 import uuid from 'uuid';
 import {isFSA}from 'flux-standard-action';
+import { KEY } from '../constants';
 
 function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
 
 export default ({dispatch, getState}) => next => action => {
-    console.log(action,'dd'.repeat(10));
     if (!isFSA(action)) {
-        // console.log('sss')
         if (typeof action === 'function') {
             if (isPromise(action)) {
+                dispatch({
+                    type:action.type,
+                    payload:{},
+                    meta:{
+                        ...action.meta,
+                        [KEY.LIFECYCLE]:'start'
+                    }
+                });
                 action.then(
                     (result) => {
                         dispatch({
@@ -33,8 +40,15 @@ export default ({dispatch, getState}) => next => action => {
             return next(action);
         }
     } else  {
-        // console.log(action,'ac'.repeat(10));
         if (isPromise(action.payload)) {
+            dispatch({
+                type:action.type,
+                payload:{},
+                meta:{
+                    ...action.meta,
+                    [KEY.LIFECYCLE]:'start'
+                }
+            });
             action.payload.then(
                 (result) => {
                     dispatch({
