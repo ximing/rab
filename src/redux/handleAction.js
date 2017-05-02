@@ -35,8 +35,9 @@ export default function handleAction(type, reducer = identity, defaultState) {
 
   const [startReducer, nextReducer, throwReducer, finishReducer] = isFunction(reducer)
     ? [identity, reducer, reducer, identity]
-    : [reducer.start, reducer.next,
-      reducer.throw, reducer.finish].map(aReducer => (isNil(aReducer) ? identity : aReducer));
+    : [reducer.start, (reducer.next||reducer.success),
+          (reducer.throw||reducer.error), reducer.finish]
+          .map(aReducer => (isNil(aReducer) ? identity : aReducer));
 
   return (state = defaultState, action) => {
     const { type: actionType, meta } = action;

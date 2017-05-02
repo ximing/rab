@@ -72,7 +72,7 @@ function handleAction(type) {
   (0, _invariant2.default)(!isUndefined(defaultState), 'defaultState for reducer handling ' + types.join(', ') + ' should be defined');
   (0, _invariant2.default)(isFunction(reducer) || isPlainObject(reducer), 'Expected reducer to be a function or object with next and throw reducers');
 
-  var _ref = isFunction(reducer) ? [identity, reducer, reducer, identity] : [reducer.start, reducer.next, reducer.throw, reducer.finish].map(function (aReducer) {
+  var _ref = isFunction(reducer) ? [identity, reducer, reducer, identity] : [reducer.start, reducer.next || reducer.success, reducer.throw || reducer.error, reducer.finish].map(function (aReducer) {
     return isNil(aReducer) ? identity : aReducer;
   }),
       _ref2 = _slicedToArray(_ref, 4),
