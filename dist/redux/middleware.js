@@ -21,6 +21,15 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
+function callStartReducer(dispatch, action) {
+    if (action.type) {
+        dispatch({
+            type: action.type,
+            payload: {},
+            meta: _extends({}, action.meta, _defineProperty({}, _constants.KEY.LIFECYCLE, 'start'))
+        });
+    }
+}
 
 exports.default = function (_ref) {
     var dispatch = _ref.dispatch,
@@ -30,13 +39,7 @@ exports.default = function (_ref) {
             if (!(0, _fluxStandardAction.isFSA)(action)) {
                 if (typeof action === 'function') {
                     if (isPromise(action)) {
-                        if (action.type) {
-                            dispatch({
-                                type: action.type,
-                                payload: {},
-                                meta: _extends({}, action.meta, _defineProperty({}, _constants.KEY.LIFECYCLE, 'start'))
-                            });
-                        }
+                        callStartReducer(dispatch, action);
                         action.then(function (result) {
                             dispatch(_extends({}, action, result));
                         }, function (error) {
@@ -51,26 +54,41 @@ exports.default = function (_ref) {
                     return next(action);
                 }
             } else {
-                if (isPromise(action.payload)) {
-                    if (action.type) {
-                        dispatch({
-                            type: action.type,
-                            payload: {},
-                            meta: _extends({}, action.meta, _defineProperty({}, _constants.KEY.LIFECYCLE, 'start'))
+                if (typeof action.payload === 'function' && !isPromise(action.payload)) {
+                    var res = action.payload(dispatch, getState);
+                    if (isPromise(res)) {
+                        callStartReducer(dispatch, action);
+                        res.then(function (result) {
+                            dispatch(_extends({}, action, {
+                                payload: result
+                            }));
+                        }, function (error) {
+                            dispatch(_extends({}, action, {
+                                payload: error,
+                                error: true
+                            }));
                         });
+                    } else {
+                        dispatch(_extends({}, action, {
+                            payload: res
+                        }));
                     }
-                    action.payload.then(function (result) {
-                        dispatch(_extends({}, action, {
-                            payload: result
-                        }));
-                    }, function (error) {
-                        dispatch(_extends({}, action, {
-                            payload: error,
-                            error: true
-                        }));
-                    });
                 } else {
-                    next(action);
+                    if (isPromise(action.payload)) {
+                        callStartReducer(dispatch, action);
+                        action.payload.then(function (result) {
+                            dispatch(_extends({}, action, {
+                                payload: result
+                            }));
+                        }, function (error) {
+                            dispatch(_extends({}, action, {
+                                payload: error,
+                                error: true
+                            }));
+                        });
+                    } else {
+                        next(action);
+                    }
                 }
             }
         };
