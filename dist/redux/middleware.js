@@ -14,6 +14,8 @@ var _fluxStandardAction = require('flux-standard-action');
 
 var _constants = require('../constants');
 
+var _lib = require('../lib');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -55,7 +57,7 @@ exports.default = function (_ref) {
                 }
             } else {
                 if (typeof action.payload === 'function' && !isPromise(action.payload)) {
-                    var res = action.payload(dispatch, getState);
+                    var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
                     if (isPromise(res)) {
                         callStartReducer(dispatch, action);
                         res.then(function (result) {
