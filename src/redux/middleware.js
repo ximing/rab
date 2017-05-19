@@ -2,6 +2,8 @@ import uuid from 'uuid';
 import {isFSA}from 'flux-standard-action';
 import { KEY } from '../constants';
 
+import {put,call} from '../lib';
+
 function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
@@ -45,7 +47,7 @@ export default ({dispatch, getState}) => next => action => {
         }
     } else  {
         if(typeof action.payload === 'function' && !isPromise(action.payload)){
-            let res = action.payload(dispatch, getState);
+            let res = action.payload({dispatch, getState,put,call});
             if (isPromise(res)) {
                 callStartReducer(dispatch,action);
                 res.then(

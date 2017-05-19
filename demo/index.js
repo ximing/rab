@@ -42,7 +42,8 @@ let count = createModel({
         }
     },
     actions:{
-        async asyncAdd() {
+        asyncAdd:() => async ({getState,dispatch})=>{
+            console.log('----->',getState(),dispatch)
             await stop();
             return 100;
         },
