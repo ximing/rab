@@ -44,13 +44,19 @@ function createAction(type) {
     var finalPayloadCreator = isNull(payloadCreator) ? identity : payloadCreator;
 
     var actionCreator = function actionCreator() {
-        var hasError = (arguments.length <= 0 ? undefined : arguments[0]) instanceof Error;
+        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+        }
+
+        var hasError = args[0] instanceof Error;
 
         var action = {
             type: type
         };
 
-        var payload = hasError ? arguments.length <= 0 ? undefined : arguments[0] : finalPayloadCreator.apply(undefined, arguments);
+        var payload = hasError ? args[0] : finalPayloadCreator.apply(undefined, args);
+
+        payload['action-redux/payload'] = [].concat(args);
         if (!isUndefined(payload)) {
             action.payload = payload;
         }
@@ -61,7 +67,7 @@ function createAction(type) {
         }
 
         if (isFunction(metaCreator)) {
-            action.meta = metaCreator.apply(undefined, arguments);
+            action.meta = metaCreator.apply(undefined, args);
         }
 
         return action;
