@@ -5,6 +5,33 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.call = exports.getState = exports.put = exports.dispatch = exports.createModel = exports.handleActions = exports.handleAction = exports.createActions = exports.createAction = undefined;
 
+var _lib = require('./lib');
+
+Object.defineProperty(exports, 'dispatch', {
+    enumerable: true,
+    get: function get() {
+        return _lib.dispatch;
+    }
+});
+Object.defineProperty(exports, 'put', {
+    enumerable: true,
+    get: function get() {
+        return _lib.put;
+    }
+});
+Object.defineProperty(exports, 'getState', {
+    enumerable: true,
+    get: function get() {
+        return _lib.getState;
+    }
+});
+Object.defineProperty(exports, 'call', {
+    enumerable: true,
+    get: function get() {
+        return _lib.call;
+    }
+});
+
 var _router = require('../router');
 
 var _reactRouterRedux = require('react-router-redux');
@@ -33,10 +60,6 @@ var _createModel2 = require('./createModel.js');
 
 var _createModel3 = _interopRequireDefault(_createModel2);
 
-var _lib = require('./lib');
-
-var _lib2 = _interopRequireDefault(_lib);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.createAction = _createAction3.default;
@@ -44,14 +67,6 @@ exports.createActions = _createActions3.default;
 exports.handleAction = _handleAction3.default;
 exports.handleActions = _handleActions3.default;
 exports.createModel = _createModel3.default;
-var dispatch = _lib2.default.dispatch,
-    put = _lib2.default.put,
-    getState = _lib2.default.getState,
-    call = _lib2.default.call;
-exports.dispatch = dispatch;
-exports.put = put;
-exports.getState = getState;
-exports.call = call;
 exports.default = (0, _initRab2.default)({
     initialReducer: { routing: _reactRouterRedux.routerReducer },
     initialActions: {},

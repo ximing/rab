@@ -10,8 +10,7 @@ export createActions from './redux/createActions';
 export handleAction from './redux/handleAction.js';
 export handleActions from './redux/handleActions.js';
 export createModel from './createModel.js';
-import Lib from './lib';
-export const {dispatch,put,getState,call} = Lib;
+export {dispatch,put,getState,call} from './lib';
 export default initRab({
     initialReducer: {routing},
     initialActions:{},
