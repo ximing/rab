@@ -6,6 +6,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.put = exports.call = exports.getState = exports.dispatch = undefined;
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
@@ -13,7 +14,7 @@ var _store = require('./store');
 
 var _actions = require('./actions');
 
-var dispatch = function dispatch(args) {
+var dispatch = exports.dispatch = function dispatch(args) {
     if ((0, _store.getReduxStore)()) {
         (0, _store.getReduxStore)().dispatch(args);
     } else {
@@ -21,7 +22,7 @@ var dispatch = function dispatch(args) {
     }
 };
 
-var getState = function getState(args) {
+var getState = exports.getState = function getState(args) {
     if ((0, _store.getReduxStore)()) {
         (0, _store.getReduxStore)().getState(args);
     } else {
@@ -29,7 +30,7 @@ var getState = function getState(args) {
     }
 };
 
-var call = function call(type) {
+var call = exports.call = function call(type) {
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
     }
@@ -44,7 +45,7 @@ var call = function call(type) {
     }
 };
 
-var put = function put(_ref) {
+var put = exports.put = function put(_ref) {
     var type = _ref.type,
         payload = _ref.payload;
 
@@ -56,7 +57,4 @@ var put = function put(_ref) {
             payload: payload
         });
     }
-};
-exports.default = {
-    dispatch: dispatch, getState: getState, call: call, put: put
 };

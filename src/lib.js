@@ -5,7 +5,7 @@
 import {getReduxStore} from './store';
 import {getAction} from './actions';
 
-const dispatch = function (args) {
+export const dispatch = function (args) {
     if(getReduxStore()){
         getReduxStore().dispatch(args)
     }else{
@@ -13,7 +13,7 @@ const dispatch = function (args) {
     }
 };
 
-const getState = function (args) {
+export const getState = function (args) {
     if(getReduxStore()){
         getReduxStore().getState(args)
     }else{
@@ -21,7 +21,7 @@ const getState = function (args) {
     }
 };
 
-const call = function(type, ...args) {
+export const call = function(type, ...args) {
     if(getAction(type)){
         dispatch(getAction(type)(...args))
     }else{
@@ -32,7 +32,7 @@ const call = function(type, ...args) {
     }
 }
 
-const put = function({type,payload}) {
+export const put = function({type,payload}) {
     if(getAction(type)){
         dispatch(getAction(type)(payload||{}))
     }else{
@@ -41,7 +41,4 @@ const put = function({type,payload}) {
             payload
         })
     }
-}
-export default {
-    dispatch,getState,call,put
 }
