@@ -28,6 +28,8 @@ export default function createAction(type, payloadCreator = identity, metaCreato
         };
 
         const payload = hasError ? args[0] : finalPayloadCreator(...args);
+
+        payload['action-redux/payload'] = [...args];
         if (!isUndefined(payload)) {
             action.payload = payload;
         }

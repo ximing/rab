@@ -11,7 +11,7 @@ function callStartReducer(dispatch,action) {
     if(action.type){
         dispatch({
             type:action.type,
-            payload:{},
+            payload:action.payload['action-redux/payload']||{},
             meta:{
                 ...action.meta,
                 [KEY.LIFECYCLE]:'start'
