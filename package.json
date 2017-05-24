@@ -1,9 +1,9 @@
 {
   "name": "rabjs",
-  "version": "3.2.3",
+  "version": "3.2.4",
   "description": "React and redux based framework.",
-  "repository": "",
   "author": "yanzhi",
+  "repository": "https://github.com/ximing/rab",
   "scripts": {
     "i": "SASS_BINARY_SITE=https://npm.taobao.org/mirrors/node-sass/ yarn install --registry=https://registry.npm.taobao.org",
     "build": "rimraf dist && babel src --out-dir dist",
