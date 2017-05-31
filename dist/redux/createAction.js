@@ -23,6 +23,8 @@ var _identity2 = require('lodash/identity');
 
 var _identity3 = _interopRequireDefault(_identity2);
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 exports.default = createAction;
 
 var _invariant = require('invariant');
@@ -51,12 +53,14 @@ function createAction(type) {
         var hasError = args[0] instanceof Error;
 
         var action = {
-            type: type
+            type: type,
+            meta: {
+                'action-redux/payload': [].concat(args)
+            }
         };
 
         var payload = hasError ? args[0] : finalPayloadCreator.apply(undefined, args);
 
-        payload['action-redux/payload'] = [].concat(args);
         if (!isUndefined(payload)) {
             action.payload = payload;
         }
@@ -67,7 +71,7 @@ function createAction(type) {
         }
 
         if (isFunction(metaCreator)) {
-            action.meta = metaCreator.apply(undefined, args);
+            action.meta = Object.assign(action.meta, _extends({}, metaCreator.apply(undefined, args)));
         }
 
         return action;

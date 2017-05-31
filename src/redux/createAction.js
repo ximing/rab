@@ -23,13 +23,15 @@ export default function createAction(type, payloadCreator = identity, metaCreato
     const actionCreator = (...args) => {
         const hasError = args[0] instanceof Error;
 
-        const action = {
-            type
+        let action = {
+            type,
+            meta: {
+                'action-redux/payload': [...args]
+            }
         };
 
         const payload = hasError ? args[0] : finalPayloadCreator(...args);
 
-        payload['action-redux/payload'] = [...args];
         if (!isUndefined(payload)) {
             action.payload = payload;
         }
@@ -40,7 +42,7 @@ export default function createAction(type, payloadCreator = identity, metaCreato
         }
 
         if (isFunction(metaCreator)) {
-            action.meta = metaCreator(...args);
+            action.meta = Object.assign(action.meta,{...metaCreator(...args)});
         }
 
         return action;

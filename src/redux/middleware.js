@@ -11,7 +11,7 @@ function callStartReducer(dispatch,action) {
     if(action.type){
         dispatch({
             type:action.type,
-            payload:action.payload['action-redux/payload']||{},
+            payload:action.meta['action-redux/payload']||{},
             meta:{
                 ...action.meta,
                 [KEY.LIFECYCLE]:'start'
@@ -40,7 +40,7 @@ export default ({dispatch, getState}) => next => action => {
                     }
                 );
             } else {
-                return action(dispatch, getState);
+                return action({dispatch, getState,put,call});
             }
         } else {
             return next(action);

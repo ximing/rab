@@ -27,7 +27,7 @@ function callStartReducer(dispatch, action) {
     if (action.type) {
         dispatch({
             type: action.type,
-            payload: action.payload['action-redux/payload'] || {},
+            payload: action.meta['action-redux/payload'] || {},
             meta: _extends({}, action.meta, _defineProperty({}, _constants.KEY.LIFECYCLE, 'start'))
         });
     }
@@ -50,7 +50,7 @@ exports.default = function (_ref) {
                             }, action, error));
                         });
                     } else {
-                        return action(dispatch, getState);
+                        return action({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
                     }
                 } else {
                     return next(action);
