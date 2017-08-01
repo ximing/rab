@@ -39,15 +39,17 @@ function initRab(createOpts) {
         routerMiddleware = createOpts.routerMiddleware,
         setupHistory = createOpts.setupHistory;
     /**
-     * Create a dva instance.
+     * Create a rab instance.
      */
 
     return function rab() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
+        options = Object.assign({}, options, { historyFirstCall: true });
         // history and initialState does not pass to plugin
         var history = options.history || defaultHistory;
         var initialState = options.initialState || {};
+        var firstCall = !!options.historyFirstCall;
         delete options.history;
         delete options.initialState;
 
@@ -207,7 +209,9 @@ function initRab(createOpts) {
             var ReactDOM = require('react-dom');
             ReactDOM.render(_react2.default.createElement(getProvider(store, app, router)), container, function () {
                 setTimeout(function () {
-                    history.push(window.location);
+                    if (firstCall) {
+                        history.push(window.location);
+                    }
                 }, 100);
             });
         }
