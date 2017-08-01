@@ -16,7 +16,7 @@ export default function initRab(createOpts) {
      * Create a rab instance.
      */
     return function rab(options = {}) {
-        options = Object.assign({},options,{historyFirstCall:true});
+        options = Object.assign({historyFirstCall:true},options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
