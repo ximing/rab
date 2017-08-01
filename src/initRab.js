@@ -13,12 +13,14 @@ export default function initRab(createOpts) {
         setupHistory
     } = createOpts;
     /**
-     * Create a dva instance.
+     * Create a rab instance.
      */
     return function rab(options = {}) {
+        options = Object.assign({},options,{historyFirstCall:true});
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
+        const firstCall = !!options.historyFirstCall;
         delete options.history;
         delete options.initialState;
 
@@ -159,7 +161,9 @@ export default function initRab(createOpts) {
             const ReactDOM = require('react-dom');
             ReactDOM.render(React.createElement(getProvider(store, app, router)), container, () => {
                 setTimeout(() => {
-                    history.push(window.location);
+                    if(firstCall){
+                        history.push(window.location);
+                    }
                 }, 100);
             });
         }
