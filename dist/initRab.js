@@ -45,7 +45,7 @@ function initRab(createOpts) {
     return function rab() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-        options = Object.assign({}, options, { historyFirstCall: true });
+        options = Object.assign({ historyFirstCall: true }, options);
         // history and initialState does not pass to plugin
         var history = options.history || defaultHistory;
         var initialState = options.initialState || {};
