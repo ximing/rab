@@ -7,29 +7,30 @@ import {
     applyMiddleware,
     compose,
     combineReducers
-}from 'redux';
+} from 'redux';
 
 import rabMiddleware from './redux/middleware';
 
 let _reduxStore = null;
 
-export const createReduxStore = function (middlewares,initialState,reducers,options) {
-    const {routerMiddleware,extraEnhancers,extraReducers} = options;
+export const createReduxStore = function (middlewares, initialState, reducers, options) {
+    const {routerMiddleware, extraEnhancers, extraReducers} = options;
     // create store
     let _middlewares = [...middlewares];
     if (routerMiddleware) {
-        _middlewares = [routerMiddleware,...middlewares];
+        _middlewares = [routerMiddleware, ...middlewares];
     }
     let devtools = () => noop => noop;
-    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-        devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-    }
+    // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
+    //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
+    // }
+    console.log('_middlewares', middlewares, routerMiddleware);
     const enhancers = [
-        applyMiddleware(rabMiddleware,..._middlewares),
+        applyMiddleware(rabMiddleware, ..._middlewares),
         devtools(),
         ...extraEnhancers,
     ];
-    _reduxStore  = createStore(
+    _reduxStore = createStore(
         createReducer(),
         initialState,
         compose(...enhancers),
@@ -39,11 +40,12 @@ export const createReduxStore = function (middlewares,initialState,reducers,opti
         return combineReducers({
             ...reducers,
             ...extraReducers
-        })
+        });
     }
+
     return _reduxStore;
-}
+};
 
 export const getReduxStore = function () {
     return _reduxStore;
-}
+};

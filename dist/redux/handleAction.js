@@ -1,7 +1,7 @@
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _includes2 = require('lodash/includes');
@@ -53,50 +53,50 @@ var includes = _includes3.default;
 
 
 function safeMap(state, fn, action) {
-  switch (typeof fn === 'undefined' ? 'undefined' : _typeof(fn)) {
-    case 'function':
-      {
-        var result = fn(state, action);
-        return result;
-      }
-    default:
-      return state;
-  }
+    switch (typeof fn === 'undefined' ? 'undefined' : _typeof(fn)) {
+        case 'function':
+            {
+                var result = fn(state, action);
+                return result;
+            }
+        default:
+            return state;
+    }
 }
 
 function handleAction(type) {
-  var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : identity;
-  var defaultState = arguments[2];
+    var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : identity;
+    var defaultState = arguments[2];
 
-  var types = type.toString().split(_combineActions.ACTION_TYPE_DELIMITER);
-  (0, _invariant2.default)(!isUndefined(defaultState), 'defaultState for reducer handling ' + types.join(', ') + ' should be defined');
-  (0, _invariant2.default)(isFunction(reducer) || isPlainObject(reducer), 'Expected reducer to be a function or object with next and throw reducers');
+    var types = type.toString().split(_combineActions.ACTION_TYPE_DELIMITER);
+    (0, _invariant2.default)(!isUndefined(defaultState), 'defaultState for reducer handling ' + types.join(', ') + ' should be defined');
+    (0, _invariant2.default)(isFunction(reducer) || isPlainObject(reducer), 'Expected reducer to be a function or object with next and throw reducers');
 
-  var _ref = isFunction(reducer) ? [identity, reducer, reducer, identity] : [reducer.start, reducer.next || reducer.success, reducer.throw || reducer.error, reducer.finish].map(function (aReducer) {
-    return isNil(aReducer) ? identity : aReducer;
-  }),
-      _ref2 = _slicedToArray(_ref, 4),
-      startReducer = _ref2[0],
-      nextReducer = _ref2[1],
-      throwReducer = _ref2[2],
-      finishReducer = _ref2[3];
+    var _ref = isFunction(reducer) ? [identity, reducer, reducer, identity] : [reducer.start, reducer.next || reducer.success, reducer.throw || reducer.error, reducer.finish].map(function (aReducer) {
+        return isNil(aReducer) ? identity : aReducer;
+    }),
+        _ref2 = _slicedToArray(_ref, 4),
+        startReducer = _ref2[0],
+        nextReducer = _ref2[1],
+        throwReducer = _ref2[2],
+        finishReducer = _ref2[3];
 
-  return function () {
-    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultState;
-    var action = arguments[1];
-    var actionType = action.type,
-        meta = action.meta;
+    return function () {
+        var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultState;
+        var action = arguments[1];
+        var actionType = action.type,
+            meta = action.meta;
 
-    var lifecycle = meta ? meta[_constants.KEY.LIFECYCLE] : null;
-    if (!actionType || !includes(types, actionType.toString())) {
-      return state;
-    }
-    if (lifecycle === 'start') {
-      state = safeMap(state, startReducer, action);
-    } else {
-      state = (action.error === true ? throwReducer : nextReducer)(state, action);
-      state = safeMap(state, finishReducer, action);
-    }
-    return state;
-  };
+        var lifecycle = meta ? meta[_constants.KEY.LIFECYCLE] : null;
+        if (!actionType || !includes(types, actionType.toString())) {
+            return state;
+        }
+        if (lifecycle === 'start') {
+            state = safeMap(state, startReducer, action);
+        } else {
+            state = (action.error === true ? throwReducer : nextReducer)(state, action);
+            state = safeMap(state, finishReducer, action);
+        }
+        return state;
+    };
 }

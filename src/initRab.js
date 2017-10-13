@@ -1,9 +1,10 @@
 import React from 'react';
-import {Provider}from 'react-redux';
+import {Provider} from 'react-redux';
 import _ from 'lodash';
 import invariant from 'invariant';
 import handleActions from './redux/handleActions';
-import {createReduxStore} from './store'
+import {createReduxStore} from './store';
+
 const isPlainObject = _.isPlainObject;
 export default function initRab(createOpts) {
     const {
@@ -16,11 +17,13 @@ export default function initRab(createOpts) {
      * Create a rab instance.
      */
     return function rab(options = {}) {
-        options = Object.assign({historyFirstCall:true},options);
+        options = Object.assign({historyFirstCall: true, useHistory: true}, options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
         const firstCall = !!options.historyFirstCall;
+        const useHistory = options.useHistory;
+        delete options.useHistory;
         delete options.history;
         delete options.initialState;
 
@@ -36,6 +39,7 @@ export default function initRab(createOpts) {
             use,
             addModel,
             router,
+            top,
             start
         };
         return app;
@@ -46,7 +50,7 @@ export default function initRab(createOpts) {
          * @param middleware
          */
         function use(middleware) {
-            this._middleware.concat(middleware);
+            this._middleware.push(middleware);
         }
 
         /**
@@ -72,6 +76,11 @@ export default function initRab(createOpts) {
             this._router = router;
         }
 
+        function top(top) {
+            invariant(typeof top === 'function', 'app.top: top should be function');
+            this._router = top;
+        }
+
         /**
          * Start the app
          * @param container selector | HTMLElement
@@ -84,7 +93,9 @@ export default function initRab(createOpts) {
             }
 
             invariant(!container || isHTMLElement(container), 'app.start: container should be HTMLElement');
-            invariant(this._router, 'app.start: router should be defined');
+            // if(this._router){
+            //     invariant(this._router, 'app.start: router should be defined');
+            // }
 
             // get reducers from model
             const reducers = {...initialReducer};
@@ -93,7 +104,7 @@ export default function initRab(createOpts) {
             this._models.forEach(m => {
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
                 // actions = Object.assign(actions, m.mutations);
-            })
+            });
 
             const extraReducers = options['extraReducers'] || {};
             invariant(
@@ -108,13 +119,13 @@ export default function initRab(createOpts) {
 
             // create store
             let storeOptions = {extraEnhancers, extraReducers};
-            if (routerMiddleware) {
+            if (useHistory && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
             const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions);
 
             // setup history
-            if (setupHistory) {
+            if (useHistory && setupHistory) {
                 setupHistory.call(this, history);
             }
 
@@ -125,11 +136,18 @@ export default function initRab(createOpts) {
                         if (Object.prototype.hasOwnProperty.call(model.subscriptions, key)) {
                             const sub = model.subscriptions[key];
                             invariant(typeof sub === 'function', 'app.start: subscription should be function');
-                            sub({
-                                dispatch: app._store.dispatch,
-                                history: app._history,
-                                getState: app._store.getState
-                            });
+                            if (useHistory) {
+                                sub({
+                                    dispatch: app._store.dispatch,
+                                    history: app._history,
+                                    getState: app._store.getState
+                                });
+                            } else {
+                                sub({
+                                    dispatch: app._store.dispatch,
+                                    getState: app._store.getState
+                                });
+                            }
                         }
                     }
                 }
@@ -152,7 +170,10 @@ export default function initRab(createOpts) {
         function getProvider(store, app, router) {
             return extraProps => (
                 <Provider store={store}>
-                    { router({app, history: app._history, ...extraProps}) }
+                    {
+                        useHistory ? router({app, history: app._history, ...extraProps}) :
+                            router({app, ...extraProps})
+                    }
                 </Provider>
             );
         }
@@ -161,7 +182,7 @@ export default function initRab(createOpts) {
             const ReactDOM = require('react-dom');
             ReactDOM.render(React.createElement(getProvider(store, app, router)), container, () => {
                 setTimeout(() => {
-                    if(firstCall){
+                    if (useHistory && firstCall) {
                         history.push(window.location);
                     }
                 }, 100);

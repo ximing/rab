@@ -37,15 +37,17 @@ var createReduxStore = exports.createReduxStore = function createReduxStore(midd
             return noop;
         };
     };
-    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-        devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-    }
+    // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
+    //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
+    // }
+    console.log('_middlewares', middlewares, routerMiddleware);
     var enhancers = [_redux.applyMiddleware.apply(undefined, [_middleware2.default].concat(_toConsumableArray(_middlewares))), devtools()].concat(_toConsumableArray(extraEnhancers));
     _reduxStore = (0, _redux.createStore)(createReducer(), initialState, _redux.compose.apply(undefined, _toConsumableArray(enhancers)));
 
     function createReducer() {
         return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers));
     }
+
     return _reduxStore;
 };
 

@@ -1,7 +1,7 @@
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 exports.ACTION_TYPE_DELIMITER = undefined;
 
@@ -42,24 +42,24 @@ var toString = _toString3.default;
 var ACTION_TYPE_DELIMITER = exports.ACTION_TYPE_DELIMITER = '||';
 
 function isValidActionType(type) {
-  return isString(type) || isFunction(type) || isSymbol(type);
+    return isString(type) || isFunction(type) || isSymbol(type);
 }
 
 function isValidActionTypes(types) {
-  if (isEmpty(types)) {
-    return false;
-  }
-  return types.every(isValidActionType);
+    if (isEmpty(types)) {
+        return false;
+    }
+    return types.every(isValidActionType);
 }
 
 function combineActions() {
-  for (var _len = arguments.length, actionsTypes = Array(_len), _key = 0; _key < _len; _key++) {
-    actionsTypes[_key] = arguments[_key];
-  }
+    for (var _len = arguments.length, actionsTypes = Array(_len), _key = 0; _key < _len; _key++) {
+        actionsTypes[_key] = arguments[_key];
+    }
 
-  (0, _invariant2.default)(isValidActionTypes(actionsTypes), 'Expected action types to be strings, symbols, or action creators');
-  var combinedActionType = actionsTypes.map(toString).join(ACTION_TYPE_DELIMITER);
-  return { toString: function toString() {
-      return combinedActionType;
-    } };
+    (0, _invariant2.default)(isValidActionTypes(actionsTypes), 'Expected action types to be strings, symbols, or action creators');
+    var combinedActionType = actionsTypes.map(toString).join(ACTION_TYPE_DELIMITER);
+    return { toString: function toString() {
+            return combinedActionType;
+        } };
 }

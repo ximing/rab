@@ -10,8 +10,8 @@ let actions = {};
 export const setAction = function (type,action) {
     warning(!actions[type], `action ${type} init multiple times`);
     actions[type] = action;
-}
+};
 
 export const getAction = function (type) {
-    return actions[type]
-}
+    return actions[type];
+};

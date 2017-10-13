@@ -1,8 +1,8 @@
 import { browserHistory } from '../router';
 import {
-  routerMiddleware,
-  syncHistoryWithStore,
-  routerReducer as routing
+    routerMiddleware,
+    syncHistoryWithStore,
+    routerReducer as routing
 } from 'react-router-redux';
 import initRab from './initRab';
 export createAction from './redux/createAction';

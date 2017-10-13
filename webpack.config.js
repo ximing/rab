@@ -12,6 +12,12 @@ module.exports = {
             `webpack-dev-server/client?${c9 ? 'http://rab-yeanzhi.c9users.io' : 'http://127.0.0.1:8765'}`,
             'webpack/hot/only-dev-server',
             './demo/index.js'
+        ],
+        'simple':[
+            'react-hot-loader/patch',
+            `webpack-dev-server/client?${c9 ? 'http://rab-yeanzhi.c9users.io' : 'http://127.0.0.1:8765'}`,
+            'webpack/hot/only-dev-server',
+            './demo/simple.js'
         ]
     },
     output: {
@@ -37,6 +43,10 @@ module.exports = {
         },
         historyApiFallback: {
             rewrites: [
+                {
+                    from: /^\/simple.*$/,
+                    to: '/simple.html'
+                },
                 {
                     from: /^\/.*$/,
                     to: '/index.html'

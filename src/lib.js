@@ -6,39 +6,39 @@ import {getReduxStore} from './store';
 import {getAction} from './actions';
 
 export const dispatch = function (args) {
-    if(getReduxStore()){
-        getReduxStore().dispatch(args)
+    if(getReduxStore()) {
+        getReduxStore().dispatch(args);
     }else{
-        throw new Error('could not call dispatch before init store')
+        throw new Error('could not call dispatch before init store');
     }
 };
 
 export const getState = function (args) {
-    if(getReduxStore()){
-        getReduxStore().getState(args)
+    if(getReduxStore()) {
+        getReduxStore().getState(args);
     }else{
-        throw new Error('could not call getState before init store')
+        throw new Error('could not call getState before init store');
     }
 };
 
 export const call = function(type, ...args) {
-    if(getAction(type)){
-        dispatch(getAction(type)(...args))
+    if(getAction(type)) {
+        dispatch(getAction(type)(...args));
     }else{
         dispatch({
             type,
             payload:{...args}
-        })
+        });
     }
-}
+};
 
 export const put = function({type,payload}) {
-    if(getAction(type)){
-        dispatch(getAction(type)(payload||{}))
+    if(getAction(type)) {
+        dispatch(getAction(type)(payload || {}));
     }else{
         dispatch({
             type,
             payload
-        })
+        });
     }
-}
+};

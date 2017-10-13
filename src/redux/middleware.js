@@ -8,10 +8,10 @@ function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
 function callStartReducer(dispatch,action) {
-    if(action.type){
+    if(action.type) {
         dispatch({
             type:action.type,
-            payload:action.meta['action-redux/payload']||{},
+            payload:action.meta['action-redux/payload'] || {},
             meta:{
                 ...action.meta,
                 [KEY.LIFECYCLE]:'start'
@@ -46,7 +46,7 @@ export default ({dispatch, getState}) => next => action => {
             return next(action);
         }
     } else  {
-        if(typeof action.payload === 'function' && !isPromise(action.payload)){
+        if(typeof action.payload === 'function' && !isPromise(action.payload)) {
             let res = action.payload({dispatch, getState,put,call});
             if (isPromise(res)) {
                 callStartReducer(dispatch,action);
