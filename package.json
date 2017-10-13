@@ -27,7 +27,7 @@
     "classnames": "^2.2.5",
     "flux-standard-action": "^1.2.0",
     "invariant": "^2.2.2",
-    "lodash": "^4.17.4",
+    "lodash.isplainobject": "^4.0.6",
     "react-redux": "^5.0.4",
     "react-router": "^3.0.5",
     "react-router-redux": "^4.0.8",

@@ -1,11 +1,9 @@
 import React from 'react';
-import {Provider} from 'react-redux';
-import _ from 'lodash';
+import {Provider}from 'react-redux';
 import invariant from 'invariant';
 import handleActions from './redux/handleActions';
-import {createReduxStore} from './store';
-
-const isPlainObject = _.isPlainObject;
+import {createReduxStore} from './store'
+import isplainobject from 'lodash.isplainobject';
 export default function initRab(createOpts) {
     const {
         initialReducer,
@@ -93,9 +91,7 @@ export default function initRab(createOpts) {
             }
 
             invariant(!container || isHTMLElement(container), 'app.start: container should be HTMLElement');
-            // if(this._router){
-            //     invariant(this._router, 'app.start: router should be defined');
-            // }
+            invariant(this._router, 'app.start: router should be defined');
 
             // get reducers from model
             const reducers = {...initialReducer};
