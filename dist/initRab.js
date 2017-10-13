@@ -4,10 +4,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _isPlainObject2 = require('lodash/isPlainObject');
-
-var _isPlainObject3 = _interopRequireDefault(_isPlainObject2);
-
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
@@ -30,9 +26,12 @@ var _handleActions2 = _interopRequireDefault(_handleActions);
 
 var _store = require('./store');
 
+var _lodash = require('lodash.isplainobject');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var isPlainObject = _isPlainObject3.default;
 function initRab(createOpts) {
     var initialReducer = createOpts.initialReducer,
         defaultHistory = createOpts.defaultHistory,
@@ -120,9 +119,7 @@ function initRab(createOpts) {
             }
 
             (0, _invariant2.default)(!container || isHTMLElement(container), 'app.start: container should be HTMLElement');
-            // if(this._router){
-            //     invariant(this._router, 'app.start: router should be defined');
-            // }
+            (0, _invariant2.default)(this._router, 'app.start: router should be defined');
 
             // get reducers from model
             var reducers = _extends({}, initialReducer);
