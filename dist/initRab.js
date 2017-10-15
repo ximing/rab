@@ -242,9 +242,9 @@ function initRab(createOpts) {
             (0, _invariant2.default)(!app._models.some(function (model) {
                 return model.namespace === namespace;
             }), 'app.model: namespace should be unique');
-            (0, _invariant2.default)(!model.subscriptions || isPlainObject(model.subscriptions), 'app.model: subscriptions should be Object');
-            (0, _invariant2.default)(!reducers || isPlainObject(reducers), 'app.model: reducers should be Object');
-            (0, _invariant2.default)(!actions || isPlainObject(actions), 'app.model: actions should be Object');
+            (0, _invariant2.default)(!model.subscriptions || (0, _lodash2.default)(model.subscriptions), 'app.model: subscriptions should be Object');
+            (0, _invariant2.default)(!reducers || (0, _lodash2.default)(reducers), 'app.model: reducers should be Object');
+            (0, _invariant2.default)(!actions || (0, _lodash2.default)(actions), 'app.model: actions should be Object');
 
             return model;
         }
@@ -262,7 +262,7 @@ function initRab(createOpts) {
         }
 
         function defaultMutationReducer(state, action) {
-            if (isPlainObject(state)) {
+            if ((0, _lodash2.default)(state)) {
                 return Object.assign({}, state, action.payload);
             } else if (Array.isArray(state)) {
                 return action.payload;
