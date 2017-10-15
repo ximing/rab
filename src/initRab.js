@@ -3,7 +3,7 @@ import {Provider}from 'react-redux';
 import invariant from 'invariant';
 import handleActions from './redux/handleActions';
 import {createReduxStore} from './store'
-import isplainobject from 'lodash.isplainobject';
+import isPlainObject from 'lodash.isplainobject';
 export default function initRab(createOpts) {
     const {
         initialReducer,
