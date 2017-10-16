@@ -16,7 +16,7 @@ function stop(time) {
 }
 
 const app = rab({
-    useHistory: false
+    simple: true
 });
 // 2. Model
 let count = createModel({
@@ -124,7 +124,7 @@ const App = connect(({count}) => ({
     );
 });
 
-app.top(({}) => <App/>);
+app.registerRoot(({}) => <App/>);
 
 // 5. Start
 app.start('#demo_container');

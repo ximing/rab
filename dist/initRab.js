@@ -44,13 +44,13 @@ function initRab(createOpts) {
     return function rab() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-        options = Object.assign({ historyFirstCall: true, useHistory: true }, options);
+        options = Object.assign({ historyFirstCall: true, simple: false }, options);
         // history and initialState does not pass to plugin
         var history = options.history || defaultHistory;
         var initialState = options.initialState || {};
         var firstCall = !!options.historyFirstCall;
-        var useHistory = options.useHistory;
-        delete options.useHistory;
+        var simpleMode = options.simple;
+        delete options.simple;
         delete options.history;
         delete options.initialState;
 
@@ -66,7 +66,7 @@ function initRab(createOpts) {
             use: use,
             addModel: addModel,
             router: router,
-            top: top,
+            registerRoot: registerRoot,
             start: start
         };
         return app;
@@ -102,7 +102,7 @@ function initRab(createOpts) {
             this._router = router;
         }
 
-        function top(top) {
+        function registerRoot(top) {
             (0, _invariant2.default)(typeof top === 'function', 'app.top: top should be function');
             this._router = top;
         }
@@ -139,13 +139,13 @@ function initRab(createOpts) {
 
             // create store
             var storeOptions = { extraEnhancers: extraEnhancers, extraReducers: extraReducers };
-            if (useHistory && routerMiddleware) {
+            if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
             var store = this._store = (0, _store.createReduxStore)(this._middleware, initialState, reducers, storeOptions);
 
             // setup history
-            if (useHistory && setupHistory) {
+            if (!simpleMode && setupHistory) {
                 setupHistory.call(this, history);
             }
 
@@ -163,7 +163,7 @@ function initRab(createOpts) {
                             if (Object.prototype.hasOwnProperty.call(model.subscriptions, key)) {
                                 var sub = model.subscriptions[key];
                                 (0, _invariant2.default)(typeof sub === 'function', 'app.start: subscription should be function');
-                                if (useHistory) {
+                                if (!simpleMode) {
                                     sub({
                                         dispatch: app._store.dispatch,
                                         history: app._history,
@@ -214,7 +214,7 @@ function initRab(createOpts) {
                 return _react2.default.createElement(
                     _reactRedux.Provider,
                     { store: store },
-                    useHistory ? router(_extends({ app: app, history: app._history }, extraProps)) : router(_extends({ app: app }, extraProps))
+                    !simpleMode ? router(_extends({ app: app, history: app._history }, extraProps)) : router(_extends({ app: app }, extraProps))
                 );
             };
         }
@@ -223,7 +223,7 @@ function initRab(createOpts) {
             var ReactDOM = require('react-dom');
             ReactDOM.render(_react2.default.createElement(getProvider(store, app, router)), container, function () {
                 setTimeout(function () {
-                    if (useHistory && firstCall) {
+                    if (!simpleMode && firstCall) {
                         history.push(window.location);
                     }
                 }, 100);

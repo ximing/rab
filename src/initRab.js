@@ -15,13 +15,13 @@ export default function initRab(createOpts) {
      * Create a rab instance.
      */
     return function rab(options = {}) {
-        options = Object.assign({historyFirstCall: true, useHistory: true}, options);
+        options = Object.assign({historyFirstCall: true, simple: false}, options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
         const firstCall = !!options.historyFirstCall;
-        const useHistory = options.useHistory;
-        delete options.useHistory;
+        const simpleMode = options.simple;
+        delete options.simple;
         delete options.history;
         delete options.initialState;
 
@@ -37,7 +37,7 @@ export default function initRab(createOpts) {
             use,
             addModel,
             router,
-            top,
+            registerRoot,
             start
         };
         return app;
@@ -74,7 +74,7 @@ export default function initRab(createOpts) {
             this._router = router;
         }
 
-        function top(top) {
+        function registerRoot(top) {
             invariant(typeof top === 'function', 'app.top: top should be function');
             this._router = top;
         }
@@ -115,13 +115,13 @@ export default function initRab(createOpts) {
 
             // create store
             let storeOptions = {extraEnhancers, extraReducers};
-            if (useHistory && routerMiddleware) {
+            if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
             const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions);
 
             // setup history
-            if (useHistory && setupHistory) {
+            if (!simpleMode && setupHistory) {
                 setupHistory.call(this, history);
             }
 
@@ -132,7 +132,7 @@ export default function initRab(createOpts) {
                         if (Object.prototype.hasOwnProperty.call(model.subscriptions, key)) {
                             const sub = model.subscriptions[key];
                             invariant(typeof sub === 'function', 'app.start: subscription should be function');
-                            if (useHistory) {
+                            if (!simpleMode) {
                                 sub({
                                     dispatch: app._store.dispatch,
                                     history: app._history,
@@ -167,7 +167,7 @@ export default function initRab(createOpts) {
             return extraProps => (
                 <Provider store={store}>
                     {
-                        useHistory ? router({app, history: app._history, ...extraProps}) :
+                        !simpleMode ? router({app, history: app._history, ...extraProps}) :
                             router({app, ...extraProps})
                     }
                 </Provider>
@@ -178,7 +178,7 @@ export default function initRab(createOpts) {
             const ReactDOM = require('react-dom');
             ReactDOM.render(React.createElement(getProvider(store, app, router)), container, () => {
                 setTimeout(() => {
-                    if (useHistory && firstCall) {
+                    if (!simpleMode && firstCall) {
                         history.push(window.location);
                     }
                 }, 100);
