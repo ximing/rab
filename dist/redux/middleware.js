@@ -23,6 +23,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
+
 function callStartReducer(dispatch, action) {
     if (action.type) {
         dispatch({
@@ -33,66 +34,77 @@ function callStartReducer(dispatch, action) {
     }
 }
 
-exports.default = function (_ref) {
-    var dispatch = _ref.dispatch,
-        getState = _ref.getState;
-    return function (next) {
-        return function (action) {
-            if (!(0, _fluxStandardAction.isFSA)(action)) {
-                if (typeof action === 'function') {
-                    if (isPromise(action)) {
-                        callStartReducer(dispatch, action);
-                        action.then(function (result) {
-                            dispatch(_extends({}, action, result));
-                        }, function (error) {
-                            dispatch(_extends({
-                                error: true
-                            }, action, error));
-                        });
+exports.default = function (debug) {
+    return function (_ref) {
+        var dispatch = _ref.dispatch,
+            getState = _ref.getState;
+        return function (next) {
+            return function (action) {
+                if (!(0, _fluxStandardAction.isFSA)(action)) {
+                    if (typeof action === 'function') {
+                        if (isPromise(action)) {
+                            callStartReducer(dispatch, action);
+                            action.then(function (result) {
+                                dispatch(_extends({}, action, result));
+                            }, function (error) {
+                                dispatch(_extends({
+                                    error: true
+                                }, action, error));
+                                if (debug) {
+                                    throw error;
+                                }
+                            });
+                        } else {
+                            return action({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
+                        }
                     } else {
-                        return action({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
+                        return next(action);
                     }
                 } else {
-                    return next(action);
-                }
-            } else {
-                if (typeof action.payload === 'function' && !isPromise(action.payload)) {
-                    var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
-                    if (isPromise(res)) {
-                        callStartReducer(dispatch, action);
-                        res.then(function (result) {
+                    if (typeof action.payload === 'function' && !isPromise(action.payload)) {
+                        var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
+                        if (isPromise(res)) {
+                            callStartReducer(dispatch, action);
+                            res.then(function (result) {
+                                dispatch(_extends({}, action, {
+                                    payload: result
+                                }));
+                            }, function (error) {
+                                dispatch(_extends({}, action, {
+                                    payload: error,
+                                    error: true
+                                }));
+                                if (debug) {
+                                    throw error;
+                                }
+                            });
+                        } else {
                             dispatch(_extends({}, action, {
-                                payload: result
+                                payload: res
                             }));
-                        }, function (error) {
-                            dispatch(_extends({}, action, {
-                                payload: error,
-                                error: true
-                            }));
-                        });
+                        }
                     } else {
-                        dispatch(_extends({}, action, {
-                            payload: res
-                        }));
-                    }
-                } else {
-                    if (isPromise(action.payload)) {
-                        callStartReducer(dispatch, action);
-                        action.payload.then(function (result) {
-                            dispatch(_extends({}, action, {
-                                payload: result
-                            }));
-                        }, function (error) {
-                            dispatch(_extends({}, action, {
-                                payload: error,
-                                error: true
-                            }));
-                        });
-                    } else {
-                        next(action);
+                        if (isPromise(action.payload)) {
+                            callStartReducer(dispatch, action);
+                            action.payload.then(function (result) {
+                                dispatch(_extends({}, action, {
+                                    payload: result
+                                }));
+                            }, function (error) {
+                                dispatch(_extends({}, action, {
+                                    payload: error,
+                                    error: true
+                                }));
+                                if (debug) {
+                                    throw error;
+                                }
+                            });
+                        } else {
+                            next(action);
+                        }
                     }
                 }
-            }
+            };
         };
     };
 };

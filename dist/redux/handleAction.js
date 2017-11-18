@@ -94,6 +94,9 @@ function handleAction(type) {
         if (lifecycle === 'start') {
             state = safeMap(state, startReducer, action);
         } else {
+            if (action.error === true && (identity === throwReducer || nextReducer === throwReducer)) {
+                throw action.payload;
+            }
             state = (action.error === true ? throwReducer : nextReducer)(state, action);
             state = safeMap(state, finishReducer, action);
         }

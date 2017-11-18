@@ -23,6 +23,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 var _reduxStore = null;
 
 var createReduxStore = exports.createReduxStore = function createReduxStore(middlewares, initialState, reducers, options) {
+    var debug = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
     var routerMiddleware = options.routerMiddleware,
         extraEnhancers = options.extraEnhancers,
         extraReducers = options.extraReducers;
@@ -40,8 +41,7 @@ var createReduxStore = exports.createReduxStore = function createReduxStore(midd
     // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
     //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
     // }
-    console.log('_middlewares', middlewares, routerMiddleware);
-    var enhancers = [_redux.applyMiddleware.apply(undefined, [_middleware2.default].concat(_toConsumableArray(_middlewares))), devtools()].concat(_toConsumableArray(extraEnhancers));
+    var enhancers = [_redux.applyMiddleware.apply(undefined, [(0, _middleware2.default)(debug)].concat(_toConsumableArray(_middlewares))), devtools()].concat(_toConsumableArray(extraEnhancers));
     _reduxStore = (0, _redux.createStore)(createReducer(), initialState, _redux.compose.apply(undefined, _toConsumableArray(enhancers)));
 
     function createReducer() {

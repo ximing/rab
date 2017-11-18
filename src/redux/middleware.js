@@ -34,12 +34,14 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                         });
                     },
                     (error) => {
-                        (debug && console.error(error));
                         dispatch({
                             error: true,
                             ...action,
                             ...error
                         });
+                        if(debug){
+                            throw error;
+                        }
                     }
                 );
             } else {
@@ -61,12 +63,14 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                         });
                     },
                     (error) => {
-                        (debug && console.error(error));
                         dispatch({
                             ...action,
                             payload: error,
                             error: true
                         });
+                        if(debug){
+                            throw error;
+                        }
                     }
                 );
             } else {
@@ -86,12 +90,14 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                         });
                     },
                     (error) => {
-                        (debug && console.error(error));
                         dispatch({
                             ...action,
                             payload: error,
                             error: true
                         });
+                        if(debug){
+                            throw error;
+                        }
                     }
                 );
             } else {

@@ -49,10 +49,12 @@ function initRab(createOpts) {
         var history = options.history || defaultHistory;
         var initialState = options.initialState || {};
         var firstCall = !!options.historyFirstCall;
+        var debug = !!options.debug;
         var simpleMode = options.simple;
         delete options.simple;
         delete options.history;
         delete options.initialState;
+        delete options.debug;
 
         var app = {
             //private member variable
@@ -142,7 +144,7 @@ function initRab(createOpts) {
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            var store = this._store = (0, _store.createReduxStore)(this._middleware, initialState, reducers, storeOptions);
+            var store = this._store = (0, _store.createReduxStore)(this._middleware, initialState, reducers, storeOptions, debug);
 
             // setup history
             if (!simpleMode && setupHistory) {

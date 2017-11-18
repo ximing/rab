@@ -16,6 +16,7 @@ function stop(time) {
 }
 
 const app = rab({
+    debug: true,
     simple: true
 });
 // 2. Model
@@ -67,6 +68,15 @@ let count = createModel({
                 console.log('run finish', action)
                 return Object.assign({}, state, {loading: false});
             }
+        },
+        asyncError: {
+            success(state, action) {
+                return Object.assign({}, state)
+            },
+            error(state, action) {
+                console.log(action);
+                return state;
+            }
         }
     },
     actions: {
@@ -82,6 +92,10 @@ let count = createModel({
         async asyncNewApi() {
             await stop();
             return -100;
+        },
+        async asyncError() {
+            a[0] = 1;
+            return {};
         }
     },
     subscriptions: {
@@ -119,6 +133,10 @@ const App = connect(({count}) => ({
             <button key="asyncNewApi" onClick={() => {
                 call('count.asyncNewApi', 1, 2, 3);
             }}>asyncNewApi
+            </button>
+            <button key="asyncError" onClick={() => {
+                call('count.asyncError', 1, 2, 3);
+            }}>async error
             </button>
         </div>
     );
