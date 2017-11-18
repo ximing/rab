@@ -1,4 +1,5 @@
 import _ from 'lodash';
+
 const identity = _.identity;
 const isFunction = _.isFunction;
 const isUndefined = _.isUndefined;
@@ -6,8 +7,8 @@ const isNil = _.isNil;
 const isPlainObject = _.isPlainObject;
 const includes = _.includes;
 import invariant from 'invariant';
-import { ACTION_TYPE_DELIMITER } from './combineActions';
-import { KEY } from '../constants';
+import {ACTION_TYPE_DELIMITER} from './combineActions';
+import {KEY} from '../constants';
 
 
 function safeMap(state, fn, action) {
@@ -40,7 +41,7 @@ export default function handleAction(type, reducer = identity, defaultState) {
             .map(aReducer => (isNil(aReducer) ? identity : aReducer));
 
     return (state = defaultState, action) => {
-        const { type: actionType, meta } = action;
+        const {type: actionType, meta} = action;
         const lifecycle = meta ? meta[KEY.LIFECYCLE] : null;
         if (!actionType || !includes(types, actionType.toString())) {
             return state;
@@ -48,6 +49,9 @@ export default function handleAction(type, reducer = identity, defaultState) {
         if (lifecycle === 'start') {
             state = safeMap(state, startReducer, action);
         } else {
+            if (action.error === true && ((identity === throwReducer) || (nextReducer === throwReducer))) {
+                throw action.payload;
+            }
             state = (action.error === true ? throwReducer : nextReducer)(state, action);
             state = safeMap(state, finishReducer, action);
         }

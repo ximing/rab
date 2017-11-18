@@ -13,7 +13,7 @@ import rabMiddleware from './redux/middleware';
 
 let _reduxStore = null;
 
-export const createReduxStore = function (middlewares, initialState, reducers, options) {
+export const createReduxStore = function (middlewares, initialState, reducers, options, debug = false) {
     const {routerMiddleware, extraEnhancers, extraReducers} = options;
     // create store
     let _middlewares = [...middlewares];
@@ -24,9 +24,8 @@ export const createReduxStore = function (middlewares, initialState, reducers, o
     // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
     //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
     // }
-    console.log('_middlewares', middlewares, routerMiddleware);
     const enhancers = [
-        applyMiddleware(rabMiddleware, ..._middlewares),
+        applyMiddleware(rabMiddleware(debug), ..._middlewares),
         devtools(),
         ...extraEnhancers,
     ];

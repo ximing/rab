@@ -1,9 +1,10 @@
 import React from 'react';
-import {Provider}from 'react-redux';
+import {Provider} from 'react-redux';
 import invariant from 'invariant';
 import handleActions from './redux/handleActions';
 import {createReduxStore} from './store'
 import isPlainObject from 'lodash.isplainobject';
+
 export default function initRab(createOpts) {
     const {
         initialReducer,
@@ -20,10 +21,12 @@ export default function initRab(createOpts) {
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
         const firstCall = !!options.historyFirstCall;
+        const debug = !!options.debug;
         const simpleMode = options.simple;
         delete options.simple;
         delete options.history;
         delete options.initialState;
+        delete options.debug;
 
         const app = {
             //private member variable
@@ -118,7 +121,7 @@ export default function initRab(createOpts) {
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions);
+            const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions, debug);
 
             // setup history
             if (!simpleMode && setupHistory) {
