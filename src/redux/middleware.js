@@ -1,4 +1,3 @@
-import uuid from 'uuid';
 import {isFSA} from 'flux-standard-action';
 import {KEY} from '../constants';
 

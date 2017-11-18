@@ -1,9 +1,10 @@
 import React from 'react';
 import {Provider} from 'react-redux';
 import invariant from 'invariant';
+import _ from 'lodash';
 import handleActions from './redux/handleActions';
 import {createReduxStore} from './store'
-import isPlainObject from 'lodash.isplainobject';
+const isPlainObject = _.isPlainObject;
 
 export default function initRab(createOpts) {
     const {

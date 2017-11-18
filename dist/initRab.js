@@ -4,6 +4,10 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _isPlainObject2 = require('lodash/isPlainObject');
+
+var _isPlainObject3 = _interopRequireDefault(_isPlainObject2);
+
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
@@ -26,11 +30,9 @@ var _handleActions2 = _interopRequireDefault(_handleActions);
 
 var _store = require('./store');
 
-var _lodash = require('lodash.isplainobject');
-
-var _lodash2 = _interopRequireDefault(_lodash);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var isPlainObject = _isPlainObject3.default;
 
 function initRab(createOpts) {
     var initialReducer = createOpts.initialReducer,
@@ -244,9 +246,9 @@ function initRab(createOpts) {
             (0, _invariant2.default)(!app._models.some(function (model) {
                 return model.namespace === namespace;
             }), 'app.model: namespace should be unique');
-            (0, _invariant2.default)(!model.subscriptions || (0, _lodash2.default)(model.subscriptions), 'app.model: subscriptions should be Object');
-            (0, _invariant2.default)(!reducers || (0, _lodash2.default)(reducers), 'app.model: reducers should be Object');
-            (0, _invariant2.default)(!actions || (0, _lodash2.default)(actions), 'app.model: actions should be Object');
+            (0, _invariant2.default)(!model.subscriptions || isPlainObject(model.subscriptions), 'app.model: subscriptions should be Object');
+            (0, _invariant2.default)(!reducers || isPlainObject(reducers), 'app.model: reducers should be Object');
+            (0, _invariant2.default)(!actions || isPlainObject(actions), 'app.model: actions should be Object');
 
             return model;
         }
@@ -264,7 +266,7 @@ function initRab(createOpts) {
         }
 
         function defaultMutationReducer(state, action) {
-            if ((0, _lodash2.default)(state)) {
+            if (isPlainObject(state)) {
                 return Object.assign({}, state, action.payload);
             } else if (Array.isArray(state)) {
                 return action.payload;
