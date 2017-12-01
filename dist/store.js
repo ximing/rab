@@ -8,8 +8,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getReduxStore = exports.createReduxStore = undefined;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _redux = require('redux');
 
 var _middleware = require('./redux/middleware');
@@ -22,11 +20,10 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 var _reduxStore = null;
 
-var createReduxStore = exports.createReduxStore = function createReduxStore(middlewares, initialState, reducers, options) {
+var createReduxStore = exports.createReduxStore = function createReduxStore(middlewares, initialState, createReducer, options) {
     var debug = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
     var routerMiddleware = options.routerMiddleware,
-        extraEnhancers = options.extraEnhancers,
-        extraReducers = options.extraReducers;
+        extraEnhancers = options.extraEnhancers;
     // create store
 
     var _middlewares = [].concat(_toConsumableArray(middlewares));
@@ -38,15 +35,11 @@ var createReduxStore = exports.createReduxStore = function createReduxStore(midd
             return noop;
         };
     };
-    // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-    //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-    // }
-    var enhancers = [_redux.applyMiddleware.apply(undefined, [(0, _middleware2.default)(debug)].concat(_toConsumableArray(_middlewares))), devtools()].concat(_toConsumableArray(extraEnhancers));
-    _reduxStore = (0, _redux.createStore)(createReducer(), initialState, _redux.compose.apply(undefined, _toConsumableArray(enhancers)));
-
-    function createReducer() {
-        return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers));
+    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
+        devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
     }
+    var enhancers = [_redux.applyMiddleware.apply(undefined, [(0, _middleware2.default)(debug)].concat(_toConsumableArray(_middlewares))), devtools(window.__REDUX_DEVTOOLS_EXTENSION__OPTIONS)].concat(_toConsumableArray(extraEnhancers));
+    _reduxStore = (0, _redux.createStore)(createReducer(), initialState, _redux.compose.apply(undefined, _toConsumableArray(enhancers)));
 
     return _reduxStore;
 };

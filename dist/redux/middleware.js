@@ -54,49 +54,45 @@ exports.default = function (debug) {
                     } else {
                         return next(action);
                     }
-                } else {
-                    if (typeof action.payload === 'function' && !isPromise(action.payload)) {
-                        var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
-                        if (isPromise(res)) {
-                            callStartReducer(dispatch, action);
-                            res.then(function (result) {
-                                dispatch(_extends({}, action, {
-                                    payload: result
-                                }));
-                            }, function (error) {
-                                dispatch(_extends({}, action, {
-                                    payload: error,
-                                    error: true
-                                }));
-                                if (debug) {
-                                    throw error;
-                                }
-                            });
-                        } else {
+                } else if (typeof action.payload === 'function' && !isPromise(action.payload)) {
+                    var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
+                    if (isPromise(res)) {
+                        callStartReducer(dispatch, action);
+                        res.then(function (result) {
                             dispatch(_extends({}, action, {
-                                payload: res
+                                payload: result
                             }));
-                        }
+                        }, function (error) {
+                            dispatch(_extends({}, action, {
+                                payload: error,
+                                error: true
+                            }));
+                            if (debug) {
+                                throw error;
+                            }
+                        });
                     } else {
-                        if (isPromise(action.payload)) {
-                            callStartReducer(dispatch, action);
-                            action.payload.then(function (result) {
-                                dispatch(_extends({}, action, {
-                                    payload: result
-                                }));
-                            }, function (error) {
-                                dispatch(_extends({}, action, {
-                                    payload: error,
-                                    error: true
-                                }));
-                                if (debug) {
-                                    throw error;
-                                }
-                            });
-                        } else {
-                            next(action);
-                        }
+                        dispatch(_extends({}, action, {
+                            payload: res
+                        }));
                     }
+                } else if (isPromise(action.payload)) {
+                    callStartReducer(dispatch, action);
+                    action.payload.then(function (result) {
+                        dispatch(_extends({}, action, {
+                            payload: result
+                        }));
+                    }, function (error) {
+                        dispatch(_extends({}, action, {
+                            payload: error,
+                            error: true
+                        }));
+                        if (debug) {
+                            throw error;
+                        }
+                    });
+                } else {
+                    next(action);
                 }
             };
         };

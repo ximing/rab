@@ -1,9 +1,13 @@
 import React from 'react';
 import {Provider} from 'react-redux';
+import {combineReducers} from 'redux';
+
 import invariant from 'invariant';
 import _ from 'lodash';
 import handleActions from './redux/handleActions';
-import {createReduxStore} from './store'
+import {createReduxStore} from './store';
+import {unlisten, listen} from './subscription';
+
 const isPlainObject = _.isPlainObject;
 
 export default function initRab(createOpts) {
@@ -40,6 +44,7 @@ export default function initRab(createOpts) {
             //public member function
             use,
             addModel,
+            removeModel,
             router,
             registerRoot,
             start
@@ -63,6 +68,15 @@ export default function initRab(createOpts) {
         function addModel(model) {
             model = checkModel(model);
             this._models.push(model);
+        }
+
+        /**
+         * Register a model.
+         *
+         * @param namespace
+         */
+        function removeModel(namespace) {
+            this._models = this._models.filter(m => m.namespace !== namespace);
         }
 
 
@@ -99,11 +113,10 @@ export default function initRab(createOpts) {
 
             // get reducers from model
             const reducers = {...initialReducer};
-            let actions = {};
+            const unlisteners = {};
 
             this._models.forEach(m => {
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
-                // actions = Object.assign(actions, m.mutations);
             });
 
             const extraReducers = options['extraReducers'] || {};
@@ -116,14 +129,20 @@ export default function initRab(createOpts) {
                 Array.isArray(extraEnhancers),
                 'app.start: extraEnhancers should be array',
             );
-
+            const createReducer = function (asyncReducers = {}) {
+                return combineReducers({
+                    ...reducers,
+                    ...extraReducers,
+                    ...asyncReducers
+                });
+            };
             // create store
             let storeOptions = {extraEnhancers, extraReducers};
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            const store = this._store = createReduxStore(this._middleware, initialState, reducers, storeOptions, debug);
-
+            const store = this._store = createReduxStore(this._middleware, initialState, createReducer, storeOptions, debug);
+            store.asyncReducers = {};
             // setup history
             if (!simpleMode && setupHistory) {
                 setupHistory.call(this, history);
@@ -132,26 +151,37 @@ export default function initRab(createOpts) {
             // run subscriptions
             for (let model of this._models) {
                 if (model.subscriptions) {
-                    for (const key in model.subscriptions) {
-                        if (Object.prototype.hasOwnProperty.call(model.subscriptions, key)) {
-                            const sub = model.subscriptions[key];
-                            invariant(typeof sub === 'function', 'app.start: subscription should be function');
-                            if (!simpleMode) {
-                                sub({
-                                    dispatch: app._store.dispatch,
-                                    history: app._history,
-                                    getState: app._store.getState
-                                });
-                            } else {
-                                sub({
-                                    dispatch: app._store.dispatch,
-                                    getState: app._store.getState
-                                });
-                            }
-                        }
-                    }
+                    unlisteners[model.namespace] = listen(model.subscriptions, app, simpleMode);
                 }
             }
+
+            //  async add model
+            app.addModel = (m) => {
+                checkModel(m);
+                console.log('asybc add model');
+                const store = app._store;
+                if (m.reducers) {
+                    store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
+                    store.replaceReducer(createReducer(store.asyncReducers));
+                }
+                if (m.subscriptions) {
+                    unlisteners[m.namespace] = listen(m.subscriptions, app, simpleMode);
+                }
+            };
+
+            // async remove model
+            app.removeModel = (namespace) => {
+                const store = app._store;
+                delete store.asyncReducers[namespace];
+                delete reducers[namespace];
+                store.replaceReducer(createReducer(store.asyncReducers));
+                store.dispatch({type: '@@rab.UPDATE'});
+                // Unlisten subscrioptions
+                unlisten(unlisteners, namespace);
+
+                // Delete model from app._models
+                app._models = app._models.filter(model => model.namespace !== namespace);
+            };
 
             // If has container, render; else, return react component
             if (container) {
@@ -161,11 +191,8 @@ export default function initRab(createOpts) {
             }
         }
 
-        // Helpers
 
-        function isEmpty(val) {
-            return val === null || val === (void 0);
-        }
+        // Helpers
 
         function getProvider(store, app, router) {
             return extraProps => (
@@ -229,16 +256,6 @@ export default function initRab(createOpts) {
                 return reducers[1](handleActions(reducers[0], state));
             } else {
                 return handleActions(reducers || {}, state);
-            }
-        }
-
-        function defaultMutationReducer(state, action) {
-            if (isPlainObject(state)) {
-                return Object.assign({}, state, action.payload);
-            } else if (Array.isArray(state)) {
-                return action.payload;
-            } else {
-                return action.payload;
             }
         }
 

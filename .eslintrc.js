@@ -5,7 +5,6 @@ module.exports = {
         "nw": true,
         "fabric": true
     },
-    "quiet": true,
     "parser": "babel-eslint",
     "env": {
         "browser": true,

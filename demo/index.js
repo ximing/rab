@@ -2,7 +2,10 @@ import 'babel-polyfill';
 
 import React from 'react';
 import rab, {connect, createModel, put, call} from '../main.js';
-import {Router, Route} from '../router';
+import {BrowserRouter as Router, Route, routerRedux} from '../router';
+
+const {ConnectedRouter} = routerRedux;
+
 function stop(time) {
     return new Promise((res, rej) => {
         setTimeout(function () {
@@ -10,6 +13,7 @@ function stop(time) {
         }, 2000);
     });
 }
+
 const app = rab();
 // 2. Model
 let count = createModel({
@@ -30,33 +34,33 @@ let count = createModel({
             return Object.assign({}, state, {num: state.num + action.payload})
         },
         asyncMinus: {
-            start(state, action){
+            start(state, action) {
                 console.log('run start', action)
                 return Object.assign({}, state, {loading: true});
             },
-            next(state, action){
+            next(state, action) {
                 return Object.assign({}, state, {num: state.num + action.payload})
             },
-            throw(state, action){
+            throw(state, action) {
                 return Object.assign({}, state, {num: state.num + action.payload})
             },
-            finish(state, action){
+            finish(state, action) {
                 console.log('run finish', action)
                 return Object.assign({}, state, {loading: false});
             }
         },
         asyncNewApi: {
-            start(state, action){
+            start(state, action) {
                 console.log('run start', action)
                 return Object.assign({}, state, {loading: true});
             },
-            next(state, action){
+            next(state, action) {
                 return Object.assign({}, state, {num: state.num + action.payload})
             },
-            throw(state, action){
+            throw(state, action) {
                 return Object.assign({}, state, {num: state.num + action.payload})
             },
-            finish(state, action){
+            finish(state, action) {
                 console.log('run finish', action)
                 return Object.assign({}, state, {loading: false});
             }
@@ -78,14 +82,28 @@ let count = createModel({
         }
     },
     subscriptions: {
-        init({history, dispatch}){
+        init({history, dispatch}) {
             console.log('history')
-            history.listen((location) => {
+            return history.listen((location) => {
                 console.log('init------------>', location)
             })
         }
     }
 })
+
+let asyncModel = createModel({
+    namespace: 'asyncModel',
+    state: {
+        num: 0,
+        loading: false
+    },
+    reducers: {
+        add(state, action) {
+            console.log(action.payload);
+            return Object.assign({}, state, {num: state.num + 1})
+        },
+    }
+});
 
 app.addModel(count);
 
@@ -95,8 +113,8 @@ const App = connect(({count}) => ({
 }))((props) => {
     return (
         <div>
-            <h2>{ props.count.num }</h2>
-            <h2>{ !props.count.loading ? 'finish' : 'loading' }</h2>
+            <h2>{props.count.num}</h2>
+            <h2>{!props.count.loading ? 'finish' : 'loading'}</h2>
             <button key="add" onClick={() => {
                 put({type: 'count.add', payload: {a: 1}});
             }}>+
@@ -117,6 +135,12 @@ const App = connect(({count}) => ({
                 call('count.asyncNewApi', 1, 2, 3);
             }}>asyncNewApi
             </button>
+            <button key="asyncAddModel" onClick={() => {
+                console.log(asyncModel)
+                app.addModel(asyncModel);
+            }}>
+                async add model
+            </button>
         </div>
     );
 });
@@ -124,11 +148,12 @@ const App = connect(({count}) => ({
 // 4. Router
 app.router(({history}) => {
     return (
-        <Router history={history}>
+        <ConnectedRouter history={history}>
             <Route path="/" component={App}/>
-        </Router>
+        </ConnectedRouter>
     );
 });
 
 // 5. Start
 app.start('#demo_container');
+window.appStore = app._store;

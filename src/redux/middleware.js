@@ -38,7 +38,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                             ...action,
                             ...error
                         });
-                        if(debug){
+                        if(debug) {
                             throw error;
                         }
                     }
@@ -49,59 +49,55 @@ export default (debug) => ({dispatch, getState}) => next => action => {
         } else {
             return next(action);
         }
-    } else {
-        if (typeof action.payload === 'function' && !isPromise(action.payload)) {
-            let res = action.payload({dispatch, getState, put, call});
-            if (isPromise(res)) {
-                callStartReducer(dispatch, action);
-                res.then(
-                    (result) => {
-                        dispatch({
-                            ...action,
-                            payload: result
-                        });
-                    },
-                    (error) => {
-                        dispatch({
-                            ...action,
-                            payload: error,
-                            error: true
-                        });
-                        if(debug){
-                            throw error;
-                        }
+    } else if (typeof action.payload === 'function' && !isPromise(action.payload)) {
+        let res = action.payload({dispatch, getState, put, call});
+        if (isPromise(res)) {
+            callStartReducer(dispatch, action);
+            res.then(
+                (result) => {
+                    dispatch({
+                        ...action,
+                        payload: result
+                    });
+                },
+                (error) => {
+                    dispatch({
+                        ...action,
+                        payload: error,
+                        error: true
+                    });
+                    if(debug) {
+                        throw error;
                     }
-                );
-            } else {
+                }
+            );
+        } else {
+            dispatch({
+                ...action,
+                payload: res
+            });
+        }
+    } else if (isPromise(action.payload)) {
+        callStartReducer(dispatch, action);
+        action.payload.then(
+            (result) => {
                 dispatch({
                     ...action,
-                    payload: res
+                    payload: result
                 });
+            },
+            (error) => {
+                dispatch({
+                    ...action,
+                    payload: error,
+                    error: true
+                });
+                if(debug) {
+                    throw error;
+                }
             }
-        } else {
-            if (isPromise(action.payload)) {
-                callStartReducer(dispatch, action);
-                action.payload.then(
-                    (result) => {
-                        dispatch({
-                            ...action,
-                            payload: result
-                        });
-                    },
-                    (error) => {
-                        dispatch({
-                            ...action,
-                            payload: error,
-                            error: true
-                        });
-                        if(debug){
-                            throw error;
-                        }
-                    }
-                );
-            } else {
-                next(action);
-            }
-        }
+        );
+    } else {
+        next(action);
     }
 };

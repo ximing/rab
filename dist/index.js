@@ -32,13 +32,15 @@ Object.defineProperty(exports, 'call', {
     }
 });
 
-var _router = require('../router');
-
 var _reactRouterRedux = require('react-router-redux');
 
 var _initRab = require('./initRab');
 
 var _initRab2 = _interopRequireDefault(_initRab);
+
+var _createBrowserHistory = require('history/createBrowserHistory');
+
+var _createBrowserHistory2 = _interopRequireDefault(_createBrowserHistory);
 
 var _createAction2 = require('./redux/createAction');
 
@@ -70,9 +72,9 @@ exports.createModel = _createModel3.default;
 exports.default = (0, _initRab2.default)({
     initialReducer: { routing: _reactRouterRedux.routerReducer },
     initialActions: {},
-    defaultHistory: _router.browserHistory,
+    defaultHistory: (0, _createBrowserHistory2.default)(),
     routerMiddleware: _reactRouterRedux.routerMiddleware,
     setupHistory: function setupHistory(history) {
-        this._history = (0, _reactRouterRedux.syncHistoryWithStore)(history, this._store);
+        this._history = history; //syncHistoryWithStore(history, this._store);
     }
 });

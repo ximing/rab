@@ -20,6 +20,8 @@ var _react2 = _interopRequireDefault(_react);
 
 var _reactRedux = require('react-redux');
 
+var _redux = require('redux');
+
 var _invariant = require('invariant');
 
 var _invariant2 = _interopRequireDefault(_invariant);
@@ -29,6 +31,8 @@ var _handleActions = require('./redux/handleActions');
 var _handleActions2 = _interopRequireDefault(_handleActions);
 
 var _store = require('./store');
+
+var _subscription = require('./subscription');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -69,6 +73,7 @@ function initRab(createOpts) {
             //public member function
             use: use,
             addModel: addModel,
+            removeModel: removeModel,
             router: router,
             registerRoot: registerRoot,
             start: start
@@ -92,6 +97,17 @@ function initRab(createOpts) {
         function addModel(model) {
             model = checkModel(model);
             this._models.push(model);
+        }
+
+        /**
+         * Register a model.
+         *
+         * @param namespace
+         */
+        function removeModel(namespace) {
+            this._models = this._models.filter(function (m) {
+                return m.namespace !== namespace;
+            });
         }
 
         /**
@@ -127,11 +143,10 @@ function initRab(createOpts) {
 
             // get reducers from model
             var reducers = _extends({}, initialReducer);
-            var actions = {};
+            var unlisteners = {};
 
             this._models.forEach(function (m) {
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
-                // actions = Object.assign(actions, m.mutations);
             });
 
             var extraReducers = options['extraReducers'] || {};
@@ -140,14 +155,16 @@ function initRab(createOpts) {
             }), 'app.start: extraReducers is conflict with other reducers');
             var extraEnhancers = options['extraEnhancers'] || [];
             (0, _invariant2.default)(Array.isArray(extraEnhancers), 'app.start: extraEnhancers should be array');
-
+            var createReducer = function createReducer() {
+                return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers));
+            };
             // create store
             var storeOptions = { extraEnhancers: extraEnhancers, extraReducers: extraReducers };
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            var store = this._store = (0, _store.createReduxStore)(this._middleware, initialState, reducers, storeOptions, debug);
-
+            var store = this._store = (0, _store.createReduxStore)(this._middleware, initialState, createReducer, storeOptions, debug);
+            store.asyncReducers = {};
             // setup history
             if (!simpleMode && setupHistory) {
                 setupHistory.call(this, history);
@@ -163,28 +180,11 @@ function initRab(createOpts) {
                     var model = _step.value;
 
                     if (model.subscriptions) {
-                        for (var key in model.subscriptions) {
-                            if (Object.prototype.hasOwnProperty.call(model.subscriptions, key)) {
-                                var sub = model.subscriptions[key];
-                                (0, _invariant2.default)(typeof sub === 'function', 'app.start: subscription should be function');
-                                if (!simpleMode) {
-                                    sub({
-                                        dispatch: app._store.dispatch,
-                                        history: app._history,
-                                        getState: app._store.getState
-                                    });
-                                } else {
-                                    sub({
-                                        dispatch: app._store.dispatch,
-                                        getState: app._store.getState
-                                    });
-                                }
-                            }
-                        }
+                        unlisteners[model.namespace] = (0, _subscription.listen)(model.subscriptions, app, simpleMode);
                     }
                 }
 
-                // If has container, render; else, return react component
+                //  async add model
             } catch (err) {
                 _didIteratorError = true;
                 _iteratorError = err;
@@ -200,6 +200,35 @@ function initRab(createOpts) {
                 }
             }
 
+            app.addModel = function (m) {
+                checkModel(m);
+                var store = app._store;
+                if (m.reducers) {
+                    store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
+                    store.replaceReducer(createReducer(store.asyncReducers));
+                }
+                if (m.subscriptions) {
+                    unlisteners[m.namespace] = (0, _subscription.listen)(m.subscriptions, app, simpleMode);
+                }
+            };
+
+            // async remove model
+            app.removeModel = function (namespace) {
+                var store = app._store;
+                delete store.asyncReducers[namespace];
+                delete reducers[namespace];
+                store.replaceReducer(createReducer());
+                store.dispatch({ type: '@@rab.UPDATE' });
+                // Unlisten subscrioptions
+                (0, _subscription.unlisten)(unlisteners, namespace);
+
+                // Delete model from app._models
+                app._models = app._models.filter(function (model) {
+                    return model.namespace !== namespace;
+                });
+            };
+
+            // If has container, render; else, return react component
             if (container) {
                 render(container, store, this, this._router);
             } else {
@@ -208,10 +237,6 @@ function initRab(createOpts) {
         }
 
         // Helpers
-
-        function isEmpty(val) {
-            return val === null || val === void 0;
-        }
 
         function getProvider(store, app, router) {
             return function (extraProps) {
@@ -262,16 +287,6 @@ function initRab(createOpts) {
                 return reducers[1]((0, _handleActions2.default)(reducers[0], state));
             } else {
                 return (0, _handleActions2.default)(reducers || {}, state);
-            }
-        }
-
-        function defaultMutationReducer(state, action) {
-            if (isPlainObject(state)) {
-                return Object.assign({}, state, action.payload);
-            } else if (Array.isArray(state)) {
-                return action.payload;
-            } else {
-                return action.payload;
             }
         }
     };

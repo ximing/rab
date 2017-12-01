@@ -5,42 +5,34 @@
 import {
     createStore,
     applyMiddleware,
-    compose,
-    combineReducers
+    compose
 } from 'redux';
 
 import rabMiddleware from './redux/middleware';
 
 let _reduxStore = null;
 
-export const createReduxStore = function (middlewares, initialState, reducers, options, debug = false) {
-    const {routerMiddleware, extraEnhancers, extraReducers} = options;
+export const createReduxStore = function (middlewares, initialState, createReducer, options, debug = false) {
+    const {routerMiddleware, extraEnhancers} = options;
     // create store
     let _middlewares = [...middlewares];
     if (routerMiddleware) {
         _middlewares = [routerMiddleware, ...middlewares];
     }
     let devtools = () => noop => noop;
-    // if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-    //     devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-    // }
+    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
+        devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
+    }
     const enhancers = [
         applyMiddleware(rabMiddleware(debug), ..._middlewares),
-        devtools(),
-        ...extraEnhancers,
+        devtools(window.__REDUX_DEVTOOLS_EXTENSION__OPTIONS),
+        ...extraEnhancers
     ];
     _reduxStore = createStore(
         createReducer(),
         initialState,
         compose(...enhancers),
     );
-
-    function createReducer() {
-        return combineReducers({
-            ...reducers,
-            ...extraReducers
-        });
-    }
 
     return _reduxStore;
 };
