@@ -156,7 +156,9 @@ function initRab(createOpts) {
             var extraEnhancers = options['extraEnhancers'] || [];
             (0, _invariant2.default)(Array.isArray(extraEnhancers), 'app.start: extraEnhancers should be array');
             var createReducer = function createReducer() {
-                return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers));
+                var asyncReducers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+                return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers, asyncReducers));
             };
             // create store
             var storeOptions = { extraEnhancers: extraEnhancers, extraReducers: extraReducers };
@@ -202,6 +204,7 @@ function initRab(createOpts) {
 
             app.addModel = function (m) {
                 checkModel(m);
+                console.log('asybc add model');
                 var store = app._store;
                 if (m.reducers) {
                     store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
@@ -217,7 +220,7 @@ function initRab(createOpts) {
                 var store = app._store;
                 delete store.asyncReducers[namespace];
                 delete reducers[namespace];
-                store.replaceReducer(createReducer());
+                store.replaceReducer(createReducer(store.asyncReducers));
                 store.dispatch({ type: '@@rab.UPDATE' });
                 // Unlisten subscrioptions
                 (0, _subscription.unlisten)(unlisteners, namespace);
