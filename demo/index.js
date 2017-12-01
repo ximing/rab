@@ -141,6 +141,11 @@ const App = connect(({count}) => ({
             }}>
                 async add model
             </button>
+            <button key="asyncAddModel" onClick={() => {
+                app.removeModel(asyncModel.namespace);
+            }}>
+                async remove model
+            </button>
         </div>
     );
 });
