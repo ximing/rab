@@ -17,6 +17,15 @@ export default initRab({
     defaultHistory: createHistory(),
     routerMiddleware,
     setupHistory(history) {
-        this._history = history;//syncHistoryWithStore(history, this._store);
+        this._history = patchHistory(history);//syncHistoryWithStore(history, this._store);
     }
 });
+
+function patchHistory(history) {
+    const oldListen = history.listen;
+    history.listen = (callback) => {
+        callback(history.location);
+        return oldListen.call(history, callback);
+    };
+    return history;
+}

@@ -207,13 +207,7 @@ export default function initRab(createOpts) {
 
         function render(container, store, app, router) {
             const ReactDOM = require('react-dom');
-            ReactDOM.render(React.createElement(getProvider(store, app, router)), container, () => {
-                setTimeout(() => {
-                    if (!simpleMode && firstCall) {
-                        history.push(window.location);
-                    }
-                }, 100);
-            });
+            ReactDOM.render(React.createElement(getProvider(store, app, router)), container);
         }
 
         function checkModel(m) {
