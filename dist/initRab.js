@@ -253,13 +253,7 @@ function initRab(createOpts) {
 
         function render(container, store, app, router) {
             var ReactDOM = require('react-dom');
-            ReactDOM.render(_react2.default.createElement(getProvider(store, app, router)), container, function () {
-                setTimeout(function () {
-                    if (!simpleMode && firstCall) {
-                        history.push(window.location);
-                    }
-                }, 100);
-            });
+            ReactDOM.render(_react2.default.createElement(getProvider(store, app, router)), container);
         }
 
         function checkModel(m) {

@@ -75,6 +75,16 @@ exports.default = (0, _initRab2.default)({
     defaultHistory: (0, _createBrowserHistory2.default)(),
     routerMiddleware: _reactRouterRedux.routerMiddleware,
     setupHistory: function setupHistory(history) {
-        this._history = history; //syncHistoryWithStore(history, this._store);
+        this._history = patchHistory(history); //syncHistoryWithStore(history, this._store);
     }
 });
+
+
+function patchHistory(history) {
+    var oldListen = history.listen;
+    history.listen = function (callback) {
+        callback(history.location);
+        return oldListen.call(history, callback);
+    };
+    return history;
+}
