@@ -158,7 +158,6 @@ export default function initRab(createOpts) {
             //  async add model
             app.addModel = (m) => {
                 checkModel(m);
-                console.log('asybc add model');
                 const store = app._store;
                 if (m.reducers) {
                     store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
