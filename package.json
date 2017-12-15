@@ -1,11 +1,12 @@
 {
   "name": "rabjs",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "React and redux based framework.",
   "author": "yanzhi",
   "repository": "https://github.com/ximing/rab",
+  "license":"MIT",
   "scripts": {
-    "i": "SASS_BINARY_SITE=https://npm.taobao.org/mirrors/node-sass/ yarn install --registry=https://registry.npm.taobao.org",
+    "i": "SASS_BINARY_SITE=https://npm.taobao.org/mirrors/node-sass/ npm install --registry=https://registry.npm.taobao.org",
     "build": "rimraf dist && babel src --out-dir dist",
     "build1": "webpack --config webpack.build.config.js",
     "dev": "./node_modules/.bin/webpack-dev-server "
@@ -30,10 +31,10 @@
     "lodash": "^4.17.4",
     "react-redux": "^5.0.6",
     "react-router": "^4.2.0",
-    "react-router-redux": "^5.0.0-alpha.8",
     "react-router-dom": "^4.2.2",
+    "react-router-redux": "^5.0.0-alpha.8",
     "reduce-reducers": "^0.1.2",
-    "redux": "^3.7.2",
+    "redux": "^4.0.0-beta.1",
     "warning": "^3.0.0"
   },
   "devDependencies": {

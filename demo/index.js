@@ -94,18 +94,24 @@ let count = {
 let asyncModel = {
     namespace: 'asyncModel',
     state: {
-        num: 0,
-        loading: false
+        asyncNum: 0
     },
     reducers: {
         add(state, action) {
-            console.log(action.payload);
-            return Object.assign({}, state, {num: state.num + 1})
+            return Object.assign({}, state, {asyncNum: state.asyncNum + 1})
         },
+        testasyncModel(state) {
+            return state;
+        }
+    },
+    actions: {
+        testasyncModel: async () => {
+            return;
+        }
     }
 };
 
-count = app.addModel(count);
+let countModel = app.addModel(count);
 
 // 3. View
 const App = connect(({count}) => ({
@@ -124,7 +130,7 @@ const App = connect(({count}) => ({
             }}>-
             </button>
             <button key="asyncadd" onClick={() => {
-                props.dispatch(count.actions.asyncAdd());
+                props.dispatch(countModel.actions.asyncAdd());
             }}>ASYNC ADD
             </button>
             <button key="asyncminus" onClick={() => {
@@ -136,8 +142,8 @@ const App = connect(({count}) => ({
             }}>asyncNewApi
             </button>
             <button key="asyncAddModel" onClick={() => {
-                console.log(asyncModel)
-                app.addModel(asyncModel);
+                let newModel = app.addModel(asyncModel);
+                console.log(asyncModel, newModel)
             }}>
                 async add model
             </button>
@@ -145,6 +151,11 @@ const App = connect(({count}) => ({
                 app.removeModel(asyncModel.namespace);
             }}>
                 async remove model
+            </button>
+            <button key="dispacth" onClick={() => {
+                app._store.dispatch({type: 'asyncModel.add'});
+            }}>
+                dispatch asyncModel
             </button>
         </div>
     );

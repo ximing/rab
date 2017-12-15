@@ -12,7 +12,7 @@ import rabMiddleware from './redux/middleware';
 
 let _reduxStore = null;
 
-export const createReduxStore = function (middlewares, initialState, createReducer, options, debug = false) {
+export const createReduxStore = function (middlewares, initialState, initialReducer, options, debug = false) {
     const {routerMiddleware, extraEnhancers} = options;
     // create store
     let _middlewares = [...middlewares];
@@ -28,8 +28,9 @@ export const createReduxStore = function (middlewares, initialState, createReduc
         devtools(window.__REDUX_DEVTOOLS_EXTENSION__OPTIONS),
         ...extraEnhancers
     ];
+    console.log('create store', initialState)
     _reduxStore = createStore(
-        createReducer(),
+        initialReducer,
         initialState,
         compose(...enhancers),
     );

@@ -145,8 +145,8 @@ export default function initRab(createOpts) {
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            const store = this._store = createReduxStore(this._middleware, initialState, createReducer, storeOptions, debug);
-            store.asyncReducers = {};
+            const store = this._store = createReduxStore(this._middleware, initialState, createReducer(), storeOptions, debug);
+            const asyncReducers = {};
             // setup history
             if (!simpleMode && setupHistory) {
                 setupHistory.call(this, history);
@@ -164,8 +164,8 @@ export default function initRab(createOpts) {
                 m = checkModel(m);
                 const store = app._store;
                 if (m.reducers) {
-                    store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
-                    store.replaceReducer(createReducer(store.asyncReducers));
+                    asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
+                    store.replaceReducer(createReducer(asyncReducers));
                 }
                 if (m.subscriptions) {
                     unlisteners[m.namespace] = listen(m.subscriptions, app, simpleMode);
@@ -175,15 +175,16 @@ export default function initRab(createOpts) {
 
             // async remove model
             app.removeModel = (namespace) => {
-                const store = app._store;
-                delete store.asyncReducers[namespace];
-                delete reducers[namespace];
                 removeActions(namespace);
-                store.replaceReducer(createReducer(store.asyncReducers));
-                store.dispatch({type: '@@rab.UPDATE'});
                 // Unlisten subscrioptions
                 unlisten(unlisteners, namespace);
-
+                const store = app._store;
+                delete asyncReducers[namespace];
+                delete reducers[namespace];
+                let newReducer = createReducer(asyncReducers);
+                console.log('newReducer', newReducer);
+                store.replaceReducer(newReducer);
+                store.dispatch({type: '@@rab.UPDATE'});
                 // Delete model from app._models
                 app._models = app._models.filter(model => model.namespace !== namespace);
             };
@@ -217,10 +218,8 @@ export default function initRab(createOpts) {
 
         function checkModel(m) {
             // Clone model to avoid prefixing namespace multiple times
-            const model = {
-                ...m
-            };
-            const {
+            let model = {...m};
+            let {
                 namespace,
                 reducers,
                 actions
