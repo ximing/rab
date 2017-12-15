@@ -7,9 +7,17 @@ import warning from 'warning';
 //all actions in models
 let actions = {};
 
-export const setAction = function (type,action) {
+export const setAction = function (type, action) {
     warning(!actions[type], `action ${type} init multiple times`);
     actions[type] = action;
+};
+
+export const removeActions = function (namespace) {
+    Object.keys(actions).forEach(actionKey => {
+        if (actionKey.indexOf(namespace) === 0) {
+            delete actions[actionKey]
+        }
+    })
 };
 
 export const getAction = function (type) {

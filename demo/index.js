@@ -16,7 +16,7 @@ function stop(time) {
 
 const app = rab();
 // 2. Model
-let count = createModel({
+let count = {
     namespace: 'count',
     state: {
         num: 0,
@@ -89,9 +89,9 @@ let count = createModel({
             })
         }
     }
-})
+};
 
-let asyncModel = createModel({
+let asyncModel = {
     namespace: 'asyncModel',
     state: {
         num: 0,
@@ -103,9 +103,9 @@ let asyncModel = createModel({
             return Object.assign({}, state, {num: state.num + 1})
         },
     }
-});
+};
 
-app.addModel(count);
+count = app.addModel(count);
 
 // 3. View
 const App = connect(({count}) => ({
@@ -141,7 +141,7 @@ const App = connect(({count}) => ({
             }}>
                 async add model
             </button>
-            <button key="asyncAddModel" onClick={() => {
+            <button key="removeModel" onClick={() => {
                 app.removeModel(asyncModel.namespace);
             }}>
                 async remove model

@@ -34,6 +34,12 @@ var _store = require('./store');
 
 var _subscription = require('./subscription');
 
+var _createModel = require('./createModel');
+
+var _createModel2 = _interopRequireDefault(_createModel);
+
+var _actions = require('./actions');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var isPlainObject = _isPlainObject3.default;
@@ -97,6 +103,7 @@ function initRab(createOpts) {
         function addModel(model) {
             model = checkModel(model);
             this._models.push(model);
+            return model;
         }
 
         /**
@@ -105,6 +112,7 @@ function initRab(createOpts) {
          * @param namespace
          */
         function removeModel(namespace) {
+            (0, _actions.removeActions)(namespace);
             this._models = this._models.filter(function (m) {
                 return m.namespace !== namespace;
             });
@@ -203,8 +211,7 @@ function initRab(createOpts) {
             }
 
             app.addModel = function (m) {
-                checkModel(m);
-                console.log('asybc add model');
+                m = checkModel(m);
                 var store = app._store;
                 if (m.reducers) {
                     store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
@@ -213,6 +220,7 @@ function initRab(createOpts) {
                 if (m.subscriptions) {
                     unlisteners[m.namespace] = (0, _subscription.listen)(m.subscriptions, app, simpleMode);
                 }
+                return m;
             };
 
             // async remove model
@@ -220,6 +228,7 @@ function initRab(createOpts) {
                 var store = app._store;
                 delete store.asyncReducers[namespace];
                 delete reducers[namespace];
+                (0, _actions.removeActions)(namespace);
                 store.replaceReducer(createReducer(store.asyncReducers));
                 store.dispatch({ type: '@@rab.UPDATE' });
                 // Unlisten subscrioptions
@@ -272,7 +281,7 @@ function initRab(createOpts) {
             (0, _invariant2.default)(!reducers || isPlainObject(reducers), 'app.model: reducers should be Object');
             (0, _invariant2.default)(!actions || isPlainObject(actions), 'app.model: actions should be Object');
 
-            return model;
+            return (0, _createModel2.default)(model);
         }
 
         function isHTMLElement(node) {

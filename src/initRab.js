@@ -7,6 +7,8 @@ import _ from 'lodash';
 import handleActions from './redux/handleActions';
 import {createReduxStore} from './store';
 import {unlisten, listen} from './subscription';
+import createModel from './createModel';
+import {removeActions} from './actions';
 
 const isPlainObject = _.isPlainObject;
 
@@ -68,6 +70,7 @@ export default function initRab(createOpts) {
         function addModel(model) {
             model = checkModel(model);
             this._models.push(model);
+            return model;
         }
 
         /**
@@ -76,6 +79,7 @@ export default function initRab(createOpts) {
          * @param namespace
          */
         function removeModel(namespace) {
+            removeActions(namespace);
             this._models = this._models.filter(m => m.namespace !== namespace);
         }
 
@@ -157,7 +161,7 @@ export default function initRab(createOpts) {
 
             //  async add model
             app.addModel = (m) => {
-                checkModel(m);
+                m = checkModel(m);
                 const store = app._store;
                 if (m.reducers) {
                     store.asyncReducers[m.namespace] = getReducer(m.reducers, m.state);
@@ -166,6 +170,7 @@ export default function initRab(createOpts) {
                 if (m.subscriptions) {
                     unlisteners[m.namespace] = listen(m.subscriptions, app, simpleMode);
                 }
+                return m;
             };
 
             // async remove model
@@ -173,6 +178,7 @@ export default function initRab(createOpts) {
                 const store = app._store;
                 delete store.asyncReducers[namespace];
                 delete reducers[namespace];
+                removeActions(namespace);
                 store.replaceReducer(createReducer(store.asyncReducers));
                 store.dispatch({type: '@@rab.UPDATE'});
                 // Unlisten subscrioptions
@@ -237,7 +243,7 @@ export default function initRab(createOpts) {
                 'app.model: actions should be Object'
             );
 
-            return model;
+            return createModel(model);
         }
 
         function isHTMLElement(node) {
