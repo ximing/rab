@@ -3,6 +3,7 @@
  */
 'use strict';
 import warning from 'warning';
+import {SEP} from './constants';
 
 //all actions in models
 let actions = {};
@@ -14,7 +15,7 @@ export const setAction = function (type, action) {
 
 export const removeActions = function (namespace) {
     Object.keys(actions).forEach(actionKey => {
-        if (actionKey.indexOf(namespace) === 0) {
+        if (actionKey.indexOf(`${namespace}${SEP}`) === 0) {
             delete actions[actionKey]
         }
     })
