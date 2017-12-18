@@ -12,6 +12,8 @@ var _warning = require('warning');
 
 var _warning2 = _interopRequireDefault(_warning);
 
+var _constants = require('./constants');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 //all actions in models
@@ -24,7 +26,7 @@ var setAction = exports.setAction = function setAction(type, action) {
 
 var removeActions = exports.removeActions = function removeActions(namespace) {
     Object.keys(actions).forEach(function (actionKey) {
-        if (actionKey.indexOf(namespace) === 0) {
+        if (actionKey.indexOf('' + namespace + _constants.SEP) === 0) {
             delete actions[actionKey];
         }
     });
