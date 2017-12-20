@@ -25,7 +25,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
         if (typeof action === 'function') {
             if (isPromise(action)) {
                 callStartReducer(dispatch, action);
-                action.then(
+                return action.then(
                     (result) => {
                         dispatch({
                             ...action,
@@ -53,7 +53,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
         let res = action.payload({dispatch, getState, put, call});
         if (isPromise(res)) {
             callStartReducer(dispatch, action);
-            res.then(
+            return res.then(
                 (result) => {
                     dispatch({
                         ...action,
@@ -72,14 +72,14 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                 }
             );
         } else {
-            dispatch({
+            return dispatch({
                 ...action,
                 payload: res
             });
         }
     } else if (isPromise(action.payload)) {
         callStartReducer(dispatch, action);
-        action.payload.then(
+        return action.payload.then(
             (result) => {
                 dispatch({
                     ...action,
@@ -98,6 +98,6 @@ export default (debug) => ({dispatch, getState}) => next => action => {
             }
         );
     } else {
-        next(action);
+        return next(action);
     }
 };

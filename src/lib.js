@@ -21,22 +21,22 @@ export const getState = function (args) {
     }
 };
 
-export const call = function(type, ...args) {
-    if(getAction(type)) {
-        dispatch(getAction(type)(...args));
-    }else{
-        dispatch({
+export const call = function (type, ...args) {
+    if (getAction(type)) {
+        return dispatch(getAction(type)(...args));
+    } else {
+        return dispatch({
             type,
-            payload:{...args}
+            payload: {...args}
         });
     }
 };
 
-export const put = function({type,payload}) {
-    if(getAction(type)) {
-        dispatch(getAction(type)(payload || {}));
-    }else{
-        dispatch({
+export const put = function ({type, payload}) {
+    if (getAction(type)) {
+        return dispatch(getAction(type)(payload || {}));
+    } else {
+        return dispatch({
             type,
             payload
         });
