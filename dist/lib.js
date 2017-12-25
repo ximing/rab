@@ -36,9 +36,9 @@ var call = exports.call = function call(type) {
     }
 
     if ((0, _actions.getAction)(type)) {
-        dispatch((0, _actions.getAction)(type).apply(undefined, args));
+        return dispatch((0, _actions.getAction)(type).apply(undefined, args));
     } else {
-        dispatch({
+        return dispatch({
             type: type,
             payload: _extends({}, args)
         });
@@ -50,9 +50,9 @@ var put = exports.put = function put(_ref) {
         payload = _ref.payload;
 
     if ((0, _actions.getAction)(type)) {
-        dispatch((0, _actions.getAction)(type)(payload || {}));
+        return dispatch((0, _actions.getAction)(type)(payload || {}));
     } else {
-        dispatch({
+        return dispatch({
             type: type,
             payload: payload
         });
