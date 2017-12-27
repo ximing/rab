@@ -38,7 +38,7 @@ exports.default = function (debug) {
                     if (typeof action === 'function') {
                         if (isPromise(action)) {
                             callStartReducer(dispatch, action);
-                            action.then(function (result) {
+                            return action.then(function (result) {
                                 dispatch(_extends({}, action, result));
                             }, function (error) {
                                 dispatch(_extends({
@@ -58,7 +58,7 @@ exports.default = function (debug) {
                     var res = action.payload({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
                     if (isPromise(res)) {
                         callStartReducer(dispatch, action);
-                        res.then(function (result) {
+                        return res.then(function (result) {
                             dispatch(_extends({}, action, {
                                 payload: result
                             }));
@@ -72,13 +72,13 @@ exports.default = function (debug) {
                             }
                         });
                     } else {
-                        dispatch(_extends({}, action, {
+                        return dispatch(_extends({}, action, {
                             payload: res
                         }));
                     }
                 } else if (isPromise(action.payload)) {
                     callStartReducer(dispatch, action);
-                    action.payload.then(function (result) {
+                    return action.payload.then(function (result) {
                         dispatch(_extends({}, action, {
                             payload: result
                         }));
