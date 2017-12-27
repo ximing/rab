@@ -16,7 +16,7 @@ var _actions = require('./actions');
 
 var dispatch = exports.dispatch = function dispatch(args) {
     if ((0, _store.getReduxStore)()) {
-        (0, _store.getReduxStore)().dispatch(args);
+        return (0, _store.getReduxStore)().dispatch(args);
     } else {
         throw new Error('could not call dispatch before init store');
     }
