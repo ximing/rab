@@ -23,9 +23,9 @@ export const getState = function (args) {
 
 export const call = function(type, ...args) {
     if(getAction(type)) {
-        dispatch(getAction(type)(...args));
+        return dispatch(getAction(type)(...args));
     }else{
-        dispatch({
+        return dispatch({
             type,
             payload:{...args}
         });
@@ -34,9 +34,9 @@ export const call = function(type, ...args) {
 
 export const put = function({type,payload}) {
     if(getAction(type)) {
-        dispatch(getAction(type)(payload || {}));
+        return dispatch(getAction(type)(payload || {}));
     }else{
-        dispatch({
+        return dispatch({
             type,
             payload
         });
