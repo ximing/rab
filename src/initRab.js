@@ -217,9 +217,7 @@ export default function initRab(createOpts) {
 
         function checkModel(m) {
             // Clone model to avoid prefixing namespace multiple times
-            const model = {
-                ...m
-            };
+            const model = _.cloneDeep(m);
             const {
                 namespace,
                 reducers,
