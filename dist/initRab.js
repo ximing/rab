@@ -4,6 +4,10 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _cloneDeep2 = require('lodash/cloneDeep');
+
+var _cloneDeep3 = _interopRequireDefault(_cloneDeep2);
+
 var _isPlainObject2 = require('lodash/isPlainObject');
 
 var _isPlainObject3 = _interopRequireDefault(_isPlainObject2);
@@ -269,7 +273,7 @@ function initRab(createOpts) {
 
         function checkModel(m) {
             // Clone model to avoid prefixing namespace multiple times
-            var model = _extends({}, m);
+            var model = (0, _cloneDeep3.default)(m);
             var namespace = model.namespace,
                 reducers = model.reducers,
                 actions = model.actions;
