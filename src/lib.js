@@ -7,7 +7,7 @@ import {getAction} from './actions';
 
 export const dispatch = function (args) {
     if(getReduxStore()) {
-        getReduxStore().dispatch(args);
+        return getReduxStore().dispatch(args);
     }else{
         throw new Error('could not call dispatch before init store');
     }

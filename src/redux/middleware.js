@@ -31,6 +31,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                             ...action,
                             ...result
                         });
+                        return result;
                     },
                     (error) => {
                         dispatch({
@@ -60,6 +61,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                             ...action,
                             payload: result
                         });
+                        return result;
                     },
                     (error) => {
                         dispatch({
@@ -73,10 +75,11 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                     }
                 );
             } else {
-                return dispatch({
+                dispatch({
                     ...action,
                     payload: res
                 });
+                return res;
             }
         } else {
             if (isPromise(action.payload)) {
@@ -87,6 +90,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                             ...action,
                             payload: result
                         });
+                        return result
                     },
                     (error) => {
                         dispatch({
