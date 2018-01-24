@@ -36,21 +36,7 @@ exports.default = function (debug) {
             return function (action) {
                 if (!(0, _fluxStandardAction.isFSA)(action)) {
                     if (typeof action === 'function') {
-                        if (isPromise(action)) {
-                            callStartReducer(dispatch, action);
-                            return action.then(function (result) {
-                                dispatch(_extends({}, action, result));
-                            }, function (error) {
-                                dispatch(_extends({
-                                    error: true
-                                }, action, error));
-                                if (debug) {
-                                    throw error;
-                                }
-                            });
-                        } else {
-                            return action({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
-                        }
+                        return action({ dispatch: dispatch, getState: getState, put: _lib.put, call: _lib.call });
                     } else {
                         return next(action);
                     }
@@ -62,6 +48,7 @@ exports.default = function (debug) {
                             dispatch(_extends({}, action, {
                                 payload: result
                             }));
+                            return result;
                         }, function (error) {
                             dispatch(_extends({}, action, {
                                 payload: error,
@@ -69,6 +56,8 @@ exports.default = function (debug) {
                             }));
                             if (debug) {
                                 throw error;
+                            } else {
+                                return error;
                             }
                         });
                     } else {
@@ -82,6 +71,7 @@ exports.default = function (debug) {
                         dispatch(_extends({}, action, {
                             payload: result
                         }));
+                        return result;
                     }, function (error) {
                         dispatch(_extends({}, action, {
                             payload: error,
@@ -89,6 +79,8 @@ exports.default = function (debug) {
                         }));
                         if (debug) {
                             throw error;
+                        } else {
+                            return error;
                         }
                     });
                 } else {
