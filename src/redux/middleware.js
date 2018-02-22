@@ -23,29 +23,7 @@ function callStartReducer(dispatch, action) {
 export default (debug) => ({dispatch, getState}) => next => action => {
     if (!isFSA(action)) {
         if (typeof action === 'function') {
-            if (isPromise(action)) {
-                callStartReducer(dispatch, action);
-                return action.then(
-                    (result) => {
-                        dispatch({
-                            ...action,
-                            ...result
-                        });
-                    },
-                    (error) => {
-                        dispatch({
-                            error: true,
-                            ...action,
-                            ...error
-                        });
-                        if(debug) {
-                            throw error;
-                        }
-                    }
-                );
-            } else {
-                return action({dispatch, getState, put, call});
-            }
+            return action({dispatch, getState, put, call});
         } else {
             return next(action);
         }
@@ -59,6 +37,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                         ...action,
                         payload: result
                     });
+                    return result
                 },
                 (error) => {
                     dispatch({
@@ -66,16 +45,17 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                         payload: error,
                         error: true
                     });
-                    if(debug) {
+                    if (debug) {
                         throw error;
                     }
                 }
             );
         } else {
-            return dispatch({
+            dispatch({
                 ...action,
                 payload: res
             });
+            return res;
         }
     } else if (isPromise(action.payload)) {
         callStartReducer(dispatch, action);
@@ -85,6 +65,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                     ...action,
                     payload: result
                 });
+                return result;
             },
             (error) => {
                 dispatch({
@@ -92,7 +73,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
                     payload: error,
                     error: true
                 });
-                if(debug) {
+                if (debug) {
                     throw error;
                 }
             }
