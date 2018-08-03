@@ -1,7 +1,9 @@
 import React from 'react';
 import {Provider} from 'react-redux';
-import combineReducers from './combineReducers';
-
+import {combineReducers} from 'redux';
+import {
+    ConnectedRouter
+} from "react-router-redux";
 import invariant from 'invariant';
 import _ from 'lodash';
 import handleActions from './redux/handleActions';
@@ -203,7 +205,8 @@ export default function initRab(createOpts) {
             return extraProps => (
                 <Provider store={store}>
                     {
-                        !simpleMode ? router({app, history: app._history, ...extraProps}) :
+                        !simpleMode ?
+                            router({app, history: app._history, ...extraProps}) :
                             router({app, ...extraProps})
                     }
                 </Provider>
