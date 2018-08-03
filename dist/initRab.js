@@ -24,9 +24,9 @@ var _react2 = _interopRequireDefault(_react);
 
 var _reactRedux = require('react-redux');
 
-var _combineReducers = require('./combineReducers');
+var _redux = require('redux');
 
-var _combineReducers2 = _interopRequireDefault(_combineReducers);
+var _reactRouterRedux = require('react-router-redux');
 
 var _invariant = require('invariant');
 
@@ -172,7 +172,7 @@ function initRab(createOpts) {
             var createReducer = function createReducer() {
                 var asyncReducers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-                return (0, _combineReducers2.default)(_extends({}, reducers, extraReducers, asyncReducers));
+                return (0, _redux.combineReducers)(_extends({}, reducers, extraReducers, asyncReducers));
             };
             // create store
             var storeOptions = { extraEnhancers: extraEnhancers, extraReducers: extraReducers };
