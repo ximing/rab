@@ -1,29 +1,29 @@
-import {
-    routerReducer as routing,
-    routerMiddleware
-} from 'react-router-redux';
+import { routerMiddleware } from 'connected-react-router';
 import initRab from './initRab';
-import createHistory from 'history/createBrowserHistory';
+import { createBrowserHistory } from 'history';
 
 export createAction from './redux/createAction';
 export createActions from './redux/createActions';
 export handleAction from './redux/handleAction.js';
 export handleActions from './redux/handleActions.js';
-export {dispatch, put, getState, call} from './lib';
+export { dispatch, put, getState, call } from './lib';
+
 export default initRab({
-    initialReducer: {routing},
+    initialReducer: {},
     initialActions: {},
-    defaultHistory: createHistory(),
+    defaultHistory: createBrowserHistory(),
     routerMiddleware,
     setupHistory(history) {
-        this._history = patchHistory(history);//syncHistoryWithStore(history, this._store);
+        this._history = patchHistory(history); //syncHistoryWithStore(history, this._store);
     }
 });
 
 function patchHistory(history) {
     const oldListen = history.listen;
-    history.listen = (callback) => {
-        callback(history.location);
+    history.listen = function(callback) {
+        if (callback.name !== 'handleLocationChange') {
+            callback(history.location);
+        }
         return oldListen.call(history, callback);
     };
     return history;

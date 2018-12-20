@@ -2,18 +2,15 @@
  * Created by yeanzhi on 17/2/25.
  */
 'use strict';
-const {
-    resolve
-} = require('path');
+const { resolve } = require('path');
 const webpack = require('webpack');
 var node_modules = resolve(__dirname, 'node_modules');
 var pathToReact = resolve(node_modules, 'react/dist/react.min.js');
 
 module.exports = {
+    mode: 'production', // "production" | "development" | "none"
     entry: {
-        'rabjs': [
-            './src/index.js'
-        ]
+        rabjs: ['./src/index.js']
     },
     output: {
         filename: '[name].js',
@@ -24,42 +21,20 @@ module.exports = {
         libraryTarget: 'umd'
     },
     devtool: 'cheap-module-source-map',
-
-    performance: {
-        hints: false
-    },
     module: {
         rules: [
             {
                 test: /\.js$/,
-                use:[{
-                    loader: 'babel-loader',
-                    options: {
-                        'presets': [
-                            ['es2015', {
-                                'modules': false
-                            }], 'stage-0', 'react'
-                        ],
-                        'env': {},
-                        'ignore': [
-                            'node_modules/**',
-                            'dist'
-                        ],
-                        'plugins': [
-                            'lodash',
-                            'transform-decorators-legacy'
-                        ]
+                use: [
+                    {
+                        loader: 'babel-loader'
                     }
-                }],
+                ],
                 exclude: /node_modules/
             },
             {
                 test: /\.css$/,
-                use: [
-                    'style-loader',
-                    'css-loader',
-                    'postcss-loader'
-                ]
+                use: ['style-loader', 'css-loader', 'postcss-loader']
             },
             {
                 test: /\.(png|jpg|jpeg|gif|woff|svg|eot|ttf|woff2)$/i,
@@ -75,13 +50,13 @@ module.exports = {
                 commonjs: 'react',
                 amd: 'react'
             },
-            'react-dom':{
+            'react-dom': {
                 root: 'ReactDOM',
                 commonjs2: 'react-dom',
                 commonjs: 'react-dom',
                 amd: 'react-dom'
             },
-            'prop-types':'prop-types'
+            'prop-types': 'prop-types'
         }
     ],
     plugins: [
@@ -89,6 +64,6 @@ module.exports = {
             'process.env': {
                 NODE_ENV: JSON.stringify('production')
             }
-        }),
+        })
     ]
 };

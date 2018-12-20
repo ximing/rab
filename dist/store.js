@@ -1,49 +1,48 @@
-/**
- * Created by yeanzhi on 17/4/28.
- */
 'use strict';
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
-exports.getReduxStore = exports.createReduxStore = undefined;
+exports.getReduxStore = exports.createReduxStore = void 0;
 
-var _redux = require('redux');
+var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray"));
 
-var _middleware = require('./redux/middleware');
+var _redux = require("redux");
 
-var _middleware2 = _interopRequireDefault(_middleware);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+var _middleware = _interopRequireDefault(require("./redux/middleware"));
 
 var _reduxStore = null;
 
-var createReduxStore = exports.createReduxStore = function createReduxStore(middlewares, initialState, createReducer, options) {
-    var debug = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
-    var routerMiddleware = options.routerMiddleware,
-        extraEnhancers = options.extraEnhancers;
-    // create store
+var createReduxStore = function createReduxStore(middlewares, initialState, createReducer, options) {
+  var debug = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
+  var routerMiddleware = options.routerMiddleware,
+      extraEnhancers = options.extraEnhancers;
 
-    var _middlewares = [].concat(_toConsumableArray(middlewares));
-    if (routerMiddleware) {
-        _middlewares = [routerMiddleware].concat(_toConsumableArray(middlewares));
-    }
-    var devtools = function devtools() {
-        return function (noop) {
-            return noop;
-        };
-    };
-    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION__) {
-        devtools = window.__REDUX_DEVTOOLS_EXTENSION__;
-    }
-    var enhancers = [_redux.applyMiddleware.apply(undefined, [(0, _middleware2.default)(debug)].concat(_toConsumableArray(_middlewares))), devtools(window.__REDUX_DEVTOOLS_EXTENSION__OPTIONS)].concat(_toConsumableArray(extraEnhancers));
-    _reduxStore = (0, _redux.createStore)(createReducer(), initialState, _redux.compose.apply(undefined, _toConsumableArray(enhancers)));
+  var _middlewares = (0, _toConsumableArray2.default)(middlewares);
 
-    return _reduxStore;
+  if (routerMiddleware) {
+    _middlewares = [routerMiddleware, (0, _middleware.default)(debug)].concat((0, _toConsumableArray2.default)(middlewares));
+  } else {
+    _middlewares = [(0, _middleware.default)(debug)].concat((0, _toConsumableArray2.default)(middlewares));
+  }
+
+  var composeFn = _redux.compose;
+
+  if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) {
+    composeFn = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__;
+  }
+
+  var enhancers = [_redux.applyMiddleware.apply(void 0, (0, _toConsumableArray2.default)(_middlewares))].concat((0, _toConsumableArray2.default)(extraEnhancers));
+  _reduxStore = (0, _redux.createStore)(createReducer(), initialState, composeFn.apply(void 0, (0, _toConsumableArray2.default)(enhancers)));
+  return _reduxStore;
 };
 
-var getReduxStore = exports.getReduxStore = function getReduxStore() {
-    return _reduxStore;
+exports.createReduxStore = createReduxStore;
+
+var getReduxStore = function getReduxStore() {
+  return _reduxStore;
 };
+
+exports.getReduxStore = getReduxStore;

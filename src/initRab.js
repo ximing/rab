@@ -1,35 +1,27 @@
 import React from 'react';
-import {Provider} from 'react-redux';
-import {combineReducers} from 'redux';
-import {
-    ConnectedRouter
-} from "react-router-redux";
+import { Provider } from 'react-redux';
+import { combineReducers } from 'redux';
 import invariant from 'invariant';
 import _ from 'lodash';
 import handleActions from './redux/handleActions';
-import {createReduxStore} from './store';
-import {unlisten, listen} from './subscription';
+import { createReduxStore } from './store';
+import { unlisten, listen } from './subscription';
 import createModel from './createModel';
-import {removeActions} from './actions';
+import { removeActions } from './actions';
+import { connectRouter } from 'connected-react-router';
 
 const isPlainObject = _.isPlainObject;
 
 export default function initRab(createOpts) {
-    const {
-        initialReducer,
-        defaultHistory,
-        routerMiddleware,
-        setupHistory
-    } = createOpts;
+    const { initialReducer, defaultHistory, routerMiddleware, setupHistory } = createOpts;
     /**
      * Create a rab instance.
      */
     return function rab(options = {}) {
-        options = Object.assign({historyFirstCall: true, simple: false}, options);
+        options = Object.assign({ simple: false }, options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
         const initialState = options.initialState || {};
-        const firstCall = !!options.historyFirstCall;
         const debug = !!options.debug;
         const simpleMode = options.simple;
         delete options.simple;
@@ -82,9 +74,8 @@ export default function initRab(createOpts) {
          */
         function removeModel(namespace) {
             removeActions(namespace);
-            this._models = this._models.filter(m => m.namespace !== namespace);
+            this._models = this._models.filter((m) => m.namespace !== namespace);
         }
-
 
         /**
          * Config router. Takes a function with arguments { history, dispatch },
@@ -114,28 +105,31 @@ export default function initRab(createOpts) {
                 invariant(container, `app.start: could not query selector: ${container}`);
             }
 
-            invariant(!container || isHTMLElement(container), 'app.start: container should be HTMLElement');
+            invariant(
+                !container || isHTMLElement(container),
+                'app.start: container should be HTMLElement'
+            );
             invariant(this._router, 'app.start: router should be defined');
 
             // get reducers from model
-            const reducers = {...initialReducer};
+            const reducers = {
+                router: connectRouter(history),
+                ...initialReducer
+            };
             const unlisteners = {};
 
-            this._models.forEach(m => {
+            this._models.forEach((m) => {
                 reducers[m.namespace] = getReducer(m.reducers, m.state);
             });
 
             const extraReducers = options['extraReducers'] || {};
             invariant(
-                Object.keys(extraReducers).every(key => !(key in reducers)),
-                'app.start: extraReducers is conflict with other reducers',
+                Object.keys(extraReducers).every((key) => !(key in reducers)),
+                'app.start: extraReducers is conflict with other reducers'
             );
             const extraEnhancers = options['extraEnhancers'] || [];
-            invariant(
-                Array.isArray(extraEnhancers),
-                'app.start: extraEnhancers should be array',
-            );
-            const createReducer = function (asyncReducers = {}) {
+            invariant(Array.isArray(extraEnhancers), 'app.start: extraEnhancers should be array');
+            const createReducer = function(asyncReducers = {}) {
                 return combineReducers({
                     ...reducers,
                     ...extraReducers,
@@ -143,11 +137,17 @@ export default function initRab(createOpts) {
                 });
             };
             // create store
-            let storeOptions = {extraEnhancers, extraReducers};
+            let storeOptions = { extraEnhancers, extraReducers };
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
-            const store = this._store = createReduxStore(this._middleware, initialState, createReducer, storeOptions, debug);
+            const store = (this._store = createReduxStore(
+                this._middleware,
+                initialState,
+                createReducer,
+                storeOptions,
+                debug
+            ));
             store.asyncReducers = {};
             // setup history
             if (!simpleMode && setupHistory) {
@@ -182,12 +182,12 @@ export default function initRab(createOpts) {
                 delete reducers[namespace];
                 removeActions(namespace);
                 store.replaceReducer(createReducer(store.asyncReducers));
-                store.dispatch({type: '@@rab.UPDATE'});
+                store.dispatch({ type: '@@rab.UPDATE' });
                 // Unlisten subscrioptions
                 unlisten(unlisteners, namespace);
 
                 // Delete model from app._models
-                app._models = app._models.filter(model => model.namespace !== namespace);
+                app._models = app._models.filter((model) => model.namespace !== namespace);
             };
 
             // If has container, render; else, return react component
@@ -198,17 +198,14 @@ export default function initRab(createOpts) {
             }
         }
 
-
         // Helpers
 
         function getProvider(store, app, router) {
-            return extraProps => (
+            return (extraProps) => (
                 <Provider store={store}>
-                    {
-                        !simpleMode ?
-                            router({app, history: app._history, ...extraProps}) :
-                            router({app, ...extraProps})
-                    }
+                    {!simpleMode
+                        ? router({ app, history: app._history, ...extraProps })
+                        : router({ app, ...extraProps })}
                 </Provider>
             );
         }
@@ -221,28 +218,19 @@ export default function initRab(createOpts) {
         function checkModel(m) {
             // Clone model to avoid prefixing namespace multiple times
             const model = _.cloneDeep(m);
-            const {
-                namespace,
-                reducers,
-                actions
-            } = model;
+            const { namespace, reducers, actions } = model;
 
+            invariant(namespace, 'app.model: namespace should be defined');
             invariant(
-                namespace,
-                'app.model: namespace should be defined'
-            );
-            invariant(!app._models.some(model => model.namespace === namespace),
+                !app._models.some((model) => model.namespace === namespace),
                 'app.model: namespace should be unique'
             );
-            invariant(!model.subscriptions || isPlainObject(model.subscriptions),
+            invariant(
+                !model.subscriptions || isPlainObject(model.subscriptions),
                 'app.model: subscriptions should be Object'
             );
-            invariant(!reducers || isPlainObject(reducers),
-                'app.model: reducers should be Object'
-            );
-            invariant(!actions || isPlainObject(actions),
-                'app.model: actions should be Object'
-            );
+            invariant(!reducers || isPlainObject(reducers), 'app.model: reducers should be Object');
+            invariant(!actions || isPlainObject(actions), 'app.model: actions should be Object');
 
             return createModel(model);
         }
@@ -258,6 +246,5 @@ export default function initRab(createOpts) {
                 return handleActions(reducers || {}, state);
             }
         }
-
     };
 }

@@ -1,15 +1,12 @@
 /**
  * Created by yeanzhi on 10/13/17.
  */
-'use strict';
-import 'babel-polyfill';
-
 import React from 'react';
-import rab, {connect, createModel, put, call} from '../main.js';
+import rab, { connect, createModel, put, call } from '../main.js';
 
 function stop(time) {
     return new Promise((res, rej) => {
-        setTimeout(function () {
+        setTimeout(function() {
             res();
         }, 2000);
     });
@@ -29,49 +26,49 @@ let count = createModel({
     reducers: {
         add(state, action) {
             console.log(action.payload);
-            return Object.assign({}, state, {num: state.num + 1})
+            return Object.assign({}, state, { num: state.num + 1 });
         },
         minus(state) {
-            return Object.assign({}, state, {num: state.num - 1})
+            return Object.assign({}, state, { num: state.num - 1 });
         },
         asyncAdd(state, action) {
-            return Object.assign({}, state, {num: state.num + action.payload})
+            return Object.assign({}, state, { num: state.num + action.payload });
         },
         asyncMinus: {
             start(state, action) {
-                console.log('run start', action)
-                return Object.assign({}, state, {loading: true});
+                console.log('run start', action);
+                return Object.assign({}, state, { loading: true });
             },
             next(state, action) {
-                return Object.assign({}, state, {num: state.num + action.payload})
+                return Object.assign({}, state, { num: state.num + action.payload });
             },
             throw(state, action) {
-                return Object.assign({}, state, {num: state.num + action.payload})
+                return Object.assign({}, state, { num: state.num + action.payload });
             },
             finish(state, action) {
-                console.log('run finish', action)
-                return Object.assign({}, state, {loading: false});
+                console.log('run finish', action);
+                return Object.assign({}, state, { loading: false });
             }
         },
         asyncNewApi: {
             start(state, action) {
-                console.log('run start', action)
-                return Object.assign({}, state, {loading: true});
+                console.log('run start', action);
+                return Object.assign({}, state, { loading: true });
             },
             next(state, action) {
-                return Object.assign({}, state, {num: state.num + action.payload})
+                return Object.assign({}, state, { num: state.num + action.payload });
             },
             throw(state, action) {
-                return Object.assign({}, state, {num: state.num + action.payload})
+                return Object.assign({}, state, { num: state.num + action.payload });
             },
             finish(state, action) {
-                console.log('run finish', action)
-                return Object.assign({}, state, {loading: false});
+                console.log('run finish', action);
+                return Object.assign({}, state, { loading: false });
             }
         },
         asyncError: {
             success(state, action) {
-                return Object.assign({}, state)
+                return Object.assign({}, state);
             },
             error(state, action) {
                 console.log(action);
@@ -80,8 +77,8 @@ let count = createModel({
         }
     },
     actions: {
-        asyncAdd: (a, b, c) => async ({getState, dispatch}) => {
-            console.log('----->', getState(), dispatch)
+        asyncAdd: (a, b, c) => async ({ getState, dispatch }) => {
+            console.log('----->', getState(), dispatch);
             await stop();
             return 100;
         },
@@ -99,50 +96,73 @@ let count = createModel({
         }
     },
     subscriptions: {
-        init({dispatch}) {
-        }
+        init({ dispatch }) {}
     }
 });
 
 app.addModel(count);
 
 // 3. View
-const App = connect(({count}) => ({
+const App = connect(({ count }) => ({
     count
 }))((props) => {
     return (
         <div>
             <h2>{props.count.num}</h2>
             <h2>{!props.count.loading ? 'finish' : 'loading'}</h2>
-            <button key="add" onClick={() => {
-                put({type: 'count.add', payload: {a: 1}});
-            }}>+
+            <button
+                key="add"
+                onClick={() => {
+                    put({ type: 'count.add', payload: { a: 1 } });
+                }}
+            >
+                +
             </button>
-            <button key="minus" onClick={() => {
-                props.dispatch({type: 'count.minus'});
-            }}>-
+            <button
+                key="minus"
+                onClick={() => {
+                    props.dispatch({ type: 'count.minus' });
+                }}
+            >
+                -
             </button>
-            <button key="asyncadd" onClick={() => {
-                props.dispatch(count.actions.asyncAdd());
-            }}>ASYNC ADD
+            <button
+                key="asyncadd"
+                onClick={() => {
+                    props.dispatch(count.actions.asyncAdd());
+                }}
+            >
+                ASYNC ADD
             </button>
-            <button key="asyncminus" onClick={() => {
-                put({type: 'count.asyncMinus', payload: {a: 1, n: 2}});
-            }}>ASYNC Minus
+            <button
+                key="asyncminus"
+                onClick={() => {
+                    put({ type: 'count.asyncMinus', payload: { a: 1, n: 2 } });
+                }}
+            >
+                ASYNC Minus
             </button>
-            <button key="asyncNewApi" onClick={() => {
-                call('count.asyncNewApi', 1, 2, 3);
-            }}>asyncNewApi
+            <button
+                key="asyncNewApi"
+                onClick={() => {
+                    call('count.asyncNewApi', 1, 2, 3);
+                }}
+            >
+                asyncNewApi
             </button>
-            <button key="asyncError" onClick={() => {
-                call('count.asyncError', 1, 2, 3);
-            }}>async error
+            <button
+                key="asyncError"
+                onClick={() => {
+                    call('count.asyncError', 1, 2, 3);
+                }}
+            >
+                async error
             </button>
         </div>
     );
 });
 
-app.registerRoot(({}) => <App/>);
+app.registerRoot(({}) => <App />);
 
 // 5. Start
 app.start('#demo_container');

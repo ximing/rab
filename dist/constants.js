@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-/**
- * Created by yeanzhi on 17/4/24.
- */
-var SEP = exports.SEP = '.';
-var KEY = exports.KEY = {
+exports.KEY = exports.SEP = void 0;
+var SEP = '.';
+exports.SEP = SEP;
+var KEY = {
   LIFECYCLE: 'redux-actions/LIFECYCLE'
 };
+exports.KEY = KEY;

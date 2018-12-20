@@ -1,85 +1,67 @@
-/**
- * Created by yeanzhi on 17/4/27.
- */
 'use strict';
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
-
-var _isNull2 = require('lodash/isNull');
-
-var _isNull3 = _interopRequireDefault(_isNull2);
-
-var _isUndefined2 = require('lodash/isUndefined');
-
-var _isUndefined3 = _interopRequireDefault(_isUndefined2);
-
-var _isFunction2 = require('lodash/isFunction');
-
-var _isFunction3 = _interopRequireDefault(_isFunction2);
-
-var _identity2 = require('lodash/identity');
-
-var _identity3 = _interopRequireDefault(_identity2);
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 exports.default = createAction;
 
-var _invariant = require('invariant');
+var _objectSpread2 = _interopRequireDefault(require("@babel/runtime/helpers/objectSpread"));
 
-var _invariant2 = _interopRequireDefault(_invariant);
+var _isNull2 = _interopRequireDefault(require("lodash/isNull"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _isUndefined2 = _interopRequireDefault(require("lodash/isUndefined"));
 
-var identity = _identity3.default;
-var isFunction = _isFunction3.default;
-var isUndefined = _isUndefined3.default;
-var isNull = _isNull3.default;
+var _isFunction2 = _interopRequireDefault(require("lodash/isFunction"));
+
+var _identity2 = _interopRequireDefault(require("lodash/identity"));
+
+var _invariant = _interopRequireDefault(require("invariant"));
+
+var identity = _identity2.default;
+var isFunction = _isFunction2.default;
+var isUndefined = _isUndefined2.default;
+var isNull = _isNull2.default;
+
 function createAction(type) {
-    var payloadCreator = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : identity;
-    var metaCreator = arguments[2];
+  var payloadCreator = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : identity;
+  var metaCreator = arguments.length > 2 ? arguments[2] : undefined;
+  (0, _invariant.default)(isFunction(payloadCreator) || isNull(payloadCreator), 'Expected payloadCreator to be a function, undefined or null');
+  var finalPayloadCreator = isNull(payloadCreator) ? identity : payloadCreator;
 
-    (0, _invariant2.default)(isFunction(payloadCreator) || isNull(payloadCreator), 'Expected payloadCreator to be a function, undefined or null');
+  var actionCreator = function actionCreator() {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
 
-    var finalPayloadCreator = isNull(payloadCreator) ? identity : payloadCreator;
-
-    var actionCreator = function actionCreator() {
-        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-            args[_key] = arguments[_key];
-        }
-
-        var hasError = args[0] instanceof Error;
-
-        var action = {
-            type: type,
-            meta: {
-                'action-redux/payload': [].concat(args)
-            }
-        };
-
-        var payload = hasError ? args[0] : finalPayloadCreator.apply(undefined, args);
-
-        if (!isUndefined(payload)) {
-            action.payload = payload;
-        }
-
-        if (hasError || payload instanceof Error) {
-            // Handle FSA errors where the payload is an Error object. Set error.
-            action.error = true;
-        }
-
-        if (isFunction(metaCreator)) {
-            action.meta = Object.assign(action.meta, _extends({}, metaCreator.apply(undefined, args)));
-        }
-
-        return action;
+    var hasError = args[0] instanceof Error;
+    var action = {
+      type: type,
+      meta: {
+        'action-redux/payload': [].concat(args)
+      }
     };
+    var payload = hasError ? args[0] : finalPayloadCreator.apply(void 0, args);
 
-    actionCreator.toString = function () {
-        return type.toString();
-    };
+    if (!isUndefined(payload)) {
+      action.payload = payload;
+    }
 
-    return actionCreator;
+    if (hasError || payload instanceof Error) {
+      action.error = true;
+    }
+
+    if (isFunction(metaCreator)) {
+      action.meta = Object.assign(action.meta, (0, _objectSpread2.default)({}, metaCreator.apply(void 0, args)));
+    }
+
+    return action;
+  };
+
+  actionCreator.toString = function () {
+    return type.toString();
+  };
+
+  return actionCreator;
 }

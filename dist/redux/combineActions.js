@@ -1,65 +1,55 @@
-'use strict';
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
-exports.ACTION_TYPE_DELIMITER = undefined;
-
-var _toString2 = require('lodash/toString');
-
-var _toString3 = _interopRequireDefault(_toString2);
-
-var _isSymbol2 = require('lodash/isSymbol');
-
-var _isSymbol3 = _interopRequireDefault(_isSymbol2);
-
-var _isString2 = require('lodash/isString');
-
-var _isString3 = _interopRequireDefault(_isString2);
-
-var _isFunction2 = require('lodash/isFunction');
-
-var _isFunction3 = _interopRequireDefault(_isFunction2);
-
-var _isEmpty2 = require('lodash/isEmpty');
-
-var _isEmpty3 = _interopRequireDefault(_isEmpty2);
-
 exports.default = combineActions;
+exports.ACTION_TYPE_DELIMITER = void 0;
 
-var _invariant = require('invariant');
+var _toString2 = _interopRequireDefault(require("lodash/toString"));
 
-var _invariant2 = _interopRequireDefault(_invariant);
+var _isSymbol2 = _interopRequireDefault(require("lodash/isSymbol"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _isString2 = _interopRequireDefault(require("lodash/isString"));
 
-var isEmpty = _isEmpty3.default;
-var isFunction = _isFunction3.default;
-var isString = _isString3.default;
-var isSymbol = _isSymbol3.default;
-var toString = _toString3.default;
+var _isFunction2 = _interopRequireDefault(require("lodash/isFunction"));
 
-var ACTION_TYPE_DELIMITER = exports.ACTION_TYPE_DELIMITER = '||';
+var _isEmpty2 = _interopRequireDefault(require("lodash/isEmpty"));
+
+var _invariant = _interopRequireDefault(require("invariant"));
+
+var isEmpty = _isEmpty2.default;
+var isFunction = _isFunction2.default;
+var isString = _isString2.default;
+var isSymbol = _isSymbol2.default;
+var toString = _toString2.default;
+var ACTION_TYPE_DELIMITER = '||';
+exports.ACTION_TYPE_DELIMITER = ACTION_TYPE_DELIMITER;
 
 function isValidActionType(type) {
-    return isString(type) || isFunction(type) || isSymbol(type);
+  return isString(type) || isFunction(type) || isSymbol(type);
 }
 
 function isValidActionTypes(types) {
-    if (isEmpty(types)) {
-        return false;
-    }
-    return types.every(isValidActionType);
+  if (isEmpty(types)) {
+    return false;
+  }
+
+  return types.every(isValidActionType);
 }
 
 function combineActions() {
-    for (var _len = arguments.length, actionsTypes = Array(_len), _key = 0; _key < _len; _key++) {
-        actionsTypes[_key] = arguments[_key];
-    }
+  for (var _len = arguments.length, actionsTypes = new Array(_len), _key = 0; _key < _len; _key++) {
+    actionsTypes[_key] = arguments[_key];
+  }
 
-    (0, _invariant2.default)(isValidActionTypes(actionsTypes), 'Expected action types to be strings, symbols, or action creators');
-    var combinedActionType = actionsTypes.map(toString).join(ACTION_TYPE_DELIMITER);
-    return { toString: function toString() {
-            return combinedActionType;
-        } };
+  (0, _invariant.default)(isValidActionTypes(actionsTypes), 'Expected action types to be strings, symbols, or action creators');
+  var combinedActionType = actionsTypes.map(toString).join(ACTION_TYPE_DELIMITER);
+  return {
+    toString: function toString() {
+      return combinedActionType;
+    }
+  };
 }

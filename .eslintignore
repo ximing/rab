@@ -1,5 +1,4 @@
-test
-test.js
-node_modules
-.idea
-/pm2/
+node_modules/**/*.js
+*.json
+dist/**/*.js
+demo
