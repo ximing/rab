@@ -4,7 +4,7 @@ const webpack = require('webpack');
 const path = require('path');
 const c9 = !!process.env.PORT;
 module.exports = {
-    mode: 'development', // "production" | "development" | "none"
+    mode: 'production', // "production" | "development" | "none"
     entry: {
         demo: ['react-hot-loader/patch', './demo/index.js'],
         simple: ['react-hot-loader/patch', './demo/simple.js']
@@ -25,6 +25,7 @@ module.exports = {
         hot: true,
         inline: true,
         publicPath: '/dist/',
+        disableHostCheck: true,
         headers: {
             'XM-Component-Server': 'webpack-dev-server@2.0.0'
         },
