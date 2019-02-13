@@ -12,7 +12,7 @@ React and redux based framework.
 
 ### 参考 
 
-[react-router](https://github.com/ReactTraining/react-router) 和 [react-router-redux](https://github.com/reactjs/react-router-redux)
+[react-router](https://github.com/ReactTraining/react-router) 和 [connected-react-router](https://github.com/supasate/connected-react-router)
 
-react-router-redux 默认会赋值到state.router
+rab 默认会将connected-react-router管理的路由赋值为state.router
 
