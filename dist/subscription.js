@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.listen = listen;
 exports.unlisten = unlisten;
+exports.removeAllListener = removeAllListener;
 
 var _isFunction2 = _interopRequireDefault(require("lodash/isFunction"));
 
@@ -84,4 +85,10 @@ function unlisten(unlisteners, namespace) {
   }
 
   delete unlisteners[namespace];
+}
+
+function removeAllListener(unlisteners) {
+  Object.keys(unlisteners).forEach(function (key) {
+    unlisten(unlisteners, key);
+  });
 }

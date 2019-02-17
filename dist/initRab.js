@@ -67,7 +67,8 @@ function initRab(createOpts) {
       removeModel: removeModel,
       router: router,
       registerRoot: registerRoot,
-      start: start
+      start: start,
+      destory: function destory() {}
     };
     return app;
 
@@ -208,6 +209,15 @@ function initRab(createOpts) {
       } else {
         return getProvider(store, this, this._router);
       }
+
+      app.destory = function () {
+        var store = app._store;
+        Object.keys(store.asyncReducers).forEach(function (key) {
+          app.removeModel(key);
+        });
+        (0, _actions.clearActions)();
+        (0, _subscription.removeAllListener)(unlisteners);
+      };
     }
 
     function getProvider(store, app, router) {

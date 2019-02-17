@@ -5,7 +5,7 @@ var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefau
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getAction = exports.removeActions = exports.setAction = void 0;
+exports.clearActions = exports.getAction = exports.removeActions = exports.setAction = void 0;
 
 var _warning = _interopRequireDefault(require("warning"));
 
@@ -35,3 +35,9 @@ var getAction = function getAction(type) {
 };
 
 exports.getAction = getAction;
+
+var clearActions = function clearActions() {
+  actions = {};
+};
+
+exports.clearActions = clearActions;
