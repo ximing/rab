@@ -5,9 +5,9 @@ import invariant from 'invariant';
 import _ from 'lodash';
 import handleActions from './redux/handleActions';
 import { createReduxStore } from './store';
-import { unlisten, listen } from './subscription';
+import { unlisten, listen, removeAllListener } from './subscription';
 import createModel from './createModel';
-import { removeActions } from './actions';
+import { removeActions, clearActions } from './actions';
 import { connectRouter } from 'connected-react-router';
 
 const isPlainObject = _.isPlainObject;
@@ -43,7 +43,8 @@ export default function initRab(createOpts) {
             removeModel,
             router,
             registerRoot,
-            start
+            start,
+            destory: () => {}
         };
         return app;
 
@@ -196,6 +197,15 @@ export default function initRab(createOpts) {
             } else {
                 return getProvider(store, this, this._router);
             }
+
+            app.destory = () => {
+                const store = app._store;
+                Object.keys(store.asyncReducers).forEach((key) => {
+                    app.removeModel(key);
+                });
+                clearActions();
+                removeAllListener(unlisteners);
+            };
         }
 
         // Helpers

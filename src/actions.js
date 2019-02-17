@@ -3,24 +3,28 @@
  */
 'use strict';
 import warning from 'warning';
-import {SEP} from './constants';
+import { SEP } from './constants';
 
 //all actions in models
 let actions = {};
 
-export const setAction = function (type, action) {
+export const setAction = function(type, action) {
     warning(!actions[type], `action ${type} init multiple times`);
     actions[type] = action;
 };
 
-export const removeActions = function (namespace) {
-    Object.keys(actions).forEach(actionKey => {
+export const removeActions = function(namespace) {
+    Object.keys(actions).forEach((actionKey) => {
         if (actionKey.indexOf(`${namespace}${SEP}`) === 0) {
-            delete actions[actionKey]
+            delete actions[actionKey];
         }
-    })
+    });
 };
 
-export const getAction = function (type) {
+export const getAction = function(type) {
     return actions[type];
+};
+
+export const clearActions = function() {
+    actions = {};
 };

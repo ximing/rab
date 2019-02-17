@@ -31,19 +31,27 @@ export function listen(subscriptions, app, simpleMode) {
             }
         }
     }
-    return {funcs, nonFuncs};
+    return { funcs, nonFuncs };
 }
 
 export function unlisten(unlisteners, namespace) {
     if (!unlisteners[namespace]) return;
 
-    const {funcs, nonFuncs} = unlisteners[namespace];
+    const { funcs, nonFuncs } = unlisteners[namespace];
     warning(
         nonFuncs.length === 0,
-        `[app.unmodel] subscription should return unlistener function, check these subscriptions ${nonFuncs.join(', ')}`,
+        `[app.unmodel] subscription should return unlistener function, check these subscriptions ${nonFuncs.join(
+            ', '
+        )}`
     );
     for (const unlistener of funcs) {
         unlistener();
     }
     delete unlisteners[namespace];
+}
+
+export function removeAllListener(unlisteners) {
+    Object.keys(unlisteners).forEach((key) => {
+        unlisten(unlisteners, key);
+    });
 }
