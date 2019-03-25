@@ -1,11 +1,11 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
+import * as invariant from 'invariant';
+
 const isEmpty = _.isEmpty;
 const isFunction = _.isFunction;
 const isString = _.isString;
 const isSymbol = _.isSymbol;
 const toString = _.toString;
-
-import invariant from 'invariant';
 
 export const ACTION_TYPE_DELIMITER = '||';
 

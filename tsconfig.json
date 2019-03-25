@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+      "outDir": "dist",
+      "noImplicitAny": false,
+      "removeComments": false,
+      "experimentalDecorators": true,
+      "sourceMap": false,
+      "module": "commonjs",
+      "target": "es5",
+      "jsx": "react",
+      "allowJs": false,
+      "declaration":true
+    },
+    "include": ["src"],
+    "exclude": [
+      "__tests__",
+      "dist",
+      "demo",
+      "jest",
+      "**/*.test.ts",
+      "node_modules",
+      "**/*.spec.ts",
+      "index.js",
+      "main.js",
+      "router.js"
+    ]
+}

@@ -16,7 +16,9 @@ module.exports = {
         publicPath: '/dist'
     },
     devtool: 'cheap-eval-source-map',
-    resolve: {},
+    resolve: {
+        extensions: ['.tsx', '.ts', '.js']
+    },
     devServer: {
         contentBase: [path.join(__dirname, 'html'), path.join(__dirname, 'dist')],
         compress: true,
@@ -65,6 +67,11 @@ module.exports = {
             {
                 test: /\.(png|jpg|jpeg|gif|woff|svg|eot|ttf|woff2)$/i,
                 use: ['url-loader']
+            },
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/
             }
         ]
     },

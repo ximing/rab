@@ -1,5 +1,5 @@
 import React from 'react';
-import rab, { connect, createModel, put, call } from '../main.js';
+import rab, { connect, createModel, put, call } from '../main';
 import { Route, ConnectedReactRouter } from '../router';
 
 const { ConnectedRouter } = ConnectedReactRouter;

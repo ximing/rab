@@ -1,8 +1,10 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
+import * as invariant from 'invariant';
+
 import reduceReducers from 'reduce-reducers';
-import invariant from 'invariant';
 import handleAction from './handleAction';
 import ownKeys from './ownKeys';
+
 const isPlainObject = _.isPlainObject;
 
 export default function handleActions(handlers, defaultState) {

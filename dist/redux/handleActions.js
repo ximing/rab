@@ -1,37 +1,20 @@
 "use strict";
-
-var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = handleActions;
-
-var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray"));
-
-var _isPlainObject2 = _interopRequireDefault(require("lodash/isPlainObject"));
-
-var _reduceReducers = _interopRequireDefault(require("reduce-reducers"));
-
-var _invariant = _interopRequireDefault(require("invariant"));
-
-var _handleAction = _interopRequireDefault(require("./handleAction"));
-
-var _ownKeys = _interopRequireDefault(require("./ownKeys"));
-
-var isPlainObject = _isPlainObject2.default;
-
+Object.defineProperty(exports, "__esModule", { value: true });
+var _ = require("lodash");
+var invariant = require("invariant");
+var reduce_reducers_1 = require("reduce-reducers");
+var handleAction_1 = require("./handleAction");
+var ownKeys_1 = require("./ownKeys");
+var isPlainObject = _.isPlainObject;
 function handleActions(handlers, defaultState) {
-  (0, _invariant.default)(isPlainObject(handlers), 'Expected handlers to be an plain object.');
-  var reducers = (0, _ownKeys.default)(handlers).map(function (type) {
-    return (0, _handleAction.default)(type, handlers[type], defaultState);
-  });
-
-  var reducer = _reduceReducers.default.apply(void 0, (0, _toConsumableArray2.default)(reducers));
-
-  return function () {
-    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultState;
-    var action = arguments.length > 1 ? arguments[1] : undefined;
-    return reducer(state, action);
-  };
+    invariant(isPlainObject(handlers), 'Expected handlers to be an plain object.');
+    var reducers = ownKeys_1.default(handlers).map(function (type) {
+        return handleAction_1.default(type, handlers[type], defaultState);
+    });
+    var reducer = reduce_reducers_1.default.apply(void 0, reducers);
+    return function (state, action) {
+        if (state === void 0) { state = defaultState; }
+        return reducer(state, action);
+    };
 }
+exports.default = handleActions;
