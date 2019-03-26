@@ -2,14 +2,15 @@
  * Created by yeanzhi on 17/4/27.
  */
 'use strict';
-import _ from 'lodash';
+import * as _ from 'lodash';
+import * as invariant from 'invariant';
+
 const isString = _.isString;
 const isFunction = _.isFunction;
 const isEmpty = _.isEmpty;
 const isSymbol = _.isSymbol;
 const toString = _.toString;
 
-import invariant from 'invariant';
 
 export const ACTION_TYPE_DELIMITER = '||';
 

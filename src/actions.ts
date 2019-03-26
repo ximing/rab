@@ -2,7 +2,7 @@
  * Created by yeanzhi on 17/4/28.
  */
 'use strict';
-import warning from 'warning';
+import * as warning from 'warning';
 import { SEP } from './constants';
 
 //all actions in models

@@ -1,4 +1,9 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
+import * as invariant from 'invariant';
+
+import {ACTION_TYPE_DELIMITER} from './combineActions';
+import {KEY} from '../constants';
+import {reducerFunc,reducerObj} from '../interface';
 
 const identity = _.identity;
 const isFunction = _.isFunction;
@@ -6,10 +11,6 @@ const isUndefined = _.isUndefined;
 const isNil = _.isNil;
 const isPlainObject = _.isPlainObject;
 const includes = _.includes;
-import invariant from 'invariant';
-import {ACTION_TYPE_DELIMITER} from './combineActions';
-import {KEY} from '../constants';
-
 
 function safeMap(state, fn, action) {
     switch (typeof fn) {
@@ -23,7 +24,7 @@ function safeMap(state, fn, action) {
 }
 
 
-export default function handleAction(type, reducer = identity, defaultState) {
+export default function handleAction(type:string, reducer : reducerFunc<any> | reducerObj<any> = identity, defaultState:object) {
     const types = type.toString().split(ACTION_TYPE_DELIMITER);
     invariant(
         !isUndefined(defaultState),

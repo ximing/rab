@@ -1,13 +1,14 @@
 import {isFSA} from 'flux-standard-action';
-import {KEY} from '../constants';
 
+import {KEY} from '../constants';
 import {put, call} from '../lib';
+import {Action} from '../interface';
 
 function isPromise(obj) {
     return !!obj && typeof obj.then === 'function';
 }
 
-function callStartReducer(dispatch, action) {
+function callStartReducer(dispatch, action:Action) {
     if (action.type) {
         dispatch({
             type: action.type,
@@ -20,7 +21,7 @@ function callStartReducer(dispatch, action) {
     }
 }
 
-export default (debug) => ({dispatch, getState}) => next => action => {
+export default (debug) => ({dispatch, getState}) => next => (action:Action|any) => {
     if (!isFSA(action)) {
         if (typeof action === 'function') {
             return action({dispatch, getState, put, call});
@@ -30,7 +31,7 @@ export default (debug) => ({dispatch, getState}) => next => action => {
     } else if (typeof action.payload === 'function' && !isPromise(action.payload)) {
         let res = action.payload({dispatch, getState, put, call});
         if (isPromise(res)) {
-            callStartReducer(dispatch, action);
+            callStartReducer(dispatch, action as Action);
             return res.then(
                 (result) => {
                     dispatch({

@@ -1,14 +1,23 @@
-import React from 'react';
+import * as React from 'react';
 import { Provider } from 'react-redux';
 import { combineReducers } from 'redux';
-import invariant from 'invariant';
-import _ from 'lodash';
+import * as invariant from 'invariant';
+import * as _ from 'lodash';
+import { connectRouter } from 'connected-react-router';
+import {
+    History,
+    Path,
+    Location,
+    LocationState,
+    LocationDescriptorObject
+  } from 'history';
+
 import handleActions from './redux/handleActions';
 import { createReduxStore } from './store';
 import { unlisten, listen, removeAllListener } from './subscription';
 import createModel from './createModel';
 import { removeActions, clearActions } from './actions';
-import { connectRouter } from 'connected-react-router';
+import {RabOptions} from './interface';
 
 const isPlainObject = _.isPlainObject;
 
@@ -17,7 +26,7 @@ export default function initRab(createOpts) {
     /**
      * Create a rab instance.
      */
-    return function rab(options = {}) {
+    return function rab(options:RabOptions) {
         options = Object.assign({ simple: false }, options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
@@ -138,7 +147,11 @@ export default function initRab(createOpts) {
                 });
             };
             // create store
-            let storeOptions = { extraEnhancers, extraReducers };
+            let storeOptions = { 
+                extraEnhancers, 
+                extraReducers,
+                routerMiddleware:History
+             };
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
