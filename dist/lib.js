@@ -26,7 +26,7 @@ exports.dispatch = function (args) {
 };
 exports.getState = function (args) {
     if (store_1.getReduxStore()) {
-        store_1.getReduxStore().getState(args);
+        return store_1.getReduxStore().getState(args);
     }
     else {
         throw new Error('could not call getState before init store');
