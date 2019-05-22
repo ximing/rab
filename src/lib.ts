@@ -15,7 +15,7 @@ export const dispatch = function (args) {
 
 export const getState = function (args) {
     if(getReduxStore()) {
-        getReduxStore().getState(args);
+        return getReduxStore().getState(args);
     }else{
         throw new Error('could not call getState before init store');
     }

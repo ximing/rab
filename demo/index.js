@@ -1,5 +1,5 @@
 import React from 'react';
-import rab, { connect, createModel, put, call } from '../main';
+import rab, { connect, createModel, put, call,getState } from '../main';
 import { Route, ConnectedReactRouter } from '../router';
 
 const { ConnectedRouter } = ConnectedReactRouter;
@@ -71,6 +71,7 @@ let count = {
             return 100;
         },
         async asyncMinus() {
+            console.log(getState())
             await stop();
             return -100;
         },

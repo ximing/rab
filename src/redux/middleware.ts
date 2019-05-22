@@ -61,7 +61,7 @@ export default (debug) => ({dispatch, getState}) => next => (action:Action|any) 
         }
     } else if (isPromise(action.payload)) {
         callStartReducer(dispatch, action);
-        return action.payload.then(
+        return (action.payload as any).then(
             (result) => {
                 dispatch({
                     ...action,
