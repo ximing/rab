@@ -3,7 +3,7 @@ export default function ownKeys(object) {
         return Reflect.ownKeys(object);
     }
 
-    let keys :Array<any> = Object.getOwnPropertyNames(object);
+    let keys = Object.getOwnPropertyNames(object);
 
     if (typeof Object.getOwnPropertySymbols === 'function') {
         keys = keys.concat(Object.getOwnPropertySymbols(object));

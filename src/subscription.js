@@ -1,6 +1,6 @@
-import * as warning from 'warning';
-import * as _ from 'lodash';
-import * as invariant from 'invariant';
+import warning from 'warning';
+import _ from 'lodash';
+import invariant from 'invariant';
 
 const isFunction = _.isFunction;
 

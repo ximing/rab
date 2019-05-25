@@ -2,35 +2,29 @@
  * Created by yeanzhi on 17/4/27.
  */
 'use strict';
-import * as _ from 'lodash';
-import * as invariant from 'invariant';
-
-import {Action} from '../interface';
-
+import _ from 'lodash';
 const identity = _.identity;
 const isFunction = _.isFunction;
 const isUndefined = _.isUndefined;
 const isNull = _.isNull;
+import invariant from 'invariant';
 
-
-export default function createAction(type, payloadCreator = identity, metaCreator?) {
+export default function createAction(type, payloadCreator = identity, metaCreator) {
     invariant(
         isFunction(payloadCreator) || isNull(payloadCreator),
         'Expected payloadCreator to be a function, undefined or null'
     );
 
-    const finalPayloadCreator :any = isNull(payloadCreator)
-        ? identity
-        : payloadCreator;
+    const finalPayloadCreator = isNull(payloadCreator) ? identity : payloadCreator;
 
     const actionCreator = (...args) => {
         const hasError = args[0] instanceof Error;
 
-        let action : Action = {
+        let action = {
             type,
             meta: {
                 'action-redux/payload': [...args]
-            },
+            }
         };
 
         const payload = hasError ? args[0] : finalPayloadCreator(...args);
@@ -45,7 +39,7 @@ export default function createAction(type, payloadCreator = identity, metaCreato
         }
 
         if (isFunction(metaCreator)) {
-            action.meta = Object.assign(action.meta,{...metaCreator(...args)});
+            action.meta = Object.assign(action.meta, { ...metaCreator(...args) });
         }
 
         return action;

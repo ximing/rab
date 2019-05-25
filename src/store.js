@@ -24,9 +24,7 @@ export const createReduxStore = function(
         _middlewares = [rabMiddleware(debug), ...middlewares];
     }
     let composeFn = compose;
-    // @ts-ignore
     if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) {
-        // @ts-ignore
         composeFn = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__;
     }
     const enhancers = [applyMiddleware(..._middlewares), ...extraEnhancers];

@@ -1,9 +1,4 @@
-import * as _ from 'lodash';
-import * as invariant from 'invariant';
-
-import {ACTION_TYPE_DELIMITER} from './combineActions';
-import {KEY} from '../constants';
-import {reducerFunc,reducerObj} from '../interface';
+import _ from 'lodash';
 
 const identity = _.identity;
 const isFunction = _.isFunction;
@@ -11,6 +6,9 @@ const isUndefined = _.isUndefined;
 const isNil = _.isNil;
 const isPlainObject = _.isPlainObject;
 const includes = _.includes;
+import invariant from 'invariant';
+import { ACTION_TYPE_DELIMITER } from './combineActions';
+import { KEY } from '../constants';
 
 function safeMap(state, fn, action) {
     switch (typeof fn) {
@@ -23,8 +21,7 @@ function safeMap(state, fn, action) {
     }
 }
 
-
-export default function handleAction(type:string, reducer : reducerFunc<any> | reducerObj<any> = identity, defaultState:object) {
+export default function handleAction(type, reducer = identity, defaultState) {
     const types = type.toString().split(ACTION_TYPE_DELIMITER);
     invariant(
         !isUndefined(defaultState),
@@ -37,12 +34,15 @@ export default function handleAction(type:string, reducer : reducerFunc<any> | r
 
     const [startReducer, nextReducer, throwReducer, finishReducer] = isFunction(reducer)
         ? [identity, reducer, reducer, identity]
-        : [reducer.start, (reducer.next || reducer.success),
-            (reducer.throw || reducer.error), reducer.finish]
-            .map(aReducer => (isNil(aReducer) ? identity : aReducer));
+        : [
+            reducer.start,
+            reducer.next || reducer.success,
+            reducer.throw || reducer.error,
+            reducer.finish
+        ].map((aReducer) => (isNil(aReducer) ? identity : aReducer));
 
     return (state = defaultState, action) => {
-        const {type: actionType, meta} = action;
+        const { type: actionType, meta } = action;
         const lifecycle = meta ? meta[KEY.LIFECYCLE] : null;
         if (!actionType || !includes(types, actionType.toString())) {
             return state;
@@ -50,7 +50,10 @@ export default function handleAction(type:string, reducer : reducerFunc<any> | r
         if (lifecycle === 'start') {
             state = safeMap(state, startReducer, action);
         } else {
-            if (action.error === true && ((identity === throwReducer) || (nextReducer === throwReducer))) {
+            if (
+                action.error === true &&
+                (identity === throwReducer || nextReducer === throwReducer)
+            ) {
                 throw action.payload;
             }
             state = (action.error === true ? throwReducer : nextReducer)(state, action);

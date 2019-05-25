@@ -1,23 +1,14 @@
-import * as React from 'react';
+import React from 'react';
 import { Provider } from 'react-redux';
 import { combineReducers } from 'redux';
-import * as invariant from 'invariant';
-import * as _ from 'lodash';
-import { connectRouter } from 'connected-react-router';
-import {
-    History,
-    Path,
-    Location,
-    LocationState,
-    LocationDescriptorObject
-  } from 'history';
-
+import invariant from 'invariant';
+import _ from 'lodash';
 import handleActions from './redux/handleActions';
 import { createReduxStore } from './store';
 import { unlisten, listen, removeAllListener } from './subscription';
 import createModel from './createModel';
 import { removeActions, clearActions } from './actions';
-import {RabOptions} from './interface';
+import { connectRouter } from 'connected-react-router';
 
 const isPlainObject = _.isPlainObject;
 
@@ -26,7 +17,7 @@ export default function initRab(createOpts) {
     /**
      * Create a rab instance.
      */
-    return function rab(options:RabOptions) {
+    return function rab(options = {}) {
         options = Object.assign({ simple: false }, options);
         // history and initialState does not pass to plugin
         const history = options.history || defaultHistory;
@@ -147,11 +138,7 @@ export default function initRab(createOpts) {
                 });
             };
             // create store
-            let storeOptions = { 
-                extraEnhancers, 
-                extraReducers,
-                routerMiddleware:History
-             };
+            let storeOptions = { extraEnhancers, extraReducers };
             if (!simpleMode && routerMiddleware) {
                 storeOptions.routerMiddleware = routerMiddleware(history);
             }
@@ -204,13 +191,7 @@ export default function initRab(createOpts) {
                 app._models = app._models.filter((model) => model.namespace !== namespace);
             };
 
-            // If has container, render; else, return react component
-            if (container) {
-                render(container, store, this, this._router);
-            } else {
-                return getProvider(store, this, this._router);
-            }
-
+            // app destory
             app.destory = () => {
                 const store = app._store;
                 Object.keys(store.asyncReducers).forEach((key) => {
@@ -219,6 +200,13 @@ export default function initRab(createOpts) {
                 clearActions();
                 removeAllListener(unlisteners);
             };
+
+            // If has container, render; else, return react component
+            if (container) {
+                render(container, store, this, this._router);
+            } else {
+                return getProvider(store, this, this._router);
+            }
         }
 
         // Helpers

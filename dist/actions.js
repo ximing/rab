@@ -1,26 +1,43 @@
-/**
- * Created by yeanzhi on 17/4/28.
- */
 'use strict';
-Object.defineProperty(exports, "__esModule", { value: true });
-var warning = require("warning");
-var constants_1 = require("./constants");
-//all actions in models
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearActions = exports.getAction = exports.removeActions = exports.setAction = void 0;
+
+var _warning = _interopRequireDefault(require("warning"));
+
+var _constants = require("./constants");
+
 var actions = {};
-exports.setAction = function (type, action) {
-    warning(!actions[type], "action " + type + " init multiple times");
-    actions[type] = action;
+
+var setAction = function setAction(type, action) {
+  (0, _warning.default)(!actions[type], "action ".concat(type, " init multiple times"));
+  actions[type] = action;
 };
-exports.removeActions = function (namespace) {
-    Object.keys(actions).forEach(function (actionKey) {
-        if (actionKey.indexOf("" + namespace + constants_1.SEP) === 0) {
-            delete actions[actionKey];
-        }
-    });
+
+exports.setAction = setAction;
+
+var removeActions = function removeActions(namespace) {
+  Object.keys(actions).forEach(function (actionKey) {
+    if (actionKey.indexOf("".concat(namespace).concat(_constants.SEP)) === 0) {
+      delete actions[actionKey];
+    }
+  });
 };
-exports.getAction = function (type) {
-    return actions[type];
+
+exports.removeActions = removeActions;
+
+var getAction = function getAction(type) {
+  return actions[type];
 };
-exports.clearActions = function () {
-    actions = {};
+
+exports.getAction = getAction;
+
+var clearActions = function clearActions() {
+  actions = {};
 };
+
+exports.clearActions = clearActions;

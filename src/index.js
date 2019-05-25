@@ -2,11 +2,11 @@ import { routerMiddleware } from 'connected-react-router';
 import initRab from './initRab';
 import { createBrowserHistory } from 'history';
 
-import createAction from './redux/createAction';
-import createActions from './redux/createActions';
-import handleAction from './redux/handleAction';
-import handleActions from './redux/handleActions';
-import { dispatch, put, getState, call } from './lib';
+export createAction from './redux/createAction';
+export createActions from './redux/createActions';
+export handleAction from './redux/handleAction.js';
+export handleActions from './redux/handleActions.js';
+export { dispatch, put, getState, call } from './lib';
 
 export default initRab({
     initialReducer: {},
@@ -17,11 +17,6 @@ export default initRab({
         this._history = patchHistory(history); //syncHistoryWithStore(history, this._store);
     }
 });
-
-export {
-    createAction,createActions,handleAction,handleActions,
-    dispatch, put, getState, call
-}
 
 function patchHistory(history) {
     const oldListen = history.listen;
