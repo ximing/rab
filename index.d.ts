@@ -9,9 +9,8 @@ import {
     Middleware
 } from 'redux';
 
-export type dispatch = Function;
-export type put = Function;
-export type call = Function;
+export function call(type: string, ...args): any;
+export function put(any): any;
 
 export function getState(): any;
 
