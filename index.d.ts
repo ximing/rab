@@ -13,6 +13,10 @@ export function call(type: string, ...args): any;
 export function put(any): any;
 
 export function getState(): any;
+export type Subscription = (api: SubscriptionAPI, done: Function) => void;
+export interface ReducerEnhancer {
+    (reducer: Reducer<any>): void;
+}
 
 export interface SubscriptionAPI {
     history: History;
@@ -21,11 +25,20 @@ export interface SubscriptionAPI {
 export interface SubscriptionsMapObject {
     [key: string]: Subscription;
 }
+export type ReducersMapObjectWithEnhancer = [ReducersMapObject, ReducerEnhancer];
+
+export type ReducerFn = (state: any, action: { payload: any; type: string; error: any }) => void;
+export type ReducerType = 'success' | 'error' | 'fail' | 'start' | 'next' | 'throw' | 'finish';
+export type ReducerWithLifeCycle = { [key: ReducerType]: ReducerFn };
+
+export interface ActionsMapObject {
+    [key: string]: any;
+}
 export interface Model {
     namespace: string;
     state?: any;
-    reducers?: ReducersMapObject | ReducersMapObjectWithEnhancer;
-    actions?: EffectsMapObject;
+    reducers?: ReducerFn | ReducerWithLifeCycle | ReducersMapObject | ReducersMapObjectWithEnhancer;
+    actions?: ActionsMapObject;
     subscriptions?: SubscriptionsMapObject;
 }
 import * as routerRedux from 'connected-react-router';
