@@ -1,8 +1,7 @@
 import React from 'react';
-import rab, { connect, createModel, put, call,getState } from '../main';
-import { Route, ConnectedReactRouter } from '../router';
+import rab, { connect, createModel, put, call,getState, routerRedux, Route } from '../main';
 
-const { ConnectedRouter } = ConnectedReactRouter;
+const { ConnectedRouter } = routerRedux;
 
 function stop(time) {
     return new Promise((res, rej) => {

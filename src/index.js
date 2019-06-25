@@ -7,6 +7,7 @@ export createActions from './redux/createActions';
 export handleAction from './redux/handleAction.js';
 export handleActions from './redux/handleActions.js';
 export { dispatch, put, getState, call } from './lib';
+export * from 'react-router-dom';
 
 export default initRab({
     initialReducer: {},

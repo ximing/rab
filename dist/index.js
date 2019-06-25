@@ -5,6 +5,16 @@ var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefau
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+var _exportNames = {
+  createAction: true,
+  createActions: true,
+  handleAction: true,
+  handleActions: true,
+  dispatch: true,
+  put: true,
+  getState: true,
+  call: true
+};
 Object.defineProperty(exports, "createAction", {
   enumerable: true,
   get: function get() {
@@ -70,6 +80,19 @@ var _handleAction2 = _interopRequireDefault(require("./redux/handleAction.js"));
 var _handleActions2 = _interopRequireDefault(require("./redux/handleActions.js"));
 
 var _lib = require("./lib");
+
+var _reactRouterDom = require("react-router-dom");
+
+Object.keys(_reactRouterDom).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _reactRouterDom[key];
+    }
+  });
+});
 
 var _default = (0, _initRab.default)({
   initialReducer: {},

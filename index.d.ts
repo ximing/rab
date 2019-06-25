@@ -9,9 +9,8 @@ import {
     Middleware
 } from 'redux';
 
+export function put(obj: any): any;
 export function call(type: string, ...args): any;
-export function put(any): any;
-
 export function getState(): any;
 export type Subscription = (api: SubscriptionAPI, done: Function) => void;
 export interface ReducerEnhancer {
@@ -29,7 +28,7 @@ export type ReducersMapObjectWithEnhancer = [ReducersMapObject, ReducerEnhancer]
 
 export type ReducerFn = (state: any, action: { payload: any; type: string; error: any }) => void;
 export type ReducerType = 'success' | 'error' | 'fail' | 'start' | 'next' | 'throw' | 'finish';
-export type ReducerWithLifeCycle = { [key: ReducerType]: ReducerFn };
+export type ReducerWithLifeCycle = { [key in ReducerType]: ReducerFn };
 
 export interface ActionsMapObject {
     [key: string]: any;
@@ -43,9 +42,7 @@ export interface Model {
 }
 import * as routerRedux from 'connected-react-router';
 export { routerRedux };
-import * as router from 'react-router-dom';
-export { router };
-
+export * from 'react-router-dom';
 export type RabOption = {
     debug?: boolean;
     initialState?: Object;

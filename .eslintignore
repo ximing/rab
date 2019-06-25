@@ -2,3 +2,4 @@ node_modules/**/*.js
 *.json
 dist/**/*.js
 demo
+*.d.ts
