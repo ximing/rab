@@ -23,10 +23,14 @@ export const createReduxStore = function(
     } else {
         _middlewares = [rabMiddleware(debug), ...middlewares];
     }
-    let composeFn = compose;
-    if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) {
-        composeFn = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__;
-    }
+
+    const composeFn =
+        typeof window === 'object' &&
+        process.env.NODE_ENV !== 'production' &&
+        window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__
+            ? window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({ trace: true, maxAge: 30 })
+            : compose;
+
     const enhancers = [applyMiddleware(..._middlewares), ...extraEnhancers];
     _reduxStore = createStore(createReducer(), initialState, composeFn(...enhancers));
 

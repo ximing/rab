@@ -1,7 +1,20 @@
 import React from 'react';
-import rab, { connect, createModel, put, call,getState, routerRedux, Route } from '../main';
+import logger from 'redux-logger';
+
+import rab, {
+    connect,
+    createModel,
+    put,
+    call,
+    getState,
+    routerRedux,
+    Route,
+    Switch
+} from '../main';
 
 const { ConnectedRouter } = routerRedux;
+import { createBrowserHistory } from 'history';
+const history = createBrowserHistory();
 
 function stop(time) {
     return new Promise((res, rej) => {
@@ -10,8 +23,13 @@ function stop(time) {
         }, 2000);
     });
 }
+window.rootHistory = history;
 
-const app = rab();
+const app = rab({
+    history: history,
+    initialState: {}
+});
+app.use(logger);
 // 2. Model
 let count = {
     namespace: 'count',
@@ -21,7 +39,7 @@ let count = {
     },
     reducers: {
         add(state, action) {
-            console.log(action.payload);
+            console.log('count.add reducer', action.payload);
             return Object.assign({}, state, { num: state.num + 1 });
         },
         minus(state) {
@@ -70,7 +88,7 @@ let count = {
             return 100;
         },
         async asyncMinus() {
-            console.log(getState())
+            console.log(getState());
             await stop();
             return -100;
         },
@@ -84,6 +102,8 @@ let count = {
             console.log('history');
             return history.listen((location, action) => {
                 console.log('init------------>', location, action);
+                dispatch({ type: 'count.add' });
+                console.log('dispatch end');
             });
         }
     }
@@ -103,7 +123,7 @@ let asyncModel = {
     }
 };
 
-count = app.addModel(count);
+app.addModel(count);
 
 // 3. View
 const App = connect(({ count }) => ({
@@ -170,6 +190,16 @@ const App = connect(({ count }) => ({
             >
                 async remove model
             </button>
+            <div>
+                <button
+                    key="pushHistory"
+                    onClick={() => {
+                        app._history.push(`/ss/${Date.now()}`);
+                    }}
+                >
+                    push history
+                </button>
+            </div>
         </div>
     );
 });
@@ -184,6 +214,7 @@ app.router(({ history }) => {
         </ConnectedRouter>
     );
 });
+
 window.app = app;
 // 5. Start
 app.start('#demo_container');

@@ -7,6 +7,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getReduxStore = exports.createReduxStore = void 0;
 
+var _typeof2 = _interopRequireDefault(require("@babel/runtime/helpers/typeof"));
+
 var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray"));
 
 var _redux = require("redux");
@@ -28,12 +30,10 @@ var createReduxStore = function createReduxStore(middlewares, initialState, crea
     _middlewares = [(0, _middleware.default)(debug)].concat((0, _toConsumableArray2.default)(middlewares));
   }
 
-  var composeFn = _redux.compose;
-
-  if (process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) {
-    composeFn = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__;
-  }
-
+  var composeFn = (typeof window === "undefined" ? "undefined" : (0, _typeof2.default)(window)) === 'object' && process.env.NODE_ENV !== 'production' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ ? window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
+    trace: true,
+    maxAge: 30
+  }) : _redux.compose;
   var enhancers = [_redux.applyMiddleware.apply(void 0, (0, _toConsumableArray2.default)(_middlewares))].concat((0, _toConsumableArray2.default)(extraEnhancers));
   _reduxStore = (0, _redux.createStore)(createReducer(), initialState, composeFn.apply(void 0, (0, _toConsumableArray2.default)(enhancers)));
   return _reduxStore;
