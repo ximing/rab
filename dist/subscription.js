@@ -9,8 +9,6 @@ exports.listen = listen;
 exports.unlisten = unlisten;
 exports.removeAllListener = removeAllListener;
 
-var _objectSpread2 = _interopRequireDefault(require("@babel/runtime/helpers/objectSpread"));
-
 var _isFunction2 = _interopRequireDefault(require("lodash/isFunction"));
 
 var _warning = _interopRequireDefault(require("warning"));
@@ -19,11 +17,9 @@ var _invariant = _interopRequireDefault(require("invariant"));
 
 var isFunction = _isFunction2.default;
 
-function listen(subscriptions, app, simpleMode) {
+function listen(subscriptions, app, simpleMode, history) {
   var funcs = [];
   var nonFuncs = [];
-  var history = app._history;
-  var oldListen = history.listen;
 
   for (var key in subscriptions) {
     if (Object.prototype.hasOwnProperty.call(subscriptions, key)) {
@@ -34,20 +30,7 @@ function listen(subscriptions, app, simpleMode) {
       if (!simpleMode) {
         unlistener = sub({
           dispatch: app._store.dispatch,
-          history: (0, _objectSpread2.default)({}, history, {
-            listen: function listen(callback) {
-              return oldListen.call(history, function () {
-                for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-                  args[_key] = arguments[_key];
-                }
-
-                var self = this;
-                setTimeout(function () {
-                  callback.call.apply(callback, [self].concat(args));
-                }, 0);
-              });
-            }
-          }),
+          history: history,
           getState: app._store.getState
         });
       } else {

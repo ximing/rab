@@ -4,11 +4,9 @@ import invariant from 'invariant';
 
 const isFunction = _.isFunction;
 
-export function listen(subscriptions, app, simpleMode) {
+export function listen(subscriptions, app, simpleMode, history) {
     const funcs = [];
     const nonFuncs = [];
-    const history = app._history;
-    const oldListen = history.listen;
     for (const key in subscriptions) {
         if (Object.prototype.hasOwnProperty.call(subscriptions, key)) {
             const sub = subscriptions[key];
@@ -17,17 +15,7 @@ export function listen(subscriptions, app, simpleMode) {
             if (!simpleMode) {
                 unlistener = sub({
                     dispatch: app._store.dispatch,
-                    history: {
-                        ...history,
-                        listen(callback) {
-                            return oldListen.call(history, function(...args) {
-                                const self = this;
-                                setTimeout(() => {
-                                    callback.call(self, ...args);
-                                }, 0);
-                            });
-                        }
-                    },
+                    history,
                     getState: app._store.getState
                 });
             } else {

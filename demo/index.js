@@ -101,7 +101,7 @@ let count = {
         init({ history, dispatch }) {
             console.log('history');
             return history.listen((location, action) => {
-                console.log('init------------>', location, action);
+                console.log('init------------>', history.location,location.pathname, action);
                 dispatch({ type: 'count.add' });
                 console.log('dispatch end');
             });

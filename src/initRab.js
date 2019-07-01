@@ -155,10 +155,41 @@ export default function initRab(createOpts) {
                 setupHistory.call(this, history);
             }
 
+            // TODO: module 里面 listen 调用call或者dispatch 会在connected-react-router 之前触发，导致多次触发listen
+            const rabHistory = {
+                get location() {
+                    return app._history.location;
+                },
+                get action() {
+                    return app._history.action;
+                },
+                get length() {
+                    return app._history.length;
+                },
+                listen(callback) {
+                    return app._history.listen.call(app._history, function(...args) {
+                        const self = this;
+                        setTimeout(() => {
+                            callback.call(self, ...args);
+                        }, 0);
+                    });
+                }
+            };
+            Object.keys(history).forEach((key) => {
+                if (!rabHistory[key]) {
+                    rabHistory[key] = app._history[key];
+                }
+            });
+
             // run subscriptions
             for (let model of this._models) {
                 if (model.subscriptions) {
-                    unlisteners[model.namespace] = listen(model.subscriptions, app, simpleMode);
+                    unlisteners[model.namespace] = listen(
+                        model.subscriptions,
+                        app,
+                        simpleMode,
+                        rabHistory
+                    );
                 }
             }
 

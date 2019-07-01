@@ -146,6 +146,37 @@ function initRab(createOpts) {
         setupHistory.call(this, history);
       }
 
+      var rabHistory = {
+        get location() {
+          return app._history.location;
+        },
+
+        get action() {
+          return app._history.action;
+        },
+
+        get length() {
+          return app._history.length;
+        },
+
+        listen: function listen(callback) {
+          return app._history.listen.call(app._history, function () {
+            for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+              args[_key] = arguments[_key];
+            }
+
+            var self = this;
+            setTimeout(function () {
+              callback.call.apply(callback, [self].concat(args));
+            }, 0);
+          });
+        }
+      };
+      Object.keys(history).forEach(function (key) {
+        if (!rabHistory[key]) {
+          rabHistory[key] = app._history[key];
+        }
+      });
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -155,7 +186,7 @@ function initRab(createOpts) {
           var model = _step.value;
 
           if (model.subscriptions) {
-            unlisteners[model.namespace] = (0, _subscription.listen)(model.subscriptions, app, simpleMode);
+            unlisteners[model.namespace] = (0, _subscription.listen)(model.subscriptions, app, simpleMode, rabHistory);
           }
         }
       } catch (err) {
