@@ -3,13 +3,17 @@
       "outDir": "dist",
       "noImplicitAny": false,
       "removeComments": false,
-      "experimentalDecorators": true,
       "sourceMap": false,
       "module": "commonjs",
       "target": "es5",
       "jsx": "react",
       "allowJs": false,
-      "declaration":true
+      "declaration":true,
+      "lib": ["es6", "dom"],
+      "types": ["reflect-metadata"],
+      "moduleResolution": "node",
+      "experimentalDecorators": true,
+      "emitDecoratorMetadata": true
     },
     "include": ["src"],
     "exclude": [
