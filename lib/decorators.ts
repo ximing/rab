@@ -7,6 +7,8 @@ import {
     actionSymbols,
     subscribeSymbols
 } from './symbols';
+import { injectable } from 'inversify';
+import { ModelNamespaceSymbol } from './symbols';
 
 function addActionName(symbols, constructor, actionName) {
     const decoratedActionNames = Reflect.getMetadata(symbols.decorator, constructor) || [];
@@ -14,7 +16,7 @@ function addActionName(symbols, constructor, actionName) {
 }
 
 export function createActionDecorator(symbols) {
-    return ({ constructor }, propertyKey) => {
+    return () => ({ constructor }, propertyKey) => {
         addActionName(symbols, constructor, propertyKey);
     };
 }
@@ -27,9 +29,22 @@ export function getAllActionNames(instance) {
     return allActionSymbols.reduce((result, symbols) => [...result, ...getActionNames(symbols, instance.constructor)], []);
 }
 
+
 export const immerReducer = createActionDecorator(immerReducerSymbols);
 export const reducer = createActionDecorator(reducerSymbols);
 export const effect = createActionDecorator(effectSymbols);
 export const action = createActionDecorator(actionSymbols);
 export const defineAction = createActionDecorator(defineActionSymbols);
 export const subscribeAction = createActionDecorator(subscribeSymbols);
+
+export const model = (namespace: string) => function classDecorator<T extends { new(...args: any[]): {} }>(constructor: T) {
+    if (!namespace) {
+        throw new Error('namespace不能为空，请使用@model(namespace)添加注解');
+    }
+    if (typeof namespace !== 'string') {
+        throw new Error('@model(namespace) 中namespace必须为string');
+    }
+    const target = injectable()(constructor);
+    Reflect.defineMetadata(ModelNamespaceSymbol, namespace, target);
+    return target;
+};

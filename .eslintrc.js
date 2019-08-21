@@ -13,18 +13,7 @@ module.exports = {
         project: './tsconfig.json'
     },
     globals: {
-        Taro: true,
-        Page: true,
-        Component: true,
-        App: true,
-        wx: true,
-        getApp: true,
-        getCurrentPages: true,
-        Behavior: true,
-        jest: true,
-        R: true,
-        __wxAppBasePage: true,
-        mmp: true
+        window: true
     },
     settings: {
         react: {

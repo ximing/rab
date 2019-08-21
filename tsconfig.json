@@ -1,31 +1,39 @@
 {
-    "compilerOptions": {
-      "outDir": "dist",
-      "noImplicitAny": false,
-      "removeComments": false,
-      "sourceMap": false,
-      "module": "commonjs",
-      "target": "es5",
-      "jsx": "react",
-      "allowJs": false,
-      "declaration":true,
-      "lib": ["es6", "dom"],
-      "types": ["reflect-metadata"],
-      "moduleResolution": "node",
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true
-    },
-    "include": ["src"],
-    "exclude": [
-      "__tests__",
-      "dist",
-      "demo",
-      "jest",
-      "**/*.test.ts",
-      "node_modules",
-      "**/*.spec.ts",
-      "index.js",
-      "main.js",
-      "router.js"
-    ]
+  "compilerOptions": {
+    "outDir": "dist",
+    "noImplicitAny": false,
+    "removeComments": false,
+    "sourceMap": false,
+    "module": "commonjs",
+    "target": "es5",
+    "jsx": "react",
+    "allowJs": false,
+    "declaration": true,
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "types": [
+      "reflect-metadata",
+      "node"
+    ],
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "__tests__",
+    "dist",
+    "demo",
+    "jest",
+    "**/*.test.ts",
+    "node_modules",
+    "**/*.spec.ts",
+    "index.js",
+    "main.js",
+    "router.js"
+  ]
 }
