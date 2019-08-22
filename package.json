@@ -1,6 +1,6 @@
 {
     "name": "rabjs",
-    "version": "6.3.3",
+    "version": "7.0.0",
     "description": "React and redux based framework.",
     "author": "yanzhi",
     "repository": "https://github.com/ximing/rab",
@@ -129,6 +129,7 @@
         "style-loader": "^0.23.1",
         "ts-jest": "^24.0.2",
         "ts-loader": "^6.0.2",
+        "ts-node": "^8.3.0",
         "typescript": "^3.5.3",
         "typescript-eslint-parser": "^22.0.0",
         "url-loader": "^1.1.2",
@@ -153,5 +154,8 @@
             "eslint --fix",
             "git add"
         ]
+    },
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org/"
     }
 }

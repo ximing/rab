@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "outDir": "dist",
+    "sourceRoot": "lib",
     "noImplicitAny": false,
     "removeComments": false,
-    "sourceMap": false,
+    "sourceMap": true,
     "module": "commonjs",
     "target": "es5",
     "jsx": "react",
@@ -22,7 +23,7 @@
     "emitDecoratorMetadata": true
   },
   "include": [
-    "src"
+    "lib"
   ],
   "exclude": [
     "__tests__",

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import { combineReducers } from 'redux';
+import { combineReducers, Middleware } from 'redux';
 import { Model, IModel } from './model';
 import { getActionNames, reducer } from './decorators';
 import {
@@ -10,17 +10,19 @@ import {
     reducerSymbols,
     immerReducerSymbols,
     actionSymbols,
-    subscribeSymbols
+    subscribeSymbols, ModelNamespaceSymbol
 } from './symbols';
 import { ReduceManager } from './reduceManager';
 import { ReduxStore } from './store';
 
 export class Rab {
+    private middlewares: Middleware[];
     container: Container;
     reduceManager: ReduceManager;
     reduxStore: ReduxStore;
 
-    constructor() {
+    constructor(middlewares: Middleware[] = []) {
+        this.middlewares = middlewares;
         this.container = new Container({ defaultScope: 'Singleton' });
         this.reduxStore = new ReduxStore(this);
         this.reduceManager = new ReduceManager(this);
@@ -32,11 +34,15 @@ export class Rab {
     }
 
     getModel<S>(ModelClass: IModel<S>) {
-        return this.container.resolve(ModelClass);
+        return this.container.get(ModelClass);
     }
 
     start() {
+        this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, {});
     }
 
+    getStore(){
+        return this.reduxStore.getReduxStore();
+    }
 }
 

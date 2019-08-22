@@ -1,10 +1,10 @@
-import { createStore, applyMiddleware, compose, Store } from 'redux';
+import { createStore, applyMiddleware, compose, Store, combineReducers } from 'redux';
 import { Rab } from './rab';
 
 export class ReduxStore {
-    rab: Rab;
-    store: Store;
-    initialState:any;
+    private rab: Rab;
+    private store: Store;
+    initialState: any;
 
     constructor(rab: Rab) {
         this.rab = rab;
@@ -15,12 +15,12 @@ export class ReduxStore {
         return this.store;
     }
 
-     createReduxStore(
+    createReduxStore(
         middlewares,
-        createReducer,
+        reducers,
         options
     ) {
-        const { routerMiddleware, extraEnhancers } = options;
+        const { routerMiddleware, extraEnhancers = [] } = options;
         // create store
         let _middlewares = [...middlewares];
         if (routerMiddleware) {
@@ -36,7 +36,7 @@ export class ReduxStore {
                 ? (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({ trace: true, maxAge: 30 })
                 : compose;
         const enhancers = [applyMiddleware(..._middlewares), ...extraEnhancers];
-        this.store = createStore(createReducer(), this.initialState, composeFn(...enhancers));
+        this.store = createStore(combineReducers({ ...reducers }), this.initialState, composeFn(...enhancers));
         return this.store;
     };
 }

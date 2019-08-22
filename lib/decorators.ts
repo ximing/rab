@@ -1,3 +1,4 @@
+import { injectable } from 'inversify';
 import {
     allActionSymbols,
     defineActionSymbols,
@@ -5,10 +6,9 @@ import {
     reducerSymbols,
     immerReducerSymbols,
     actionSymbols,
-    subscribeSymbols
+    subscribeSymbols,
+    ModelNamespaceSymbol
 } from './symbols';
-import { injectable } from 'inversify';
-import { ModelNamespaceSymbol } from './symbols';
 
 function addActionName(symbols, constructor, actionName) {
     const decoratedActionNames = Reflect.getMetadata(symbols.decorator, constructor) || [];
@@ -37,14 +37,17 @@ export const action = createActionDecorator(actionSymbols);
 export const defineAction = createActionDecorator(defineActionSymbols);
 export const subscribeAction = createActionDecorator(subscribeSymbols);
 
-export const model = (namespace: string) => function classDecorator<T extends { new(...args: any[]): {} }>(constructor: T) {
+export const model = (namespace: string) => function classDecorator(target) {
     if (!namespace) {
         throw new Error('namespace不能为空，请使用@model(namespace)添加注解');
     }
     if (typeof namespace !== 'string') {
         throw new Error('@model(namespace) 中namespace必须为string');
     }
-    const target = injectable()(constructor);
+    if (Reflect.hasOwnMetadata(ModelNamespaceSymbol, target)) {
+        throw new Error('Cannot apply @model decorator multiple times.');
+    }
+    injectable()(target);
     Reflect.defineMetadata(ModelNamespaceSymbol, namespace, target);
     return target;
 };
