@@ -33,7 +33,7 @@ export class Rab {
         this.reduceManager.addReduce(ModelClass);
     }
 
-    getModel<S>(ModelClass: IModel<S>) {
+    getModel<S, T extends Model<S>>(ModelClass: new() => T): T {
         return this.container.get(ModelClass);
     }
 
@@ -41,7 +41,7 @@ export class Rab {
         this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, {});
     }
 
-    getStore(){
+    getStore() {
         return this.reduxStore.getReduxStore();
     }
 }
