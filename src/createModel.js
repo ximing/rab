@@ -1,7 +1,7 @@
 /**
  * Created by yeanzhi on 17/4/28.
  */
-'use strict';
+
 import warning from 'warning';
 import invariant from 'invariant';
 import _ from 'lodash';
@@ -9,7 +9,8 @@ import _ from 'lodash';
 import createAction from './redux/createAction';
 import { setAction } from './actions';
 import { SEP } from './constants';
-const isPlainObject = _.isPlainObject;
+
+const { isPlainObject } = _;
 
 export default function(model) {
     const { namespace, reducers, actions } = model;

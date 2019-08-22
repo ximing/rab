@@ -1,4 +1,3 @@
-import { combineReducers } from 'redux';
 import produce from 'immer';
 import { IModel } from './model';
 import { getActionNames } from './decorators';
@@ -11,7 +10,6 @@ import {
     subscribeSymbols
 } from './symbols';
 import { Rab } from './rab';
-import { ReducerAction, ModelAction } from './interfaces';
 import { ACTIONS } from './constants';
 
 export class ReduceManager {

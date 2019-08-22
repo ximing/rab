@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
-    "sourceRoot": "lib",
+    "outDir": "lib",
+    "sourceRoot": "src",
     "noImplicitAny": false,
     "removeComments": false,
     "sourceMap": true,

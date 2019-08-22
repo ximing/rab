@@ -1,0 +1,38 @@
+{
+  "name": "@rabjs/core",
+  "version": "7.0.0",
+  "description": "> TODO: description",
+  "author": "ximing <ximing@meituan.com>",
+  "homepage": "https://github.com/ximing/rab#readme",
+  "license": "ISC",
+  "main": "src/index.js",
+  "directories": {
+    "lib": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "src",
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "immer": "^3.2.0",
+    "invariant": "^2.2.4",
+    "inversify": "^5.0.1",
+    "redux": "^4.0.1",
+    "reflect-metadata": "^0.1.13",
+    "warning": "^4.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ximing/rab.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/ximing/rab/issues"
+  }
+}
