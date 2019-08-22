@@ -20,7 +20,7 @@ export class ReduxStore {
         reducers,
         options
     ) {
-        const { routerMiddleware, extraEnhancers = [] } = options;
+        const { routerMiddleware, extraEnhancers = [], extraReducers = {} } = options;
         // create store
         let _middlewares = [...middlewares];
         if (routerMiddleware) {
@@ -36,7 +36,7 @@ export class ReduxStore {
                 ? (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({ trace: true, maxAge: 30 })
                 : compose;
         const enhancers = [applyMiddleware(..._middlewares), ...extraEnhancers];
-        this.store = createStore(combineReducers({ ...reducers }), this.initialState, composeFn(...enhancers));
+        this.store = createStore(combineReducers({ ...reducers, ...extraReducers }), this.initialState, composeFn(...enhancers));
         return this.store;
     };
 }

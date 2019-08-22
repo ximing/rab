@@ -1,11 +1,11 @@
 {
   "name": "@rabjs/core",
   "version": "7.0.0",
-  "description": "> TODO: description",
+  "description": "React and redux based framework.",
   "author": "ximing <ximing@meituan.com>",
   "homepage": "https://github.com/ximing/rab#readme",
   "license": "ISC",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "directories": {
     "lib": "src",
     "test": "__tests__"
@@ -24,6 +24,9 @@
     "redux": "^4.0.1",
     "reflect-metadata": "^0.1.13",
     "warning": "^4.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^3.5.3"
   },
   "repository": {
     "type": "git",

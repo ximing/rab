@@ -1,31 +1,30 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import { combineReducers, Middleware } from 'redux';
+import { Middleware } from 'redux';
 import { Model, IModel } from './model';
-import { getActionNames, reducer } from './decorators';
-import {
-    allActionSymbols,
-    defineActionSymbols,
-    effectSymbols,
-    reducerSymbols,
-    immerReducerSymbols,
-    actionSymbols,
-    subscribeSymbols, ModelNamespaceSymbol
-} from './symbols';
 import { ReduceManager } from './reduceManager';
 import { ReduxStore } from './store';
+import { Plugin } from './plugin';
 
 export class Rab {
     private middlewares: Middleware[];
     container: Container;
     reduceManager: ReduceManager;
     reduxStore: ReduxStore;
+    plugins: Plugin[];
+    extraReducers: any;
 
-    constructor(middlewares: Middleware[] = []) {
+    constructor(options) {
+        const { middlewares = [], extraReducers = {} } = options;
         this.middlewares = middlewares;
         this.container = new Container({ defaultScope: 'Singleton' });
         this.reduxStore = new ReduxStore(this);
         this.reduceManager = new ReduceManager(this);
+        this.extraReducers = extraReducers;
+    }
+
+    use(plugin: Plugin) {
+        this.plugins.push(plugin);
     }
 
     addModel<S>(ModelClass: IModel<S>) {
@@ -38,7 +37,13 @@ export class Rab {
     }
 
     start() {
-        this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, {});
+        this.plugins.forEach((plugin) => {
+            plugin.beforeStart && plugin.beforeStart(this);
+        });
+        this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, { extraReducers: this.extraReducers });
+        this.plugins.forEach((plugin) => {
+            plugin.afterStart && plugin.afterStart(this);
+        });
     }
 
     getStore() {
