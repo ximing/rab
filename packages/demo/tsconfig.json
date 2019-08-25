@@ -6,11 +6,5 @@
     "types": [
       "node"
     ]
-  },
-  "include": [
-    "./src/**/*"
-  ],
-  "exclude": [
-    "lib/**/*"
-  ]
+  }
 }

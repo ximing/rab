@@ -2,6 +2,16 @@
   "extends": "../tsconfig.setting.json",
   "compilerOptions": {
     "outDir": "lib",
-    "sourceRoot": "src"
-  }
+    "sourceRoot": "src",
+    "types": [
+      "reflect-metadata",
+      "node"
+    ]
+  },
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    "lib/**/*"
+  ]
 }

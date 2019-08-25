@@ -6,6 +6,11 @@ import { ReduceManager } from './reduceManager';
 import { ReduxStore } from './store';
 import { Plugin } from './plugin';
 
+export interface RabConstructorOptions {
+    middlewares?: any[],
+    extraReducers?: any
+}
+
 export class Rab {
     private middlewares: Middleware[];
     container: Container;
@@ -14,8 +19,7 @@ export class Rab {
     plugins: Plugin[];
     extraReducers: any;
 
-    constructor(options) {
-        const { middlewares = [], extraReducers = {} } = options;
+    constructor({ middlewares, extraReducers }: RabConstructorOptions = { middlewares: [], extraReducers: {} }) {
         this.middlewares = middlewares;
         this.container = new Container({ defaultScope: 'Singleton' });
         this.reduxStore = new ReduxStore(this);
@@ -23,7 +27,7 @@ export class Rab {
         this.extraReducers = extraReducers;
     }
 
-    use(plugin: Plugin) {
+    use<P extends Plugin>(plugin: P) {
         this.plugins.push(plugin);
     }
 

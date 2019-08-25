@@ -14,10 +14,6 @@
       "esnext",
       "dom"
     ],
-    "types": [
-      "reflect-metadata",
-      "node"
-    ],
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
