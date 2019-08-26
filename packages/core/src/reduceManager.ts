@@ -35,7 +35,7 @@ export class ReduceManager {
         return Reflect.defineMetadata(defineActionSymbols.decorator, actions, target);
     }
 
-    addReduce<S>(ModelClass: IModel<S>) {
+    addModelToReduce<S>(ModelClass: IModel<S>) {
         const reduceNames = getActionNames(reducerSymbols, ModelClass);
         const immerReduceNames = getActionNames(immerReducerSymbols, ModelClass);
         const actionNames = getActionNames(actionSymbols, ModelClass);
@@ -71,7 +71,7 @@ export class ReduceManager {
             };
             this.addActionFunction(model, name, model[name]);
         });
-        this.reduces[namespace] = (state = model.getState(), payload) => {
+        this.addReduce(namespace, (state = model.getState(), payload) => {
             if (reduce[payload.type]) {
                 return reduce[payload.type](payload.params)(state);
             }
@@ -79,8 +79,12 @@ export class ReduceManager {
                 return payload.params;
             }
             return state;
-        };
+        });
+        console.log(model)
         this.rab.reduxStore.initialState[namespace] = Object.assign({}, model.getState());
     }
 
+    addReduce(reduceName, fn) {
+        this.reduces[reduceName] = fn;
+    }
 }

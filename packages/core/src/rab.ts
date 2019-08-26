@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { Container } from 'inversify';
 import { Middleware } from 'redux';
 import { Model, IModel } from './model';
@@ -13,13 +12,15 @@ export interface RabConstructorOptions {
 
 export class Rab {
     private middlewares: Middleware[];
+    protected routerMiddleware: any;
     container: Container;
     reduceManager: ReduceManager;
     reduxStore: ReduxStore;
-    plugins: Plugin[];
-    extraReducers: any;
+    plugins: Plugin[] = [];
+    extraReducers: any = {};
+    isInit: boolean = false;
 
-    constructor({ middlewares, extraReducers }: RabConstructorOptions = { middlewares: [], extraReducers: {} }) {
+    constructor({ middlewares = [], extraReducers = {} }: RabConstructorOptions = {}) {
         this.middlewares = middlewares;
         this.container = new Container({ defaultScope: 'Singleton' });
         this.reduxStore = new ReduxStore(this);
@@ -33,7 +34,7 @@ export class Rab {
 
     addModel<S>(ModelClass: IModel<S>) {
         this.container.bind<Model<S>>(ModelClass).to(ModelClass);
-        this.reduceManager.addReduce(ModelClass);
+        this.reduceManager.addModelToReduce(ModelClass);
     }
 
     getModel<S, T extends Model<S>>(ModelClass: new() => T): T {
@@ -41,13 +42,20 @@ export class Rab {
     }
 
     start() {
+        if (this.isInit) {
+            throw new Error('already start，Do not call the start repeatedly');
+        }
         this.plugins.forEach((plugin) => {
             plugin.beforeStart && plugin.beforeStart(this);
         });
-        this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, { extraReducers: this.extraReducers });
+        this.reduxStore.createReduxStore(this.middlewares, this.reduceManager.reduces, {
+            extraReducers: this.extraReducers,
+            routerMiddleware: this.routerMiddleware
+        });
         this.plugins.forEach((plugin) => {
             plugin.afterStart && plugin.afterStart(this);
         });
+        this.isInit = true;
     }
 
     getStore() {

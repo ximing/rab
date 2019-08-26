@@ -21,7 +21,7 @@
     "url": "git+https://github.com/ximing/rab.git"
   },
   "scripts": {
-    "dev": "./node_modules/.bin/webpack-dev-server --hot"
+    "dev": "webpack-dev-server --hot"
   },
   "bugs": {
     "url": "https://github.com/ximing/rab/issues"
@@ -30,10 +30,16 @@
     "@rabjs/core": "^7.0.0",
     "@rabjs/react": "^7.0.0",
     "react": "^16.9.0",
-    "react-dom": "^16.9.0"
+    "react-dom": "^16.9.0",
+    "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
     "ts-loader": "^6.0.4",
-    "typescript": "^3.5.3"
+    "typescript": "^3.5.3",
+    "webpack": "^4.32.2",
+    "webpack-cli": "^3.3.2",
+    "webpack-dev-server": "^3.4.1",
+    "webpack-manifest-plugin": "^2.0.4",
+    "webpack-merge": "^4.2.1"
   }
 }

@@ -3,10 +3,9 @@ import * as React from 'react';
 import { Rab, Plugin, RabConstructorOptions } from '@rabjs/core';
 import { Provider } from 'react-redux';
 import { createBrowserHistory, History } from 'history';
-import { connectRouter } from 'connected-react-router';
+import { connectRouter, routerMiddleware } from 'connected-react-router';
 import invariant from 'invariant';
 import { patchHistory, isHTMLElement } from './utils';
-import { SFCElement } from 'react';
 
 export interface ReactRabConstructorOptions extends RabConstructorOptions {
     history?: History;
@@ -17,11 +16,7 @@ export class ReactRab extends Rab {
     private rabHistory: History;
     private __router: any;
 
-    constructor({ middlewares, extraReducers, history }: ReactRabConstructorOptions = {
-        middlewares: [],
-        extraReducers: {},
-        history: createBrowserHistory()
-    }) {
+    constructor({ middlewares = [], extraReducers = {}, history = createBrowserHistory() }: ReactRabConstructorOptions = {}) {
         super({ middlewares, extraReducers });
         this._history = patchHistory(history);
     }
@@ -38,19 +33,20 @@ export class ReactRab extends Rab {
             'app.start: container should be HTMLElement'
         );
         invariant(this.__router, 'app.start: router should be defined');
+        const _history = this._history;
         // @ts-ignore
         this.rabHistory = {
             get location() {
-                return this._history.location;
+                return _history.location;
             },
             get action() {
-                return this._history.action;
+                return _history.action;
             },
             get length() {
-                return this._history.length;
+                return _history.length;
             },
             listen(callback) {
-                return this._history.listen.call(this._history, function(...args) {
+                return _history.listen.call(_history, function(...args) {
                     const self = this;
                     setTimeout(() => {
                         callback.call(self, ...args);
@@ -58,12 +54,13 @@ export class ReactRab extends Rab {
                 });
             }
         };
-        Object.keys(history).forEach((key) => {
+        Object.keys(_history).forEach((key) => {
             if (!this.rabHistory[key]) {
                 this.rabHistory[key] = this.rabHistory[key];
             }
         });
-        this.reduceManager.reduces['router'] = connectRouter(this._history);
+        this.routerMiddleware = routerMiddleware(_history);
+        this.reduceManager.addReduce('router', connectRouter(_history));
         super.start();
         if (container) {
             this.render(container);
@@ -80,7 +77,7 @@ export class ReactRab extends Rab {
             <Provider store={this.getStore()}>
                 {this.__router({
                     rab: this,
-                    history: this.rabHistory,
+                    history: this._history,
                     ...extraProps
                 })}
             </Provider>

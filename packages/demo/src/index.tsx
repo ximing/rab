@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import React from 'react';
 import logger from 'redux-logger';
 import { Model, model, reducer, ConnectedRouter, ReactRab, connect, Route } from '@rabjs/react';
@@ -20,7 +21,7 @@ class Count extends Model<{
     num: number,
     loading: boolean
 }> {
-    state: {
+    state = {
         num: 0,
         loading: false
     };
@@ -34,7 +35,12 @@ class Count extends Model<{
 rab.addModel(Count);
 
 // 3. View
-const App = connect(({ count }) => ({
+const App = connect(({ count }: {
+    count: {
+        num: number,
+        loading: boolean
+    }
+}) => ({
     count
 }))((props: {
     count: {
