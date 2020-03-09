@@ -1,6 +1,6 @@
 {
     "name": "rabjs",
-    "version": "6.3.3",
+    "version": "6.4.0",
     "description": "React and redux based framework.",
     "author": "yanzhi",
     "repository": "https://github.com/ximing/rab",
@@ -33,16 +33,16 @@
         "@babel/runtime": "^7.4.5",
         "babel-eslint": "^10.0.1",
         "classnames": "^2.2.6",
-        "connected-react-router": "^6.3.2",
+        "connected-react-router": "^6.7.0",
         "flux-standard-action": "^2.1.0",
+        "history": "^4.7.2",
         "invariant": "^2.2.4",
         "lodash": "^4.17.11",
-        "react-redux": "^7.1.0",
-        "react-router-dom": "^4.3.1",
+        "react-redux": "^7.2.0",
+        "react-router-dom": "^5.1.2",
         "reduce-reducers": "^0.4.3",
         "redux": "^4.0.1",
-        "warning": "^4.0.3",
-        "history": "^4.7.2"
+        "warning": "^4.0.3"
     },
     "devDependencies": {
         "@types/classnames": "^2.2.7",
@@ -142,5 +142,9 @@
             "eslint --fix",
             "git add"
         ]
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
     }
 }
