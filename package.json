@@ -15,7 +15,6 @@
     },
     "keywords": [
         "elm",
-        "redux",
         "react",
         "rab",
         "framework",
@@ -68,7 +67,6 @@
         "@types/react": "^16.8.19",
         "@types/react-dom": "^16.8.4",
         "@types/react-hot-loader": "^4.1.0",
-        "@types/react-redux": "^7.1.1",
         "@types/react-router": "^4.3.3",
         "@types/react-router-dom": "^4.3.3",
         "@types/reduce-reducers": "^0.3.0",
@@ -112,7 +110,6 @@
         "react": "^16.8.6",
         "react-dom": "^16.8.6",
         "react-hot-loader": "^4.8.8",
-        "redux-logger": "^3.0.6",
         "standard-version": "^6.0.1",
         "style-loader": "^0.23.1",
         "ts-jest": "^24.0.2",

@@ -23,7 +23,7 @@
     "emitDecoratorMetadata": true
   },
   "include": [
-    "packages/core/src"
+    "packages/core/old"
   ],
   "exclude": [
     "__tests__",
