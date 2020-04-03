@@ -5,7 +5,6 @@ import {
     reducerSymbols,
     immerReducerSymbols
 } from '../symbols';
-import { EffectAction } from '../types';
 import { createActionDecorator } from './actionRelated';
 
 export * from './actionRelated';
@@ -23,5 +22,5 @@ export const Reducer: <S = any>() => DecoratorReturnType<
 > = createActionDecorator(reducerSymbols);
 
 export const Effect: <A = any, S = any>() => DecoratorReturnType<
-    (action: A, state: S) => EffectAction
+    (action: A, state: S) => any
 > = createActionDecorator(effectSymbols);

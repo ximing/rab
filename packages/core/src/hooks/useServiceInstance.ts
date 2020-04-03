@@ -36,6 +36,5 @@ export function useServiceInstance<M extends Service<any>>(service: M, ...args: 
         },
         [options.destroyOnUnmount, service]
     );
-
     return [state, service.getActions(), service];
 }

@@ -3,7 +3,7 @@ import { ScopeKeySymbol, Singleton, Transient, Request } from '../symbols';
 
 export type ScopeType = symbol | string | number;
 
-export default class Container {
+export class Container {
     private container: InversifyContainer;
     constructor(container?: InversifyContainer) {
         this.container = container || new InversifyContainer();

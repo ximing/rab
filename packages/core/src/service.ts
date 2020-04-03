@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { injectable, postConstruct } from 'inversify';
 import produce from 'immer';
 import { ActionsSymbol, StateSymbol } from './symbols';
@@ -39,10 +40,11 @@ export abstract class Service<State> {
     }
 
     dispatch(name: string, state: State) {
+        console.log('dispatch', name);
         return this.state.setState(state);
     }
 
-    destory(){
+    destory() {
         this.state.destory();
     }
 
@@ -90,16 +92,16 @@ export abstract class Service<State> {
             actions[actionName] = (params: any) => {
                 const nextState = produce(state.getState(), (draft) => {
                     immerReducer(draft, params);
-                    // @ts-ignore
-                    this.state.setState(nextState);
                 });
+                // @ts-ignore
+                this.state.setState(nextState);
             };
         });
         return actions;
     }
 
     @postConstruct()
-    private __init__() {
+    __init__() {
         const state = new BaseState(this.defaultState);
         const { effects, reducers, immerReducers } = getOriginalFunctions(this);
         const reducerActions = this.setupReducerActions(reducers, state);

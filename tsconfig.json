@@ -1,40 +1,22 @@
 {
-  "compilerOptions": {
-    "outDir": "dist",
-    "sourceRoot": "lib",
-    "noImplicitAny": false,
-    "removeComments": false,
-    "sourceMap": true,
-    "module": "commonjs",
-    "target": "es5",
-    "jsx": "react",
-    "allowJs": false,
-    "declaration": true,
-    "lib": [
-      "esnext",
-      "dom"
-    ],
-    "types": [
-      "reflect-metadata",
-      "node"
-    ],
-    "moduleResolution": "node",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
-  },
-  "include": [
-    "packages/core/old"
-  ],
-  "exclude": [
-    "__tests__",
-    "dist",
-    "demo",
-    "jest",
-    "**/*.test.ts",
-    "node_modules",
-    "**/*.spec.ts",
-    "index.js",
-    "main.js",
-    "router.js"
-  ]
+    "compilerOptions": {
+        "declaration": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        "importHelpers": true,
+        "noEmitHelpers": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "moduleResolution": "node",
+        "lib": ["dom", "es2015"],
+        "jsx": "react",
+        "target": "es6"
+    }
 }

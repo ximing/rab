@@ -6,6 +6,7 @@ export class BaseState<State> {
     subscribeList: subscribeFunction<State>[] = [];
 
     constructor(state: State) {
+
         this.state = state;
     }
 
@@ -32,7 +33,7 @@ export class BaseState<State> {
     }
 
     destory() {
-        this.subscribeList = null;
-        this.state = null;
+        this.subscribeList = [];
+        // this.state = null;
     }
 }

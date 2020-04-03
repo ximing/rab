@@ -8,11 +8,7 @@ import {
 import { Service } from '../service';
 import { getActionNames } from '../decorators';
 
-import {
-    effectSymbols,
-    reducerSymbols,
-    immerReducerSymbols
-} from '../symbols';
+import { effectSymbols, reducerSymbols, immerReducerSymbols } from '../symbols';
 
 const getOriginalFunctionNames = (service: Service<any>) => ({
     effects: getActionNames(effectSymbols, service.constructor),
@@ -22,15 +18,14 @@ const getOriginalFunctionNames = (service: Service<any>) => ({
 
 export const getOriginalFunctions = (service: Service<any>) => {
     const { effects, reducers, immerReducers } = getOriginalFunctionNames(service);
-
     return {
-        effects: mapValues(pick(service, effects), (func: Function) =>
+        effects: mapValues(pick(service, effects), (func: any) =>
             func.bind(service)
         ) as OriginalEffectActions<any>,
-        reducers: mapValues(pick(service, reducers), (func: Function) =>
+        reducers: mapValues(pick(service, reducers), (func: any) =>
             func.bind(service)
         ) as OriginalReducerActions<any>,
-        immerReducers: mapValues(pick(service, immerReducers), (func: Function) =>
+        immerReducers: mapValues(pick(service, immerReducers), (func: any) =>
             func.bind(service)
         ) as OriginalImmerReducerActions<any>
     };

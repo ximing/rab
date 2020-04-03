@@ -9,25 +9,23 @@ module.exports = {
         'prettier',
         'prettier/@typescript-eslint'
     ],
-    parserOptions: {
-        project: './tsconfig.json'
+    env: {
+        browser: true,
+        node: true,
+        jest: true
     },
     globals: {
-        window: true
+        jest: true
     },
     settings: {
-        react: {
-            pragma: 'Taro',
-            version: '15.0'
-        },
         'import/resolver': {
             node: {
-                extensions: ['.js', '.jsx', '.ts', '.tsx']
+                extensions: ['.js', '.jsx', '.ts', '.tsx', '.d.ts']
             }
         }
     },
     rules: {
-        'max-lines': ['error', { max: 1200, skipComments: true, skipBlankLines: true }],
+        'max-lines': ['error', { max: 500, skipComments: true, skipBlankLines: true }],
         'import/no-extraneous-dependencies': 'off',
         'react/prop-types': 'off',
         'jest/no-disabled-tests': 'warn',
@@ -52,8 +50,8 @@ module.exports = {
         'one-var': 'off',
         'no-underscore-dangle': 'off',
         'no-plusplus': 'off',
-        'react/jsx-tag-spacing':'off',
-        'react/jsx-wrap-multilines':'off',
+        'react/jsx-tag-spacing': 'off',
+        'react/jsx-wrap-multilines': 'off',
         camelcase: 1,
         'no-console': 'off',
         '@typescript-eslint/no-var-requires': 'off',
@@ -65,33 +63,15 @@ module.exports = {
         'import/extensions': 'off',
         'prefer-const': 1,
         '@typescript-eslint/interface-name-prefix': 1,
-        'no-restricted-properties': [
-            2,
-            {
-                object: 'Proxy'
-            },
-            {
-                object: 'Array',
-                property: 'includes',
-                message: '请使用indexOf代替'
-            },
-            {
-                object: 'String',
-                property: 'normalize'
-            },
-            {
-                object: 'Object',
-                property: 'values',
-                message: '请使用Object.keys().map()代替'
-            }
-        ],
         'no-unused-vars': 'off',
         'lines-between-class-members': 'off',
         'no-bitwise': 'off',
         'no-restricted-syntax': 1,
         'no-param-reassign': 1,
         'no-nested-ternary': 1,
+        '@typescript-eslint/no-empty-function': 1,
         'no-control-regex': 'off',
+        'no-async-promise-executor': 'off',
         'react/no-unknown-property': 'off',
         'react/jsx-one-expression-per-line': 'off',
         'react/button-has-type': 'off',
@@ -99,11 +79,22 @@ module.exports = {
         'react/sort-comp': 'off',
         'no-useless-constructor': 'off',
         'react/jsx-indent-props': 'off',
-        '@typescript-eslint/no-explicit-any':'off',
-        'no-param-reassign':'off',
-        '@typescript-eslint/array-type':'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        'no-param-reassign': 'off',
+        '@typescript-eslint/array-type': 'off',
         '@typescript-eslint/explicit-member-accessibility': 'off',
-        'react/no-array-index-key':'off',
-        '@typescript-eslint/no-non-null-assertion':"off"
+        'react/no-array-index-key': 'off',
+        '@typescript-eslint/no-non-null-assertion': 'off',
+        'click-events-have-key-events': 'off',
+        'jsx-a11y/no-noninteractive-element-interactions': 'off',
+        'jsx-a11y/click-events-have-key-events': 'off',
+        '@typescript-eslint/ban-ts-ignore': 'off',
+        'react/jsx-fragments': 'off',
+        'global-require': 'off',
+        '@typescript-eslint/camelcase': 'off',
+        'react/static-property-placement': 'off',
+        'jsx-a11y/no-static-element-interactions': 'off',
+        'react/jsx-props-no-spreading': 'off',
+        'jsx-a11y/alt-text': 'off'
     }
 };
