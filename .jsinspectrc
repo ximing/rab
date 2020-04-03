@@ -1,0 +1,10 @@
+{
+  "threshold":     30,
+  "identifiers":   true,
+  "literals":      true,
+  "color":         true,
+  "minInstances":  2,
+  "ignore":        "test|ci|bin|babel|node_modules|dist|login",
+  "reporter":      "default",
+  "truncate":      100
+}
