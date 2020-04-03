@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/router",
-  "version": "7.0.0",
+  "version": "7.0.0-alpha.0",
   "description": "rabjs router",
   "main": "dist/router.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
     "@types/history": "^4.7.5"
   },
   "devDependencies": {
-    "@rabjs/core": "^7.0.0",
+    "@rabjs/core": "^7.0.0-alpha.0",
     "inversify": "^5.0.1",
     "react-router": "^5.1.2",
     "reflect-metadata": "^0.1.13"
