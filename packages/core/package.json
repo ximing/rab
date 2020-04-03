@@ -1,0 +1,36 @@
+{
+  "name": "@rabjs/core",
+  "version": "7.0.0-alpha.0",
+  "description": "rabjs core.",
+  "main": "dist/core.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/core.esm.js",
+  "scripts": {
+    "test": "jest",
+    "build": "rollup -c",
+    "dev": "rollup -c -w"
+  },
+  "author": "ximing",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@nx-js/observer-util": "^4.2.2"
+  },
+  "devDependencies": {
+    "inversify": "^5.0.1",
+    "reflect-metadata": "^0.1.13"
+  },
+  "peerDependencies": {
+    "inversify": "^5.0.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "reflect-metadata": "^0.1.13"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

@@ -1,27 +1,37 @@
 {
-    "compilerOptions": {
-      "outDir": "dist",
-      "noImplicitAny": false,
-      "removeComments": false,
-      "experimentalDecorators": true,
-      "sourceMap": false,
-      "module": "commonjs",
-      "target": "es5",
-      "jsx": "react",
-      "allowJs": false,
-      "declaration":true
-    },
-    "include": ["src"],
-    "exclude": [
-      "__tests__",
-      "dist",
-      "demo",
-      "jest",
-      "**/*.test.ts",
-      "node_modules",
-      "**/*.spec.ts",
-      "index.js",
-      "main.js",
-      "router.js"
-    ]
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "ESNext",
+    "declaration": true,
+    "removeComments": false,
+    "preserveConstEnums": false,
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "noImplicitAny": false,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "lib",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strictNullChecks": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "rootDir": ".",
+    "paths": {
+    }
+  },
+  "include": [
+    "packages/global.d.ts",
+    "packages/*/src"
+  ],
+  "exclude": [
+    "__tests__",
+    "node_modules",
+    "dist",
+    "tests",
+    "jest",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "compileOnSave": false
 }

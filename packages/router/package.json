@@ -1,0 +1,41 @@
+{
+  "name": "@rabjs/router",
+  "version": "7.0.0-alpha.0",
+  "description": "rabjs router",
+  "main": "dist/router.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/router.esm.js",
+  "scripts": {
+    "link": "lerna link --force-local",
+    "test": "jest",
+    "build": "rollup -c",
+    "dev": "rollup -c -w"
+  },
+  "author": "ximing",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@types/history": "^4.7.5"
+  },
+  "devDependencies": {
+    "@rabjs/core": "^7.0.0-alpha.0",
+    "inversify": "^5.0.1",
+    "react-router": "^5.1.2",
+    "reflect-metadata": "^0.1.13"
+  },
+  "peerDependencies": {
+    "@rabjs/core": "^7.0.0",
+    "inversify": "^5.0.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-router": "^4.0.0 || ^5.0.0",
+    "reflect-metadata": "^0.1.13"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
