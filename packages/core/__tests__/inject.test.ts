@@ -1,4 +1,4 @@
-import { Service, Transient, Injectable, container, Inject, Scope } from '../src';
+import { Service, Transient, Injectable, container, Inject, Scope, ServiceResult } from '../src';
 import { LazyServiceIdentifer } from 'inversify';
 
 @Injectable()
@@ -46,10 +46,10 @@ class CountService extends Service {
 }
 
 describe('Inject specs:', () => {
-  let countModel: CountService;
+  let countModel: ServiceResult<CountService>;
 
   beforeEach(() => {
-    countModel = container.resolveInScope(CountService, Transient);
+    countModel = container.resolveServiceInScope(CountService, Transient);
   });
 
   it('getState', () => {
@@ -71,7 +71,7 @@ describe('Inject specs:', () => {
   it('should scope decorator default to Singleton', () => {
     countModel.other1.subtract(1);
     container.unbind(CountService);
-    countModel = container.resolveInScope(CountService, Transient);
+    countModel = container.resolveServiceInScope(CountService, Transient);
     expect(countModel.other1.count).toEqual(-2);
   });
 

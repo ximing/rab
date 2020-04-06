@@ -1,9 +1,9 @@
 import { useMemo, useEffect } from 'react';
 import { container, ScopeType } from '../../ioc';
 import { Service } from '../../service';
-import { ConstructorOf } from '../../types';
+import { ConstructorOf, ServiceResult } from '../../types';
 import { useServiceInstance } from './useServiceInstance';
-import { ServiceResult } from './types';
+
 import { Transient, Singleton, Request } from '../../symbols';
 import { useDefault } from './useDefault';
 
@@ -22,8 +22,8 @@ export function useService<M extends Service>(
     resetOnUnmount: false
   });
 
-  const service: M = useMemo(() => {
-    return container.resolveInScope(serviceIdentifier, _options.scope!);
+  const service: ServiceResult<M> = useMemo(() => {
+    return container.resolveServiceInScope<M>(serviceIdentifier, _options.scope!);
   }, [_options.scope, serviceIdentifier]);
 
   useEffect(() => {

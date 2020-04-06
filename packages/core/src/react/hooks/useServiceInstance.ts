@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ServiceResult } from './types';
+import { ServiceResult } from '../../types';
 import { useDefault } from './useDefault';
 import { Service } from '../../service';
 
@@ -8,7 +8,7 @@ export interface UseServiceInstanceOptions {
 }
 
 export function useServiceInstance<M extends Service>(
-  service: M,
+  service: ServiceResult<M>,
   options?: UseServiceInstanceOptions
 ): ServiceResult<M> {
   const _options = useDefault(options, {
@@ -22,6 +22,5 @@ export function useServiceInstance<M extends Service>(
     },
     [_options.destroyOnUnmount, service]
   );
-  // @ts-ignore
-  return service as ServiceResult<M>;
+  return service;
 }

@@ -43,3 +43,12 @@ export type ActionMethodStatesOfService<M extends Service> = {
   };
   // [key in keyof Pick<M, PayloadMethodKeySet<M, S>>]: () => ReturnType<M[key]>;
 };
+
+export type ServiceResult<
+  M extends Service,
+  K extends keyof M = Exclude<keyof M, keyof Service>
+> = {
+  [key in K]: M[key];
+} & {
+  $model: ActionMethodStatesOfService<M>;
+};

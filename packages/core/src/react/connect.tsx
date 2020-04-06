@@ -1,8 +1,11 @@
 import React, { ComponentType } from 'react';
 
-import { ServiceResult, useService } from './hooks';
+import { useService } from './hooks';
 import { view } from './view';
+import { ServiceResult } from '../types';
 
+// @TODO 是否有更好的HOC方案？
+// 更少的写法更好的类型提示
 export function viewServices<SS extends Record<string, any> = {}>(services: SS) {
   return function connect<Props>(Component: ComponentType<Props>) {
     const InnerComponent: React.FC<Omit<Props, keyof SS>> = (props) => {

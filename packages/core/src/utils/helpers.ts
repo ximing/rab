@@ -110,3 +110,9 @@ export const isAsyncFunction = (obj: any) => {
       Object.prototype.toString.call(obj) === '[object AsyncFunction]')
   );
 };
+
+export const sleep = (timer = 300) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, timer);
+  });
+};

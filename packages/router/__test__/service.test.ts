@@ -1,8 +1,8 @@
-import { container, Singleton } from '@rabjs/core';
+import { container, Singleton, ServiceResult } from '@rabjs/core';
 import { RouterService } from '../src';
 
 // @ts-ignore
-let mockHistory: any, routerService: RouterService;
+let mockHistory: any, routerService: ServiceResult<RouterService>;
 
 beforeEach(() => {
   mockHistory = {
@@ -12,7 +12,7 @@ beforeEach(() => {
     goBack: jest.fn(),
     goForward: jest.fn()
   };
-  routerService = container.resolveInScope(RouterService, Singleton);
+  routerService = container.resolveServiceInScope(RouterService, Singleton);
   routerService.history = mockHistory;
 });
 

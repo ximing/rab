@@ -3,8 +3,9 @@ import { isObservable, observable } from '@nx-js/observer-util';
 
 import { ScopeKeySymbol, Singleton, Transient, Request, ServiceObserver } from '../symbols';
 import { Service } from '../service';
+import { ServiceResult } from '../types';
 
-const getObserverObject = (service: any) => {
+const getObserverService = (service: any) => {
   if (service instanceof Service && !isObservable(service)) {
     const observerService = observable(service);
     Reflect.defineMetadata(ServiceObserver, observerService, service);
@@ -57,7 +58,7 @@ export class Container {
   }
 
   get<T>(serviceIdentifier: interfaces.ServiceIdentifier<T>) {
-    return getObserverObject(this.container.get<T>(serviceIdentifier));
+    return this.container.get<T>(serviceIdentifier);
   }
 
   getNamed<T>(
@@ -72,11 +73,11 @@ export class Container {
     key: string | number | symbol,
     value: any
   ) {
-    return getObserverObject(this.container.getTagged<T>(serviceIdentifier, key, value));
+    return this.container.getTagged<T>(serviceIdentifier, key, value);
   }
 
   getAll<T>(serviceIdentifier: interfaces.ServiceIdentifier<T>): T[] {
-    return this.container.getAll(serviceIdentifier).map(getObserverObject);
+    return this.container.getAll(serviceIdentifier);
   }
 
   getAllTagged<T>(
@@ -84,7 +85,7 @@ export class Container {
     key: string | number | symbol,
     value: any
   ): T[] {
-    return this.container.getAllTagged(serviceIdentifier, key, value).map(getObserverObject);
+    return this.container.getAllTagged(serviceIdentifier, key, value);
   }
 
   getAllNamed<T>(
@@ -135,6 +136,14 @@ export class Container {
   resolveInScope<T>(serviceIdentifier: interfaces.ServiceIdentifier<T>, scope: ScopeType): T {
     this.registerInScope(serviceIdentifier, scope);
     return this.getTagged(serviceIdentifier, ScopeKeySymbol, scope);
+  }
+
+  resolveServiceInScope<T extends Service>(
+    serviceIdentifier: interfaces.ServiceIdentifier<T>,
+    scope: ScopeType
+  ): ServiceResult<T> {
+    this.registerInScope(serviceIdentifier, scope);
+    return getObserverService(this.getTagged(serviceIdentifier, ScopeKeySymbol, scope));
   }
 }
 

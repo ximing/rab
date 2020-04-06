@@ -1,9 +1,7 @@
-import { Service, Transient, Injectable, container, ServiceResult } from '../src';
+import { observe, observable } from '@nx-js/observer-util';
 import { sleep } from '../src/utils/helpers';
-import { observe } from '@nx-js/observer-util';
 
-@Injectable()
-class CountModel extends Service {
+class CountModel {
   count = 0;
 
   profile = {
@@ -26,13 +24,22 @@ class CountModel extends Service {
     await sleep();
     this.count -= 1;
   };
+
+  self = async () => {
+    return this;
+  };
+
+  self1() {
+    return this;
+  }
 }
 
 describe('Service specs:', () => {
-  let countModel: ServiceResult<CountModel>;
+  let countModel: CountModel, originModel: CountModel;
 
   beforeEach(() => {
-    countModel = container.resolveServiceInScope(CountModel, Transient);
+    originModel = new CountModel();
+    countModel = observable(originModel);
   });
 
   it('setCount', () => {
@@ -66,5 +73,10 @@ describe('Service specs:', () => {
     countModel.profile.firstName = 'lsfe';
     expect(countModel.profile.name).toEqual('lsfe Smith');
     expect(spy.mock.calls.length).toBe(2);
+  });
+
+  it('self', function() {
+    expect(countModel.self()).toStrictEqual(originModel.self());
+    expect(countModel.self1()).toStrictEqual(originModel.self1());
   });
 });

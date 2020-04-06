@@ -1,8 +1,10 @@
-import { Singleton, container } from '@rabjs/core';
+import { Singleton, container, ServiceResult } from '@rabjs/core';
 import { createMemoryHistory, History } from 'history';
 import { RouterService, syncHistoryWithStore, SynchronizedHistory } from '../src';
 
-let history: SynchronizedHistory, memoryHistory: History, routerService: RouterService;
+let history: SynchronizedHistory,
+  memoryHistory: History,
+  routerService: ServiceResult<RouterService>;
 
 const matchers = {
   toEqualLocation: () => ({
@@ -33,7 +35,7 @@ const matchers = {
 beforeEach(() => {
   jasmine.addMatchers(matchers);
   memoryHistory = createMemoryHistory();
-  routerService = container.resolveInScope(RouterService, Singleton);
+  routerService = container.resolveServiceInScope(RouterService, Singleton);
   history = syncHistoryWithStore(memoryHistory);
 });
 
