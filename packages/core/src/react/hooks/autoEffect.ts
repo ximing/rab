@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { observe, unobserve } from '@nx-js/observer-util';
-import { queue } from '../queue';
+import scheduler from '../scheduler';
 
 import {
   isInsideFunctionComponent,
@@ -12,7 +12,7 @@ export function useAutoEffect(fn: Function, deps = []) {
   if (isInsideFunctionComponent) {
     return useEffect(() => {
       const observer = observe(fn, {
-        scheduler: () => queue.add(observer)
+        scheduler: () => scheduler.add(observer)
       });
       return () => unobserve(observer);
     }, deps);
@@ -29,7 +29,7 @@ export function useAutoEffect(fn: Function, deps = []) {
   }
 
   const observer = observe(fn, {
-    scheduler: () => queue.add(observer)
+    scheduler: () => scheduler.add(observer)
   });
   return observer;
 }

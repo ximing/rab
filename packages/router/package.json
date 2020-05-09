@@ -27,7 +27,7 @@
     "reflect-metadata": "^0.1.13"
   },
   "peerDependencies": {
-    "@rabjs/core": "^7.0.0",
+    "@rabjs/core": "^7.0.0-alpha.0",
     "inversify": "^5.0.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",

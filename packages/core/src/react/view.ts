@@ -4,7 +4,6 @@ import {
   useEffect,
   useMemo,
   memo,
-  useCallback,
   FC,
   ComponentType,
   ComponentClass
@@ -12,8 +11,7 @@ import {
 import { observe, unobserve } from '@nx-js/observer-util';
 
 import { hasHooks } from '../utils/helpers';
-import { queue } from './queue';
-import { ownerComponent, triggerRender } from '../symbols';
+import { ownerComponent } from '../symbols';
 
 export let isInsideFunctionComponent = false;
 export let isInsideClassComponentRender = false;
@@ -39,15 +37,12 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     ReactiveComp = (props) => {
       // use a dummy setState to update the component
       const [, setState] = useState();
-      const triggerRender = useCallback(() => setState({}), []);
       // create a memoized reactive wrapper of the original component (render)
       // at the very first run of the component function
       const render = useMemo(
         () =>
           observe(Comp, {
-            scheduler: () => {
-              return queue.add(triggerRender);
-            },
+            scheduler: () => setState({}),
             lazy: true
           }),
         // Adding the original Comp here is necessary to make React Hot Reload work
@@ -84,14 +79,10 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
 
         // create a reactive render for the component
         this.render = observe(this.render, {
-          scheduler: () => queue.add(this[triggerRender]),
+          scheduler: () => this.setState({}),
           lazy: true
         });
       }
-
-      [triggerRender] = () => {
-        this.setState({});
-      };
 
       render() {
         isInsideClassComponentRender = !isStatelessComp;

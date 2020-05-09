@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { container, ScopeType } from '../../ioc';
 import { Service } from '../../service';
 import { ConstructorOf, ServiceResult } from '../../types';
@@ -6,6 +6,8 @@ import { useServiceInstance } from './useServiceInstance';
 
 import { Transient, Singleton, Request } from '../../symbols';
 import { useDefault } from './useDefault';
+import { observe, unobserve } from '@nx-js/observer-util';
+import scheduler from '../scheduler';
 
 export interface UseServiceOptions {
   scope?: ScopeType;
@@ -45,4 +47,29 @@ export function useService<M extends Service>(
   );
 
   return useServiceInstance(service, serviceInstanceOptions);
+}
+
+export function useViewService<M extends Service, S>(
+  serviceIdentifier: ConstructorOf<M>,
+  selector: (service: ServiceResult<M>) => S,
+  options?: UseServiceOptions
+) {
+  const service = useService(serviceIdentifier, options);
+  const [, setState] = useState();
+  const triggerRender = useCallback(() => setState({}), []);
+  const getState = useMemo(
+    () =>
+      observe(() => selector(service), {
+        scheduler: () => {
+          return scheduler.add(triggerRender);
+        }
+      }),
+    // Adding the original Comp here is necessary to make React Hot Reload work
+    // it does not affect behavior otherwise
+    [selector, service]
+  );
+  useEffect(() => {
+    return () => unobserve(getState);
+  }, []);
+  return [getState(), service];
 }

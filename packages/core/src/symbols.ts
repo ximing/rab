@@ -8,4 +8,3 @@ export const Transient = Symbol('transient');
 export const Request = Symbol('request');
 
 export const ownerComponent = Symbol('owner component');
-export const triggerRender = Symbol('trigger render');

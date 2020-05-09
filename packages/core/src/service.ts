@@ -3,6 +3,7 @@ import { postConstruct } from 'inversify';
 import { Injectable } from './ioc';
 import { isAsyncFunction, isPromise } from './utils/helpers';
 import { ServiceMeta, ServiceObserver } from './symbols';
+import { batchMethod } from './react/batch';
 
 @Injectable()
 export class Service {
@@ -13,6 +14,7 @@ export class Service {
       .filter((item) => item !== 'constructor')
       .concat(Reflect.ownKeys(this))
       .forEach((item) => {
+        console.log('setUpActions', item);
         const self = this as any;
         if (isAsyncFunction(self[item]) || isPromise(self[item])) {
           self.$model[item] = {
@@ -32,6 +34,9 @@ export class Service {
               throw e;
             }
           };
+        }
+        if (typeof self[item] === 'function') {
+          batchMethod(self, item);
         }
       });
   }
