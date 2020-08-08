@@ -34,8 +34,9 @@ jobs:
           node-version: '10.x'
       - name: npm script 🔧
         run: |
-          npm install
-          cd website & npm i --registry=https://registry.npmjs.com & npm run build
+          npm install --registry=https://registry.npmjs.com
+          npm run install:website
+          npm run build:website
         env:
           CI: true
       - name: Deploy 🚀
