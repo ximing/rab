@@ -13,7 +13,7 @@ const matchers = {
         search: '',
         hash: '',
         state: undefined,
-        ...expected
+        ...expected,
       };
       const passed =
         actual.pathname === expected.pathname &&
@@ -26,16 +26,16 @@ const matchers = {
           ? "Location's matched"
           : `Expected location to be ${JSON.stringify(expected)} but it was ${JSON.stringify(
               actual
-            )}`
+            )}`,
       };
-    }
-  })
+    },
+  }),
 };
 
 beforeEach(() => {
   jasmine.addMatchers(matchers);
   memoryHistory = createMemoryHistory();
-  routerService = container.resolveServiceInScope(RouterService, Singleton);
+  routerService = container.resolveInScope(RouterService, Singleton);
   history = syncHistoryWithStore(memoryHistory);
 });
 
@@ -44,28 +44,28 @@ describe('syncing', () => {
     expect(routerService.history.action).toBe('POP');
     // @ts-ignore
     expect(routerService.location).toEqualLocation({
-      pathname: '/'
+      pathname: '/',
     });
 
     history.push('/url-1');
     expect(routerService.history.action).toBe('PUSH');
     // @ts-ignore
     expect(routerService.location).toEqualLocation({
-      pathname: '/url-1'
+      pathname: '/url-1',
     });
 
     history.goBack();
     expect(routerService.history.action).toBe('POP');
     // @ts-ignore
     expect(routerService.location).toEqualLocation({
-      pathname: '/'
+      pathname: '/',
     });
 
     history.goForward();
     expect(routerService.history.action).toBe('POP');
     // @ts-ignore
     expect(routerService.location).toEqualLocation({
-      pathname: '/url-1'
+      pathname: '/url-1',
     });
 
     history.replace('/url-2?animal=fish#mango');
@@ -75,7 +75,7 @@ describe('syncing', () => {
       pathname: '/url-2',
       search: '?animal=fish',
       query: { animal: 'fish' },
-      hash: '#mango'
+      hash: '#mango',
     });
   });
   it('provides subscribe and unsubscribe functions', () => {
@@ -104,7 +104,7 @@ describe('syncing', () => {
 
     // @ts-ignore
     expect(routerService.location).toEqualLocation({
-      pathname: '/'
+      pathname: '/',
     });
   });
 });

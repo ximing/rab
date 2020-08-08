@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { observable } from '@nx-js/observer-util';
+import { observable } from '@rabjs/observer-util';
 
 import {
   isInsideFunctionComponent,

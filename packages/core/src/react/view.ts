@@ -6,9 +6,9 @@ import {
   memo,
   FC,
   ComponentType,
-  ComponentClass
+  ComponentClass,
 } from 'react';
-import { observe, unobserve } from '@nx-js/observer-util';
+import { observe, unobserve } from '@rabjs/observer-util';
 
 import { hasHooks } from '../utils/helpers';
 import { ownerComponent } from '../symbols';
@@ -43,7 +43,7 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         () =>
           observe(Comp, {
             scheduler: () => setState({}),
-            lazy: true
+            lazy: true,
           }),
         // Adding the original Comp here is necessary to make React Hot Reload work
         // it does not affect behavior otherwise
@@ -80,7 +80,7 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         // create a reactive render for the component
         this.render = observe(this.render, {
           scheduler: () => this.setState({}),
-          lazy: true
+          lazy: true,
         });
       }
 

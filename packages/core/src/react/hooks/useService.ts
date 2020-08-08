@@ -1,12 +1,12 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { container, ScopeType } from '../../ioc';
+import { container, ScopeType, Transient, Singleton, Request } from '@rabjs/ioc';
+import { observe, unobserve } from '@rabjs/observer-util';
+
 import { Service } from '../../service';
 import { ConstructorOf, ServiceResult } from '../../types';
 import { useServiceInstance } from './useServiceInstance';
 
-import { Transient, Singleton, Request } from '../../symbols';
 import { useDefault } from './useDefault';
-import { observe, unobserve } from '@nx-js/observer-util';
 import scheduler from '../scheduler';
 
 export interface UseServiceOptions {
@@ -21,11 +21,11 @@ export function useService<M extends Service>(
   const _options = useDefault(options, {
     scope: Singleton,
     // do not make this params true default
-    resetOnUnmount: false
+    resetOnUnmount: false,
   });
 
   const service: ServiceResult<M> = useMemo(() => {
-    return container.resolveServiceInScope<M>(serviceIdentifier, _options.scope!);
+    return container.resolveInScope<M>(serviceIdentifier, _options.scope!);
   }, [_options.scope, serviceIdentifier]);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export function useService<M extends Service>(
 
   const serviceInstanceOptions = useMemo(
     () => ({
-      destroyOnUnmount: _options.scope === Transient || _options.scope === Request
+      destroyOnUnmount: _options.scope === Transient || _options.scope === Request,
     }),
     [_options.scope]
   );
@@ -62,7 +62,7 @@ export function useViewService<M extends Service, S>(
       observe(() => selector(service), {
         scheduler: () => {
           return scheduler.add(triggerRender);
-        }
+        },
       }),
     // Adding the original Comp here is necessary to make React Hot Reload work
     // it does not affect behavior otherwise

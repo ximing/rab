@@ -1,4 +1,13 @@
-import { Service, Transient, Injectable, container, Inject, Scope, ServiceResult } from '../src';
+import {
+  Service,
+  Transient,
+  Request,
+  Injectable,
+  container,
+  Inject,
+  Scope,
+  ServiceResult,
+} from '../src';
 import { LazyServiceIdentifer } from 'inversify';
 
 @Injectable()
@@ -22,12 +31,14 @@ class CountService extends Service {
     public other1: OtherService,
 
     @Scope(Transient) public other2: OtherService,
-
     @Inject(OtherService) @Scope(Transient) public other3: OtherService,
 
     @Inject(new LazyServiceIdentifer(() => OtherService))
     @Scope(Transient)
-    public other4: OtherService
+    public other4: OtherService,
+
+    @Scope(Request) public other5: OtherService,
+    @Scope(Request) public other6: OtherService
   ) {
     super();
   }
@@ -49,7 +60,7 @@ describe('Inject specs:', () => {
   let countModel: ServiceResult<CountService>;
 
   beforeEach(() => {
-    countModel = container.resolveServiceInScope(CountService, Transient);
+    countModel = container.resolveInScope(CountService, Transient);
   });
 
   it('getState', () => {
@@ -71,12 +82,18 @@ describe('Inject specs:', () => {
   it('should scope decorator default to Singleton', () => {
     countModel.other1.subtract(1);
     container.unbind(CountService);
-    countModel = container.resolveServiceInScope(CountService, Transient);
+    countModel = container.resolveInScope(CountService, Transient);
     expect(countModel.other1.count).toEqual(-2);
   });
 
   it('should effect take effect asyncly', () => {
     countModel.proxySubtract(1);
     expect(countModel.other2.count).toEqual(-2);
+  });
+
+  it('should request inject work', () => {
+    expect(countModel.other5).toBe(countModel.other6);
+    countModel.other5.subtract(10);
+    expect(countModel.other5.count).toEqual(countModel.other6.count);
   });
 });

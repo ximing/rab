@@ -6,7 +6,7 @@ const {
   addDecoratorsLegacy,
   removeModuleScopePlugin,
   babelInclude,
-  addWebpackAlias
+  addWebpackAlias,
 } = require('customize-cra');
 
 module.exports = {
@@ -16,10 +16,10 @@ module.exports = {
     removeModuleScopePlugin(),
     babelInclude([path.resolve('src'), path.resolve(__dirname, '../src')]),
     addWebpackAlias({
-      '@library': path.resolve(__dirname, '../src/')
+      '@library': path.resolve(__dirname, '../src/'),
     })
   ),
   devServer: overrideDevServer((config) => {
     return config;
-  })
+  }),
 };

@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/router",
-  "version": "7.0.0",
+  "version": "7.0.0-rc.1",
   "description": "rabjs router",
   "main": "dist/router.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,8 @@
     "link": "lerna link --force-local",
     "test": "jest",
     "build": "rollup -c",
-    "dev": "rollup -c -w"
+    "dev": "rollup -c -w",
+    "prepublish": "npm run build"
   },
   "author": "ximing",
   "files": [
@@ -21,13 +22,13 @@
     "@types/history": "^4.7.5"
   },
   "devDependencies": {
-    "@rabjs/core": "^7.0.0",
+    "@rabjs/core": "^0.1.0",
     "inversify": "^5.0.1",
     "react-router": "^5.1.2",
     "reflect-metadata": "^0.1.13"
   },
   "peerDependencies": {
-    "@rabjs/core": "^7.0.0-alpha.0",
+    "@rabjs/core": "^0.1.0",
     "inversify": "^5.0.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
@@ -37,5 +38,6 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  }
+  },
+  "gitHead": "4d869601f7b1d265ba571a0a0f935a2774b7401f"
 }

@@ -7,7 +7,7 @@ export interface SynchronizedHistory extends History {
   unsubscribe?: UnregisterCallback;
 }
 export const syncHistoryWithStore = (history: History): SynchronizedHistory => {
-  const routerService = container.resolveServiceInScope(RouterService, Singleton);
+  const routerService = container.resolveInScope(RouterService, Singleton);
 
   // Initialise store
   routerService.history = history;
@@ -29,7 +29,7 @@ export const syncHistoryWithStore = (history: History): SynchronizedHistory => {
 
     // Listen for changes to location state in store
     const unsubscribeFromStore = observe(() => routerService.location, {
-      scheduler: onStoreChange
+      scheduler: onStoreChange,
     });
 
     listener(routerService.location, history.action);

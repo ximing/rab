@@ -1,4 +1,4 @@
-import { observe, observable } from '@nx-js/observer-util';
+import { observe, observable } from '@rabjs/observer-util';
 import { sleep } from '../src/utils/helpers';
 
 class CountModel {
@@ -9,7 +9,7 @@ class CountModel {
     lastName: 'Smith',
     get name() {
       return `${this.firstName} ${this.lastName}`;
-    }
+    },
   };
 
   setCount(count: number) {
@@ -54,7 +54,7 @@ describe('Service specs:', () => {
     expect(countModel.count).toEqual(-1);
   });
 
-  it('observe', async function() {
+  it('observe', async function () {
     const spy = jest.fn(() => countModel.count);
     observe(spy);
     expect(spy.mock.calls.length).toBe(1);
@@ -75,8 +75,8 @@ describe('Service specs:', () => {
     expect(spy.mock.calls.length).toBe(2);
   });
 
-  it('self', function() {
+  it('self', function () {
     expect(countModel.self()).toStrictEqual(originModel.self());
-    expect(countModel.self1()).toStrictEqual(originModel.self1());
+    expect(countModel.self1()).not.toStrictEqual(originModel.self1());
   });
 });

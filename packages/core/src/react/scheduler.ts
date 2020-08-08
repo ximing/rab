@@ -18,7 +18,7 @@ const scheduler = {
   },
   off() {
     scheduler.isOn = false;
-  }
+  },
 };
 
 export default scheduler;

@@ -1,4 +1,4 @@
-import { observable, observe } from '@nx-js/observer-util';
+import { observable, observe } from '@rabjs/observer-util';
 
 describe('Service specs:', () => {
   it('getState', () => {

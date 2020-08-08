@@ -11,7 +11,7 @@ import scheduler from './scheduler';
 // until the function is finished running
 // react renders are batched by unstable_batchedUpdates
 // autoEffects and other custom reactions are batched by our scheduler
-export function batch(fn: Function, ctx: any, args: any[]) {
+export function batch(fn: any, ctx: any, args: any[]) {
   // do not apply scheduler logic if it is already applied from a parent function
   // it would flush in the middle of the parent's batch
   if (scheduler.isOn) {
@@ -39,7 +39,7 @@ function batchFn(fn: any) {
     batched = new Proxy(fn, {
       apply(target, thisArg, args) {
         return batch(target, thisArg, args);
-      }
+      },
     });
     cache.set(fn, batched);
   }
@@ -52,7 +52,7 @@ function batchMethodCallbacks(obj: any, method: PropertyKey) {
     obj[method] = new Proxy(descriptor.value, {
       apply(target, ctx, args) {
         return Reflect.apply(target, ctx, args.map(batchFn));
-      }
+      },
     });
   }
 }
@@ -73,7 +73,7 @@ export function batchMethod(obj: any, method: PropertyKey) {
     // eslint-disable-next-line
     Object.defineProperty(obj, method, {
       ...descriptor,
-      set: batchFn(set)
+      set: batchFn(set),
     });
   } else if (writable && typeof value === 'function') {
     obj[method] = batchFn(value);
@@ -81,7 +81,7 @@ export function batchMethod(obj: any, method: PropertyKey) {
 }
 
 // batches obj.onevent = fn like calls and store methods
-export function batchMethods(obj: any, methods: string[]) {
+export function batchMethods(obj: any, methods?: string[]) {
   methods = methods || Object.getOwnPropertyNames(obj);
   methods.forEach((method) => batchMethod(obj, method));
   return obj;
@@ -95,7 +95,7 @@ batchMethodsCallbacks(globalObj, [
   'setTimeout',
   'setInterval',
   'requestAnimationFrame',
-  'requestIdleCallback'
+  'requestIdleCallback',
 ]);
 
 if (globalObj?.Promise) {

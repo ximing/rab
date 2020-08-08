@@ -1,6 +1,6 @@
 import { Service, Transient, Injectable, container, ServiceResult } from '../src';
 import { sleep } from '../src/utils/helpers';
-import { observe } from '@nx-js/observer-util';
+import { observe } from '@rabjs/observer-util';
 
 @Injectable()
 class CountModel extends Service {
@@ -11,7 +11,7 @@ class CountModel extends Service {
     lastName: 'Smith',
     get name() {
       return `${this.firstName} ${this.lastName}`;
-    }
+    },
   };
 
   setCount(count: number) {
@@ -32,7 +32,7 @@ describe('Service specs:', () => {
   let countModel: ServiceResult<CountModel>;
 
   beforeEach(() => {
-    countModel = container.resolveServiceInScope(CountModel, Transient);
+    countModel = container.resolveInScope(CountModel, Transient);
   });
 
   it('setCount', () => {
@@ -47,7 +47,7 @@ describe('Service specs:', () => {
     expect(countModel.count).toEqual(-1);
   });
 
-  it('observe', async function() {
+  it('observe', async function () {
     const spy = jest.fn(() => countModel.count);
     observe(spy);
     expect(spy.mock.calls.length).toBe(1);

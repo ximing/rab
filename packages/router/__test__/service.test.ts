@@ -10,9 +10,9 @@ beforeEach(() => {
     replace: jest.fn(),
     go: jest.fn(),
     goBack: jest.fn(),
-    goForward: jest.fn()
+    goForward: jest.fn(),
   };
-  routerService = container.resolveServiceInScope(RouterService, Singleton);
+  routerService = container.resolveInScope(RouterService, Singleton);
   routerService.history = mockHistory;
 });
 

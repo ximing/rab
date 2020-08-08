@@ -5,9 +5,10 @@ module.exports = {
     'standard',
     'prettier',
     'plugin:@typescript-eslint/recommended',
-    'plugin:react/recommended'
+    'plugin:react/recommended',
   ],
   rules: {
+    '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/class-name-casing': 'off',
     'no-unused-vars': 'off',
     '@typescript-eslint/explicit-function-return-type': 0,
@@ -33,13 +34,13 @@ module.exports = {
     '@typescript-eslint/explicit-member-accessibility': 'off',
     'promise/param-names': 'off',
     '@typescript-eslint/ban-ts-ignore': 'off',
-    camelcase: ['error', { allow: ['^internal_', '^unstable_'] }]
+    camelcase: ['error', { allow: ['^internal_', '^unstable_'] }],
   },
   env: {
     'jest/globals': true,
     browser: true,
     node: true,
-    es6: true
+    es6: true,
   },
   globals: {
     testRule: 'readonly',
@@ -54,11 +55,11 @@ module.exports = {
     jd: 'readonly',
     Component: 'readonly',
     App: 'readonly',
-    Page: 'readonly'
+    Page: 'readonly',
   },
   parserOptions: {
     ecmaFeatures: {
-      jsx: true
-    }
-  }
+      jsx: true,
+    },
+  },
 };

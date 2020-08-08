@@ -16,7 +16,7 @@ const waitMacro = (fn: (...args: any[]) => any) =>
 
 enum CountAction {
   ADD = 'add',
-  MINUS = 'minus'
+  MINUS = 'minus',
 }
 
 @Injectable()
@@ -105,7 +105,7 @@ describe('Hooks spec:', () => {
       });
 
       const renderer = create(<TestComponent />);
-
+      expect(spy1.mock.calls).toEqual([[1], [1]]);
       // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
       await act(async () => {
         renderer.update(<TestComponent />);
@@ -113,8 +113,8 @@ describe('Hooks spec:', () => {
       expect(spy.mock.calls).toEqual([[1]]);
 
       act(() => renderer.root.findByType('button').props.onClick());
-      waitMacro(() => expect(spy1.mock.calls.length).toBe(3));
-      waitMacro(() => expect(spy.mock.calls).toEqual([[1], [3]]));
+      waitMacro(() => expect(spy1.mock.calls.length).toBe(0));
+      waitMacro(() => expect(spy.mock.calls).toEqual([]));
     });
 
     it('should only render once when update the state right during rendering by only useService', async () => {
@@ -145,8 +145,8 @@ describe('Hooks spec:', () => {
       expect(spy.mock.calls).toEqual([[0]]);
 
       await act(async () => await renderer.root.findByType('button').props.onClick());
-      waitMacro(() => expect(spy1.mock.calls.length).toBe(2));
-      waitMacro(() => expect(spy.mock.calls).toEqual([[0], [1]]));
+      waitMacro(() => expect(spy1.mock.calls.length).toBe(0));
+      waitMacro(() => expect(spy.mock.calls).toEqual([]));
     });
 
     it('should only render once when update the state right during rendering by useObserverState', async () => {
@@ -177,8 +177,8 @@ describe('Hooks spec:', () => {
       expect(spy.mock.calls).toEqual([[0]]);
 
       await act(async () => await renderer.root.findByType('button').props.onClick());
-      waitMacro(() => expect(spy1.mock.calls.length).toBe(2));
-      waitMacro(() => expect(spy.mock.calls).toEqual([[0], [1]]));
+      waitMacro(() => expect(spy1.mock.calls.length).toBe(0));
+      waitMacro(() => expect(spy.mock.calls).toEqual([]));
     });
 
     it('should not trigger re-render if dont watch key', async () => {
@@ -196,18 +196,18 @@ describe('Hooks spec:', () => {
         );
       });
       const renderer = create(<TestComponent />);
-      waitMacro(() => expect(spy.mock.calls).toHaveLength(1));
+      waitMacro(() => expect(spy.mock.calls).toHaveLength(0));
       // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
       renderer.update(<TestComponent />);
       act(() => renderer.root.findByProps({ id: CountAction.ADD }).props.onClick());
-      waitMacro(() => expect(spy.mock.calls).toHaveLength(1));
+      waitMacro(() => expect(spy.mock.calls).toHaveLength(0));
     });
 
     it('should not re-render if dont watch key which is be changed', () => {
       const spy = jest.fn();
       const TestComponent = view(() => {
         const countService = useService(Count, {
-          scope: Transient
+          scope: Transient,
         });
         const addOne = useCallback(() => countService.add(1), [countService]);
         spy();
@@ -223,6 +223,7 @@ describe('Hooks spec:', () => {
       const renderer = create(<TestComponent />);
       // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
       renderer.update(<TestComponent />);
+      expect(spy.mock.calls).toHaveLength(1);
       act(() => renderer.root.findByProps({ id: CountAction.ADD }).props.onClick());
       expect(spy.mock.calls).toHaveLength(1);
     });
