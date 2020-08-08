@@ -7,7 +7,7 @@ export default defineConfig({
   logo: 'https://raw.githubusercontent.com/ximing/static/master/R.svg',
   locales: [['zh-CN', '中文']],
   base: '/rab',
-  publicPath: '/rab',
+  publicPath: '/rab/',
   navs: [
     null, // null 值代表保留约定式生成的导航，只做增量配置
     {
