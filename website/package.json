@@ -6,7 +6,7 @@
     "clean": "rm -rf .umi dist",
     "start": "dumi dev",
     "build": "dumi build",
-    "postbuild": "echo https://ximing.github.io/ > dist/CNAME",
+    "postbuild-old": "echo ximing.github.io > dist/CNAME",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
