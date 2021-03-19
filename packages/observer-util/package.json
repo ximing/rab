@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/observer-util",
-  "version": "7.0.0-rc.1",
+  "version": "7.0.0",
   "description": "Simple transparent reactivity with 100% language coverage. Made with ES6 Proxies.",
   "main": "dist/bundle.cjs.js",
   "module": "dist/bundle.es.js",

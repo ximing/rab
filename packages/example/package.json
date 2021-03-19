@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/example",
-  "version": "7.1.0",
+  "version": "7.0.0",
   "private": true,
   "dependencies": {
     "@rabjs/core": "^7.1.0",

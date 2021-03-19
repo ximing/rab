@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/router",
-  "version": "7.0.0-rc.1",
+  "version": "7.0.0",
   "description": "rabjs router",
   "main": "dist/router.js",
   "types": "dist/index.d.ts",

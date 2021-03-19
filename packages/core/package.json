@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/core",
-  "version": "7.0.0-rc.1",
+  "version": "7.0.0",
   "description": "rabjs core.",
   "main": "dist/cjs.es6.js",
   "module": "dist/es.es6.js",
@@ -21,8 +21,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@rabjs/ioc": "^7.0.0-rc.1",
-    "@rabjs/observer-util": "^7.0.0-rc.1"
+    "@rabjs/ioc": "^7.0.0",
+    "@rabjs/observer-util": "^7.0.0"
   },
   "devDependencies": {
     "@types/react-dom": "^16.9.8",
