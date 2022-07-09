@@ -1411,6 +1411,31 @@
   resolved "https://registry.npm.taobao.org/@nodelib/fs.stat/download/@nodelib/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha1-K1o6s/kYzKSKjHVMCBaOPwPrphs=
 
+"@rabjs/core@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.npmmirror.com/@rabjs/core/-/core-7.1.0.tgz#f2521e42b2564db5ca2bcd8fb13171c7213cf336"
+  integrity sha512-5T5b5NImKtR4Z2vHKPc+a7VfJnZvaUZdwt3n6LHWMW5MnZc0y38ECE6SFEmOYwO1SsvX2vBS0fQoOwS83TLpJg==
+  dependencies:
+    "@rabjs/ioc" "^7.1.0"
+    "@rabjs/observer-util" "^7.1.0"
+
+"@rabjs/ioc@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.npmmirror.com/@rabjs/ioc/-/ioc-7.1.0.tgz#68f9724dc833d73bb736551e9ea0586d1df63de0"
+  integrity sha512-b30H74CsSyDRY0mRrklYh9YIK9tM7rX/7QTtdmJrY297mr83xS5hIOpF4o1rhQX7Srk2YZnyN0gYrd1+aVvXmA==
+
+"@rabjs/observer-util@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.npmmirror.com/@rabjs/observer-util/-/observer-util-7.1.0.tgz#aaf8ea51d05bc513aaa4409157f88e0375433a5d"
+  integrity sha512-fn64Nk9t7XB8AcjZiUDv+f63D9tf41hz51w9w07mybuHozaKwhQa7yBa6R+K7PiAiSHpOWm08++b39I0ryz4sg==
+
+"@rabjs/router@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.npmmirror.com/@rabjs/router/-/router-7.1.0.tgz#b629d97a50107e0f24f45bb9315dab6097b5b694"
+  integrity sha512-gB5lSB+/9XrNpXyt5tLAoDaFwWJ0FMFNdlmZ/fDYnbISjP3MW71kVqpD46GS9+mQdBkMITvjWgzbshsAo6D+gQ==
+  dependencies:
+    "@types/history" "^4.7.5"
+
 "@svgr/babel-plugin-add-jsx-attribute@^4.2.0":
   version "4.2.0"
   resolved "https://registry.npm.taobao.org/@svgr/babel-plugin-add-jsx-attribute/download/@svgr/babel-plugin-add-jsx-attribute-4.2.0.tgz#dadcb6218503532d6884b210e7f3c502caaa44b1"
@@ -4355,6 +4380,11 @@ eslint-plugin-jsx-a11y@6.2.3:
     has "^1.0.3"
     jsx-ast-utils "^2.2.1"
 
+eslint-plugin-rabjs@^7.1.0:
+  version "7.1.0"
+  resolved "https://registry.npmmirror.com/eslint-plugin-rabjs/-/eslint-plugin-rabjs-7.1.0.tgz#a7b16ede631004832a1e3bb060c5e40d4d00697b"
+  integrity sha512-Cs3LWYZlytrbJlHp3vg/arV8B/qTRviMDQy9HtSZkVJKiS3lUf9kelc35dzLVHAoUWBIsh2LxKpTm3luh8vKGA==
+
 eslint-plugin-react-hooks@^1.6.1:
   version "1.7.0"
   resolved "https://registry.npm.taobao.org/eslint-plugin-react-hooks/download/eslint-plugin-react-hooks-1.7.0.tgz#6210b6d5a37205f0b92858f895a4e827020a7d04"
@@ -4515,11 +4545,9 @@ events@^3.0.0:
   integrity sha1-k7h8GPjvzUICpGGuxN/AVWtjk3k=
 
 eventsource@^1.0.7:
-  version "1.0.7"
-  resolved "https://registry.npm.taobao.org/eventsource/download/eventsource-1.0.7.tgz#8fbc72c93fcd34088090bc0a4e64f4b5cee6d8d0"
-  integrity sha1-j7xyyT/NNAiAkLwKTmT0tc7m2NA=
-  dependencies:
-    original "^1.0.0"
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.1.2.tgz#bc75ae1c60209e7cb1541231980460343eaea7c2"
+  integrity sha512-xAH3zWhgO2/3KIniEKYPr8plNSzlGINOUqYj0m0u7AB81iRw8b/3E73W6AuU+6klLbaSFmZnaETQ2lXPfAydrA==
 
 evp_bytestokey@^1.0.0, evp_bytestokey@^1.0.3:
   version "1.0.3"
@@ -7621,13 +7649,6 @@ optionator@^0.8.1, optionator@^0.8.3:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
     word-wrap "~1.2.3"
-
-original@^1.0.0:
-  version "1.0.2"
-  resolved "https://registry.npm.taobao.org/original/download/original-1.0.2.tgz#e442a61cffe1c5fd20a65f3261c26663b303f25f"
-  integrity sha1-5EKmHP/hxf0gpl8yYcJmY7MD8l8=
-  dependencies:
-    url-parse "^1.4.3"
 
 os-browserify@^0.3.0:
   version "0.3.0"
