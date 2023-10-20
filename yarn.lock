@@ -15761,9 +15761,9 @@ react-dev-utils@^9.1.0:
     text-table "0.2.0"
 
 react-devtools-core@^4.0.6:
-  version "4.10.1"
-  resolved "https://registry.npm.taobao.org/react-devtools-core/download/react-devtools-core-4.10.1.tgz?cache=0&sync_timestamp=1607127682001&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Freact-devtools-core%2Fdownload%2Freact-devtools-core-4.10.1.tgz#6d57db291aeac9cc45ef9fb4636dd2ab97490daf"
-  integrity sha1-bVfbKRrqycxF75+0Y23Sq5dJDa8=
+  version "4.28.4"
+  resolved "https://registry.npmmirror.com/react-devtools-core/-/react-devtools-core-4.28.4.tgz#fb8183eada77093f4c2f9830e664bf22255abe27"
+  integrity sha512-IUZKLv3CimeM07G3vX4H4loxVpByrzq3HvfTX7v9migalwvLs9ZY5D3S3pKR33U+GguYfBBdMMZyToFhsSE/iQ==
   dependencies:
     shell-quote "^1.6.1"
     ws "^7"
