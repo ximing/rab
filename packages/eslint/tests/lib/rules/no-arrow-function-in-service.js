@@ -2,21 +2,19 @@
  * @fileoverview Service dont allow arrow function
  * @author ximing
  */
-'use strict';
 const path = require('path');
 // ------------------------------------------------------------------------------
 // Requirements
 // ------------------------------------------------------------------------------
-
-var rule = require('../../../lib/rules/no-arrow-function-in-service');
-var RuleTester = require('eslint').RuleTester;
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/no-arrow-function-in-service');
 
 // ------------------------------------------------------------------------------
 // Tests
 // ------------------------------------------------------------------------------
 
 const ruleTester = new RuleTester({
-  parser: path.resolve('node_modules/babel-eslint'),
+  parser: path.resolve('node_modules/@babel/eslint-parser'),
   parserOptions: { ecmaVersion: 2018 },
 });
 

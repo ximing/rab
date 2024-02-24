@@ -1,4 +1,4 @@
-import { rawToOptions } from './internals'
+import { rawToOptions } from './internals';
 
 // Proxy trap related handlers
 // this is a copy of the built-in Reflect object
@@ -9,7 +9,7 @@ export const proxyHandlers = Object.freeze(
     (handlers, key) => ({ ...handlers, [key]: Reflect[key] }),
     {}
   )
-)
+);
 
 // ES6 collection method related handlers
 export const collectionHandlers = Object.freeze({
@@ -24,31 +24,27 @@ export const collectionHandlers = Object.freeze({
   values: (target, ...args) => target.values(...args),
   entries: (target, ...args) => target.entries(...args),
   [Symbol.iterator]: (target, ...args) => target[Symbol.iterator](...args),
-  size: (target) => target.size
-})
+  size: (target) => target.size,
+});
 
 export const reactionHandlers = Object.freeze({
   // order/filter reactions triggered by an atomic observable mutation
-  transformReactions: (target, key, reactions) => reactions
-})
+  transformReactions: (target, key, reactions) => reactions,
+});
 
 const defaultHandlers = {
   proxyHandlers,
   collectionHandlers,
-  reactionHandlers
-}
+  reactionHandlers,
+};
 
-export const runProxyHandler = (...args) =>
-  runHandler('proxyHandlers', ...args)
-export const runCollectionHandler = (...args) =>
-  runHandler('collectionHandlers', ...args)
-export const runReactionHandler = (...args) =>
-  runHandler('reactionHandlers', ...args)
+export const runProxyHandler = (...args) => runHandler('proxyHandlers', ...args);
+export const runCollectionHandler = (...args) => runHandler('collectionHandlers', ...args);
+export const runReactionHandler = (...args) => runHandler('reactionHandlers', ...args);
 
 // runs the default or custom (user-provided) handler for the specific operation
-function runHandler (handlers, name, target, ...args) {
-  const options = rawToOptions.get(target)
-  const handler =
-    options?.[handlers]?.[name] || defaultHandlers[handlers][name]
-  return handler(target, ...args)
+function runHandler(handlers, name, target, ...args) {
+  const options = rawToOptions.get(target);
+  const handler = options?.[handlers]?.[name] || defaultHandlers[handlers][name];
+  return handler(target, ...args);
 }

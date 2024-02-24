@@ -21,6 +21,7 @@ export function viewServices<SS extends Record<string, any> = {}>(services: SS) 
         const service = useService(serviceIdentifier, options);
         (serviceProps as any)[key] = service;
       });
+      console.error('serviceProps',serviceProps)
       const ViewComponent = view<Props>(Component) as any;
       return <ViewComponent {...props} {...serviceProps} />;
     };

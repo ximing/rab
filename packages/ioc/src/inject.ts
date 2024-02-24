@@ -45,15 +45,18 @@ const injectService = (service: any, target: any, key?: string, index?: number) 
   container.registerInScope(service, scope);
 };
 
-export const Injectable = <T>() => (target: T): any => {
-  injectable()(target);
-  const parameters = Reflect.getMetadata(METADATA_KEY.PARAM_TYPES, target);
-  for (let index = 0; index < parameters.length; index++) {
-    const parameter = parameters[index];
-    // only auto inject service
-    injectService(parameter, target, undefined, index);
-  }
-};
+export const Injectable =
+  <T>() =>
+  (target: T): any => {
+    injectable()(target);
+    // @ts-ignore
+    const parameters = Reflect.getMetadata(METADATA_KEY.PARAM_TYPES, target);
+    for (let index = 0; index < parameters.length; index++) {
+      const parameter = parameters[index];
+      // only auto inject service
+      injectService(parameter, target, undefined, index);
+    }
+  };
 
 export const Inject = <T extends interfaces.ServiceIdentifier<any> | LazyServiceIdentifer<any>>(
   serviceIdentifier: T
@@ -66,11 +69,14 @@ export const Inject = <T extends interfaces.ServiceIdentifier<any> | LazyService
       injectService(serviceIdentifier, target, key, index);
     }
     if (target && typeof target === 'object' && isClassComponent(target.constructor)) {
+
+      (window as any).abc = target;
       Object.defineProperty(target, key, {
         configurable: true,
         enumerable: true,
         get() {
           const scope = getScope(target, key || '', index);
+          console.error('llll', target, key, index);
           // eslint-disable-next-line
           // @ts-ignore
           return container.resolveInScope<any>(serviceIdentifier, scope || Singleton);

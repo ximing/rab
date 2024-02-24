@@ -55,7 +55,7 @@ export function useViewService<M extends Service, S>(
   options?: UseServiceOptions
 ) {
   const service = useService(serviceIdentifier, options);
-  const [, setState] = useState();
+  const [, setState] = useState({});
   const triggerRender = useCallback(() => setState({}), []);
   const getState = useMemo(
     () =>

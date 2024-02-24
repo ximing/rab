@@ -1,12 +1,10 @@
 import {
   Component,
-  useState,
-  useEffect,
-  useMemo,
   memo,
-  FC,
   ComponentType,
   ComponentClass,
+  useRef,
+  useSyncExternalStore,
 } from 'react';
 import { observe, unobserve } from '@rabjs/observer-util';
 
@@ -17,50 +15,89 @@ export let isInsideFunctionComponent = false;
 export let isInsideClassComponentRender = false;
 export let isInsideFunctionComponentWithoutHooks = false;
 
-// function mapStateToStores(state: any) {
-//   // find store properties and map them to their none observable raw value
-//   // to do not trigger none static this.setState calls
-//   // from the static getDerivedStateFromProps lifecycle method
-//   const component = state[ownerComponent];
-//   return Object.keys(component)
-//     .map((key) => component[key])
-//     .filter(isObservable)
-//     .map(raw);
-// }
-
 export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P> {
   const isStatelessComp = !Comp.prototype?.isReactComponent;
-
   let ReactiveComp: ComponentType<P>;
   if (isStatelessComp && hasHooks) {
     // use a hook based reactive wrapper when we can
     ReactiveComp = (props) => {
       // use a dummy setState to update the component
-      const [, setState] = useState();
-      // create a memoized reactive wrapper of the original component (render)
-      // at the very first run of the component function
-      const render = useMemo(
-        () =>
-          observe(Comp, {
-            scheduler: () => setState({}),
-            lazy: true,
-          }),
-        // Adding the original Comp here is necessary to make React Hot Reload work
-        // it does not affect behavior otherwise
-        [Comp]
-      ) as FC<P>;
+      const admRef = useRef<any | null>(null);
+      if (!admRef.current) {
+        const adm = {
+          reaction: null,
+          onStoreChange: null,
+          stateVersion: Symbol(),
+          subscribe(onStoreChange: () => void) {
+            // Do NOT access admRef here!
+            adm.reaction && unobserve(adm.reaction);
+            adm.reaction = null;
+            // @ts-ignore
+            adm.onStoreChange = onStoreChange;
+            if (!adm.reaction) {
+              // We've lost our reaction and therefore all subscriptions, occurs when:
+              // 1. Timer based finalization registry disposed reaction before component mounted.
+              // 2. React "re-mounts" same component without calling render in between (typically <StrictMode>).
+              // We have to recreate reaction and schedule re-render to recreate subscriptions,
+              // even if state did not change.
+              // @ts-ignore
+              adm.reaction = observe(Comp, {
+                scheduler: () => {
+                  adm.stateVersion = Symbol();
+                  // @ts-ignore
+                  adm.onStoreChange?.();
+                },
+                lazy: true,
+              });
+              // `onStoreChange` won't force update if subsequent `getSnapshot` returns same value.
+              // So we make sure that is not the case
+              adm.stateVersion = Symbol();
+            }
 
-      // cleanup the reactive connections after the very last render of the component
-      useEffect(() => {
-        return () => unobserve(render);
-      }, []);
+            return () => {
+              // Do NOT access admRef here!
+              adm.onStoreChange = null;
+              adm.reaction && unobserve(adm.reaction);
+              adm.reaction = null;
+            };
+          },
+          getSnapshot() {
+            // Do NOT access admRef here!
+            return adm.stateVersion;
+          },
+        };
+        admRef.current = adm;
+      }
+
+      const adm = admRef.current!;
+
+      if (!adm.reaction) {
+        // First render or reaction was disposed by registry before subscribe
+        adm.reaction = observe(Comp, {
+          scheduler: () => {
+            adm.stateVersion = Symbol();
+            // @ts-ignore
+            adm.onStoreChange?.();
+          },
+          lazy: true,
+        });
+        // StrictMode/ConcurrentMode/Suspense may mean that our component is
+        // rendered and abandoned multiple times, so we need to track leaked
+        // Reactions.
+      }
+
+      useSyncExternalStore(
+        admRef.current.subscribe,
+        admRef.current.getSnapshot,
+        admRef.current.getSnapshot
+      );
 
       // the isInsideFunctionComponent flag is used to toggle `store` behavior
       // based on where it was called from
       isInsideFunctionComponent = true;
       try {
         // run the reactive render instead of the original one
-        return render(props);
+        return admRef.current.reaction(props);
       } finally {
         isInsideFunctionComponent = false;
       }
@@ -118,20 +155,6 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
           nextKeys.some((key) => props[key] !== nextProps[key])
         );
       }
-
-      // add a custom deriveStoresFromProps lifecyle method
-      // static getDerivedStateFromProps(props, state) {
-      //   if (super.deriveStoresFromProps) {
-      //     // inject all local stores and let the user mutate them directly
-      //     const stores = mapStateToStores(state);
-      //     super.deriveStoresFromProps(props, ...stores);
-      //   }
-      //   // respect user defined getDerivedStateFromProps
-      //   if (super.getDerivedStateFromProps) {
-      //     return super.getDerivedStateFromProps(props, state);
-      //   }
-      //   return null;
-      // }
 
       componentWillUnmount() {
         // call user defined componentWillUnmount

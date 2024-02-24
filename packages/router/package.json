@@ -19,19 +19,23 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@types/history": "^4.7.5"
+    "@types/history": "^4.7.5",
+    "tslib": "^2.3.1"
   },
   "devDependencies": {
-    "@rabjs/core": "^0.1.0",
+    "@rabjs/core": "workspace:*",
     "inversify": "^5.0.1",
     "react-router": "^5.1.2",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.1.13",
+    "typescript": "^5.0.3",
+    "react": "^18.x",
+    "react-dom": "^18.x"
   },
   "peerDependencies": {
-    "@rabjs/core": "^0.1.0",
+    "@rabjs/core": "workspace:*",
     "inversify": "^5.0.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
+    "react": "^16.x||^17.x||^18.x",
+    "react-dom":  "^16.x||^17.x||^18.x",
     "react-router": "^4.0.0 || ^5.0.0",
     "reflect-metadata": "^0.1.13"
   },

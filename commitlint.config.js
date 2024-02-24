@@ -1,17 +1,7 @@
-/**
- * Created by ximing on 2018/7/11.
- */
-'use strict';
 module.exports = {
-  extends: ['@commitlint/config-conventional'],
+  // 采用 cz 自定义的提交规范, > .cz-config.js
+  extends: ['cz'],
   rules: {
-    'type-enum': [
-      2,
-      'always',
-      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'revert']
-    ],
-    'scope-empty': [1, 'always'],
-    'subject-full-stop': [0, 'never'],
-    'subject-case': [0, 'never']
+    // 自定义规则
   }
-};
+}

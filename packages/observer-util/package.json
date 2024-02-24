@@ -16,6 +16,7 @@
     "lint": "standard",
     "lint-fix": "prettier --ignore-path '.gitignore' --write '**/!(bundle).js' && standard --fix",
     "coveralls": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls",
+    "dev": "rollup --config rollup.config.js -w",
     "build": "rollup --config rollup.config.js",
     "build-toc": "node ./scripts/buildToc.js",
     "prepublish": "npm run build"
@@ -58,7 +59,8 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-node-resolve": "^5.2.0",
-    "standard": "^14.3.4"
+    "standard": "^14.3.4",
+    "typescript": "^5.0.3"
   },
   "engines": {
     "node": ">=6.5.0"
