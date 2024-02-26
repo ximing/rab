@@ -1,24 +1,19 @@
 {
-  "private": true,
-  "name": "website",
+  "name": "@rabjs/website",
   "version": "0.0.1",
+  "description": "A static site based on dumi",
+  "private": true,
   "scripts": {
-    "clean": "rm -rf .umi dist",
-    "start": "dumi dev",
+    "start": "npm run dev",
+    "dev": "dumi dev",
     "build": "dumi build",
-    "postbuild-old": "echo ximing.github.io > dist/CNAME",
-    "predeploy": "npm run build",
+    "prepare": "dumi setup",
     "deploy": "gh-pages -d dist"
   },
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "typings": "dist/index.d.ts",
-  "dependencies": {
-    "dumi": "^1.0.7",
-    "gh-pages": "^2.2.0",
-    "glob": "^7.1.6",
-    "mime": "^2.4.5",
-    "mos-mss": "^1.1.4",
-    "p-limit": "^2.3.0"
+  "authors": [],
+  "license": "MIT",
+  "devDependencies": {
+    "dumi": "^2.2.13",
+    "gh-pages": "^6.1.1"
   }
 }

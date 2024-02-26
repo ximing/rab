@@ -35,7 +35,7 @@ export declare const Scope: (
 
 #### 参数
 
-scope 见 [框架导出的三种 scope](../guide/advanced/ioc#框架导出的三种-scope-变量)
+scope 见 [框架导出的三种 scope](../guide/ioc.md#框架导出的三种-scope-变量)
 
 #### 返回值
 
@@ -61,7 +61,7 @@ export declare const Inject: <T extends
 #### 参数
 
 希望被注入的 Service 类构造函数，或者 LazyServiceIdentifer，详情见 [注入其他 service
-](../guide/advanced/service)
+](../guide/service.md)
 
 #### 返回值
 
