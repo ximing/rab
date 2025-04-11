@@ -18,7 +18,8 @@
     "cs:version": "changeset version",
     "cs:tag": "changeset tag",
     "prerelease": "pnpm build",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "publish:pkg": "pnpm -r publish --access public"
   },
   "repository": {
     "type": "git",
