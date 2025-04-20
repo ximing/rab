@@ -11,7 +11,7 @@ class ViewComponent extends React.Component<any, any> {
   };
 
   render() {
-    return  1;
+    return 1;
     window.ccc = this;
     return (
       <div>

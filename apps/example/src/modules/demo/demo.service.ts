@@ -1,7 +1,7 @@
-import { Service, Injectable } from '@rabjs/core';
+import { Service } from '@rabjs/core';
 
-@Injectable()
-export class DemoService extends Service {
+@Service()
+export class DemoService {
   count = 0;
   async addAsync(num: number) {
     await new Promise((resolve) => {

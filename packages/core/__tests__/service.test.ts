@@ -1,9 +1,9 @@
-import { Service, Transient, Injectable, container, ServiceResult } from '../src';
+import { Service, Transient, container, ServiceResult } from '../src';
 import { sleep } from '../src/utils/helpers';
-import { observe } from '@rabjs/observer-util';
+import { autorun, reaction } from 'mobx';
 
-@Injectable()
-class CountModel extends Service {
+@Service()
+class CountModel {
   count = 0;
 
   profile = {
@@ -32,7 +32,7 @@ describe('Service specs:', () => {
   let countModel: ServiceResult<CountModel>;
 
   beforeEach(() => {
-    countModel = container.resolveInScope(CountModel, Transient);
+    countModel = container.resolveInScope(CountModel, Transient) as ServiceResult<CountModel>;
   });
 
   it('setCount', () => {
@@ -49,22 +49,24 @@ describe('Service specs:', () => {
 
   it('observe', async function () {
     const spy = jest.fn(() => countModel.count);
-    observe(spy);
+    const disposer = autorun(spy);
     expect(spy.mock.calls.length).toBe(1);
     await countModel.minus();
     expect(countModel.count).toEqual(-1);
-    expect(spy.mock.calls.length).toBe(1);
+    expect(spy.mock.calls.length).toBe(2);
     await countModel.add();
     expect(countModel.count).toEqual(0);
-    expect(spy.mock.calls.length).toBe(2);
+    expect(spy.mock.calls.length).toBe(3);
+    disposer();
   });
 
   it('profile', async () => {
     const spy = jest.fn(() => countModel.profile.name);
-    observe(spy);
-    expect(spy.mock.calls.length).toBe(1);
+    const disposer = reaction(() => countModel.profile.name, spy);
+    expect(spy.mock.calls.length).toBe(0);
     countModel.profile.firstName = 'lsfe';
     expect(countModel.profile.name).toEqual('lsfe Smith');
-    expect(spy.mock.calls.length).toBe(2);
+    expect(spy.mock.calls.length).toBe(1);
+    disposer();
   });
 });

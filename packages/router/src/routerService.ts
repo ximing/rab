@@ -1,8 +1,8 @@
-import { Service, Injectable } from '@rabjs/core';
+import { Service } from '@rabjs/core';
 import { History, Location, LocationState, Path } from 'history';
 
-@Injectable()
-export class RouterService extends Service {
+@Service()
+export class RouterService {
   location!: Location;
 
   history!: History;

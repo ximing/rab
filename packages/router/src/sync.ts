@@ -1,4 +1,4 @@
-import { container, Singleton, observe, unobserve } from '@rabjs/core';
+import { container, Singleton, autorun } from '@rabjs/core';
 import { History, Location, UnregisterCallback, LocationListener } from 'history';
 import { RouterService } from './routerService';
 
@@ -28,14 +28,14 @@ export const syncHistoryWithStore = (history: History): SynchronizedHistory => {
     };
 
     // Listen for changes to location state in store
-    const unsubscribeFromStore = observe(() => routerService.location, {
+    const unsubscribeFromStore = autorun(() => routerService.location, {
       scheduler: onStoreChange,
     });
 
     listener(routerService.location, history.action);
 
     return () => {
-      unobserve(unsubscribeFromStore);
+      unsubscribeFromStore();
     };
   };
 

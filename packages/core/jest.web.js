@@ -2,9 +2,15 @@ module.exports = {
   preset: 'ts-jest',
   setupFilesAfterEnv: ['./scripts/testSetup.js'],
   testRegex: '\\.test\\.tsx?$',
-  collectCoverage: true,
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+    }],
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testEnvironment: 'node',
-  coverageReporters: ['lcovonly', 'text'],
+  collectCoverage: true,
+  coverageReporters: ['lcov', 'text'],
   collectCoverageFrom: ['src/**/*.{ts,tsx}'],
   coverageDirectory: 'coverage',
   // moduleNameMapper: {

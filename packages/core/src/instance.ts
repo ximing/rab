@@ -1,12 +1,11 @@
 import { container, ScopeType, Singleton } from '@rabjs/ioc';
-import { Service } from './service';
 import { ConstructorOf } from './types';
 
 export interface GetServiceOptions {
   scope?: ScopeType;
 }
 
-export const getServiceInstance = function <M extends Service>(
+export const getServiceInstance = function <M>(
   serviceIdentifier: ConstructorOf<M>,
   options?: GetServiceOptions
 ) {

@@ -32,7 +32,7 @@ const createStore = (reducer: Reducer) => {
       return () => {
         subscribeFn = subscribeFn.filter((i) => i !== fn);
       };
-    }
+    },
   };
 };
 
@@ -48,7 +48,7 @@ const store = instrument
       reorder: false, // Cannot skip for we cannot replay.
       persist: false, // Avoid trying persistence.
       dispatch: false,
-      test: false
+      test: false,
     })(createStore)(reducer)
   : undefined;
 
@@ -58,7 +58,7 @@ export function logStateAction(
 ) {
   const action = {
     type: `${namespace}/${infos.actionName}`,
-    params: infos.params
+    params: infos.params,
   };
 
   if (infos.state) {

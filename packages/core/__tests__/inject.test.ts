@@ -1,17 +1,8 @@
-import {
-  Service,
-  Transient,
-  Request,
-  Injectable,
-  container,
-  Inject,
-  Scope,
-  ServiceResult,
-} from '../src';
+import { Service, Transient, Request, container, Inject, Scope, ServiceResult } from '../src';
 import { LazyServiceIdentifer } from 'inversify';
 
-@Injectable()
-class OtherService extends Service {
+@Service()
+class OtherService {
   count = -1;
 
   subtract(n: number) {
@@ -19,8 +10,8 @@ class OtherService extends Service {
   }
 }
 
-@Injectable()
-class CountService extends Service {
+@Service()
+class CountService {
   count = 0;
 
   // type 1
@@ -39,9 +30,7 @@ class CountService extends Service {
 
     @Scope(Request) public other5: OtherService,
     @Scope(Request) public other6: OtherService
-  ) {
-    super();
-  }
+  ) {}
 
   setCount(count: number) {
     this.count = count;
@@ -60,7 +49,7 @@ describe('Inject specs:', () => {
   let countModel: ServiceResult<CountService>;
 
   beforeEach(() => {
-    countModel = container.resolveInScope(CountService, Transient);
+    countModel = container.resolveInScope(CountService, Transient) as ServiceResult<CountService>;
   });
 
   it('getState', () => {
@@ -82,7 +71,7 @@ describe('Inject specs:', () => {
   it('should scope decorator default to Singleton', () => {
     countModel.other1.subtract(1);
     container.unbind(CountService);
-    countModel = container.resolveInScope(CountService, Transient);
+    countModel = container.resolveInScope(CountService, Transient) as ServiceResult<CountService>;
     expect(countModel.other1.count).toEqual(-2);
   });
 

@@ -1,75 +1,168 @@
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import {
+  useMemo,
+  useEffect,
+  useRef,
+  useContext,
+  createContext,
+  FC,
+  ReactNode,
+  createElement,
+} from 'react';
 import { container, ScopeType, Transient, Singleton, Request } from '@rabjs/ioc';
-import { observe, unobserve } from '@rabjs/observer-util';
 
-import { Service } from '../../service';
 import { ConstructorOf, ServiceResult } from '../../types';
 import { useServiceInstance } from './useServiceInstance';
 
 import { useDefault } from './useDefault';
-import scheduler from '../scheduler';
+
+// 创建一个Context用于Request作用域
+const RequestScopeContext = createContext<{ scopeId: string | null }>({ scopeId: null });
+
+// 创建一个Provider组件，用于提供Request作用域
+export const RequestScopeProvider: FC<{ scopeId: string; children: ReactNode }> = ({
+  scopeId,
+  children,
+}) => {
+  return createElement(RequestScopeContext.Provider, { value: { scopeId } }, children);
+};
+
+// 用于跟踪Request作用域的引用计数
+const requestScopeRefCounts = new Map<string, number>();
+// 用于跟踪Request作用域的服务实例
+const requestScopeInstances = new Map<string, any>();
 
 export interface UseServiceOptions {
   scope?: ScopeType;
   resetOnUnmount?: boolean;
+  requestScopeId?: string;
 }
 
-export function useService<M extends Service>(
+/**
+ * Hook to use a service instance
+ * @param serviceIdentifier The service class constructor
+ * @param options Options for the service
+ * @returns A service instance with $model property for tracking loading and error states
+ *
+ * The returned service has a $model property with the following structure:
+ * ```typescript
+ * $model: {
+ *   [methodName: string]: {
+ *     loading: boolean;
+ *     error: Error | null;
+ *   }
+ * }
+ * ```
+ *
+ * This property is automatically populated for all async methods in the service.
+ *
+ * ## Lifecycle Options
+ *
+ * - **Singleton** (default): The service is a singleton, shared across the entire application
+ * - **Transient**: Each component gets its own service instance, unique within the component's lifecycle
+ * - **Request**: The service is unique within a specific scope (e.g., a component tree)
+ *   - Use `RequestScopeProvider` to define a scope
+ *   - Or provide a `requestScopeId` to manually specify a scope
+ */
+export function useService<M>(
   serviceIdentifier: ConstructorOf<M>,
   options?: UseServiceOptions
 ): ServiceResult<M> {
   const _options = useDefault(options, {
     scope: Singleton,
-    // do not make this params true default
     resetOnUnmount: false,
+    requestScopeId: undefined,
   });
 
+  // 获取Request作用域的ID
+  const { scopeId: contextScopeId } = useContext(RequestScopeContext);
+  const requestScopeId = _options.requestScopeId || contextScopeId;
+
+  // 为Transient作用域创建一个唯一的ID
+  const transientId = useRef<string | null>(null);
+  if (_options.scope === Transient && !transientId.current) {
+    transientId.current = Math.random().toString(36).substring(2, 15);
+  }
+
+  // 使用useRef来跟踪组件是否已卸载
+  const isUnmounted = useRef(false);
+
+  // 对于Request作用域，增加引用计数
+  useEffect(() => {
+    if (_options.scope === Request && requestScopeId) {
+      const currentCount = requestScopeRefCounts.get(requestScopeId) || 0;
+      requestScopeRefCounts.set(requestScopeId, currentCount + 1);
+
+      return () => {
+        if (isUnmounted.current) return;
+
+        const count = requestScopeRefCounts.get(requestScopeId) || 1;
+        requestScopeRefCounts.set(requestScopeId, count - 1);
+
+        if (count - 1 === 0) {
+          const instance = requestScopeInstances.get(requestScopeId);
+          if (instance) {
+            if (typeof (instance as any).destroy === 'function') {
+              (instance as any).destroy();
+            }
+
+            if (container.isBound(serviceIdentifier)) {
+              container.unbind(serviceIdentifier);
+            }
+
+            requestScopeInstances.delete(requestScopeId);
+          }
+        }
+      };
+    }
+    return undefined;
+  }, [_options.scope, requestScopeId, serviceIdentifier]);
+
+  // 在组件卸载时设置标志
+  useEffect(() => {
+    return () => {
+      isUnmounted.current = true;
+    };
+  }, []);
+
   const service: ServiceResult<M> = useMemo(() => {
-    return container.resolveInScope<M>(serviceIdentifier, _options.scope!);
-  }, [_options.scope, serviceIdentifier]);
+    let scopeId: ScopeType;
+
+    if (_options.scope === Request && requestScopeId) {
+      scopeId = requestScopeId;
+    } else if (_options.scope === Transient && transientId.current) {
+      scopeId = transientId.current;
+    } else {
+      scopeId = _options.scope;
+    }
+
+    const instance = container.resolveInScope<ServiceResult<M>>(serviceIdentifier, scopeId);
+
+    if (_options.scope === Request && requestScopeId) {
+      requestScopeInstances.set(requestScopeId, instance);
+    }
+
+    return instance;
+  }, [_options.scope, requestScopeId, transientId.current, serviceIdentifier]);
 
   useEffect(() => {
-    // resetOnUnmount
     if (_options.scope !== Transient && _options.scope !== Request && _options.resetOnUnmount) {
       return () => {
-        // TODO
-        // service.dispatch('reset', service.defaultState);
+        if (isUnmounted.current) return;
+        // TODO: Implement reset logic
       };
     }
     return undefined;
   }, [_options.resetOnUnmount, _options.scope, service]);
 
+  const shouldDestroyOnUnmount =
+    _options.scope === Transient || (_options.scope === Request && !requestScopeId);
+
   const serviceInstanceOptions = useMemo(
     () => ({
-      destroyOnUnmount: _options.scope === Transient || _options.scope === Request,
+      destroyOnUnmount: shouldDestroyOnUnmount,
     }),
-    [_options.scope]
+    [shouldDestroyOnUnmount]
   );
 
   return useServiceInstance(service, serviceInstanceOptions);
-}
-
-export function useViewService<M extends Service, S>(
-  serviceIdentifier: ConstructorOf<M>,
-  selector: (service: ServiceResult<M>) => S,
-  options?: UseServiceOptions
-) {
-  const service = useService(serviceIdentifier, options);
-  const [, setState] = useState({});
-  const triggerRender = useCallback(() => setState({}), []);
-  const getState = useMemo(
-    () =>
-      observe(() => selector(service), {
-        scheduler: () => {
-          return scheduler.add(triggerRender);
-        },
-      }),
-    // Adding the original Comp here is necessary to make React Hot Reload work
-    // it does not affect behavior otherwise
-    [selector, service]
-  );
-  useEffect(() => {
-    return () => unobserve(getState);
-  }, []);
-  return [getState(), service];
 }

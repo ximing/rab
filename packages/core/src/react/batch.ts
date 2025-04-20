@@ -11,7 +11,7 @@ import scheduler from './scheduler';
 // until the function is finished running
 // react renders are batched by unstable_batchedUpdates
 // autoEffects and other custom reactions are batched by our scheduler
-export function batch(fn: any, ctx: any, args: any[]) {
+function batch(fn: any, ctx: any, args: any[]) {
   // do not apply scheduler logic if it is already applied from a parent function
   // it would flush in the middle of the parent's batch
   if (scheduler.isOn) {

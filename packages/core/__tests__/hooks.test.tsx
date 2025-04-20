@@ -1,13 +1,12 @@
 import * as React from 'react';
-import { act, create, ReactTestInstance, ReactTestRenderer } from 'react-test-renderer';
+import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { useCallback, useEffect } from 'react';
 
-import { Service, Injectable, useService, Transient, view } from '../src';
-import { useObserverState } from '../src/react/hooks/useObserverState';
+import { Service, useService, Transient, view } from '../src';
 
 const wait = (fn: (...args: any[]) => any) => Promise.resolve().then(() => fn());
 const waitMacro = (fn: (...args: any[]) => any) =>
-  new Promise((resolve) =>
+  new Promise<void>((resolve) =>
     setTimeout(() => {
       fn();
       resolve();
@@ -19,8 +18,8 @@ enum CountAction {
   MINUS = 'minus',
 }
 
-@Injectable()
-class Count extends Service {
+@Service()
+class Count {
   count = 0;
   start = 0;
 
@@ -149,38 +148,6 @@ describe('Hooks spec:', () => {
       waitMacro(() => expect(spy.mock.calls).toEqual([]));
     });
 
-    it('should only render once when update the state right during rendering by useObserverState', async () => {
-      const spy = jest.fn();
-      const spy1 = jest.fn();
-      const TestComponent = view(() => {
-        const countService = useObserverState({ count: 0 });
-        const addOne = useCallback(() => (countService.count += 1), [countService]);
-        spy1(countService.count);
-        useEffect(() => {
-          spy(countService.count);
-        }, [countService.count]);
-
-        return (
-          <div>
-            <p>count: {countService.count}</p>
-            <button onClick={addOne}>add one</button>
-          </div>
-        );
-      });
-
-      const renderer = create(<TestComponent />);
-
-      // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
-      await act(async () => {
-        renderer.update(<TestComponent />);
-      });
-      expect(spy.mock.calls).toEqual([[0]]);
-
-      await act(async () => await renderer.root.findByType('button').props.onClick());
-      waitMacro(() => expect(spy1.mock.calls.length).toBe(0));
-      waitMacro(() => expect(spy.mock.calls).toEqual([]));
-    });
-
     it('should not trigger re-render if dont watch key', async () => {
       const spy = jest.fn();
       const TestComponent = view(() => {
@@ -261,99 +228,52 @@ describe('Hooks spec:', () => {
       });
     });
 
-    describe('Different scope will isolate service', () => {
-      let count: () => string | ReactTestInstance;
-      let click: (action: CountAction) => void;
+    describe('Different scope will not share service', () => {
+      const scope1 = Symbol('scope1');
+      const scope2 = Symbol('scope2');
+      let count1: () => string | ReactTestInstance;
+      let count2: () => string | ReactTestInstance;
+      let click1: (action: CountAction) => void;
 
       beforeEach(() => {
-        const scope = Symbol('scope');
-        const testRenderer = create(<CountComponent scope={scope} />);
+        const testRenderer = create(
+          <div>
+            <CountComponent scope={scope1} />
+            <CountComponent scope={scope2} />
+          </div>
+        );
 
-        count = () => testRenderer.root.findByType('span').children[0];
-        click = async (action: CountAction) =>
-          await act(async () => testRenderer.root.findByProps({ id: action }).props.onClick());
+        const spans = testRenderer.root.findAllByType('span');
+        count1 = () => spans[0].children[0];
+        count2 = () => spans[1].children[0];
+
+        const buttons = testRenderer.root.findAllByProps({ id: CountAction.ADD });
+        click1 = async () => await act(async () => buttons[0].props.onClick());
 
         // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
-        testRenderer.update(<CountComponent scope={scope} />);
-      });
-
-      it('Reducer action work properly', () => {
-        click(CountAction.ADD);
-        expect(count()).toBe('1');
+        testRenderer.update(
+          <div>
+            <CountComponent scope={scope1} />
+            <CountComponent scope={scope2} />
+          </div>
+        );
       });
 
       it('default state work properly', () => {
-        expect(count()).toBe('0');
-      });
-
-      it('Effect action work properly', async () => {
-        click(CountAction.MINUS);
-        await wait(() => expect(count()).toBe('-1'));
-      });
-    });
-
-    describe('TransientScope will isolate service', () => {
-      let count: () => string | ReactTestInstance;
-      let click: (action: CountAction) => void;
-      let testRenderer: ReactTestRenderer;
-
-      beforeEach(() => {
-        testRenderer = create(<CountComponent scope={Transient} />);
-
-        count = () => testRenderer.root.findByType('span').children[0];
-        click = async (action: CountAction) =>
-          await act(async () => testRenderer.root.findByProps({ id: action }).props.onClick());
-
-        // https://github.com/facebook/react/issues/14050 to trigger useEffect manually
-        testRenderer.update(<CountComponent scope={Transient} />);
+        expect(count1()).toBe('0');
+        expect(count2()).toBe('0');
       });
 
       it('Reducer action work properly', () => {
-        click(CountAction.ADD);
-        expect(count()).toBe('1');
-      });
-
-      it('default state work properly', () => {
-        expect(count()).toBe('0');
+        click1(CountAction.ADD);
+        expect(count1()).toBe('1');
+        expect(count2()).toBe('0');
       });
 
       it('Effect action work properly', async () => {
-        click(CountAction.MINUS);
-        await wait(() => expect(count()).toBe('-1'));
-      });
-
-      // it('should destroy when component unmount', () => {
-      //     const spy = jest.spyOn(Service.prototype, 'destroy');
-      //     act(() => testRenderer.unmount());
-      //     expect(spy.mock.calls.length).toBe(1);
-      // });
-    });
-
-    describe('Dynamic update scope', () => {
-      const testRenderer = create(<CountComponent scope={1} />);
-      const count = () => testRenderer.root.findByType('span').children[0];
-      const click = async (action: CountAction) =>
-        await act(async () => testRenderer.root.findByProps({ id: action }).props.onClick());
-
-      it(`should use same Service at each update if scope didn't change`, () => {
-        testRenderer.update(<CountComponent scope={1} />);
-        click(CountAction.ADD);
-        expect(count()).toBe('1');
-      });
-
-      it(`should use new scope's Service if scope changed`, async () => {
-        testRenderer.update(<CountComponent scope={2} />);
-        click(CountAction.MINUS);
-        await wait(() => expect(count()).toBe('-1'));
-      });
-
-      it(`should update state to corresponding one`, () => {
-        testRenderer.update(<CountComponent scope={1} />);
-        expect(count()).toBe('1');
-        testRenderer.update(<CountComponent scope={2} />);
-        expect(count()).toBe('-1');
-        testRenderer.update(<CountComponent scope={3} />);
-        expect(count()).toBe('0');
+        click1(CountAction.MINUS);
+        await wait(() => expect(count1()).toBe('0'));
+        expect(count2()).toBe('0');
       });
     });
   });

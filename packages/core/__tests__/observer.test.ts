@@ -1,4 +1,4 @@
-import { observe, observable } from '@rabjs/observer-util';
+import { makeAutoObservable, autorun, reaction } from 'mobx';
 import { sleep } from '../src/utils/helpers';
 
 class CountModel {
@@ -11,6 +11,10 @@ class CountModel {
       return `${this.firstName} ${this.lastName}`;
     },
   };
+
+  constructor() {
+    makeAutoObservable(this);
+  }
 
   setCount(count: number) {
     this.count = count;
@@ -34,12 +38,12 @@ class CountModel {
   }
 }
 
-describe('Service specs:', () => {
+describe('Observer specs:', () => {
   let countModel: CountModel, originModel: CountModel;
 
   beforeEach(() => {
     originModel = new CountModel();
-    countModel = observable(originModel);
+    countModel = new CountModel();
   });
 
   it('setCount', () => {
@@ -56,23 +60,25 @@ describe('Service specs:', () => {
 
   it('observe', async function () {
     const spy = jest.fn(() => countModel.count);
-    observe(spy);
+    const disposer = autorun(spy);
     expect(spy.mock.calls.length).toBe(1);
     await countModel.minus();
     expect(countModel.count).toEqual(-1);
-    expect(spy.mock.calls.length).toBe(1);
+    expect(spy.mock.calls.length).toBe(2);
     await countModel.add();
     expect(countModel.count).toEqual(0);
-    expect(spy.mock.calls.length).toBe(2);
+    expect(spy.mock.calls.length).toBe(3);
+    disposer();
   });
 
   it('profile', async () => {
     const spy = jest.fn(() => countModel.profile.name);
-    observe(spy);
-    expect(spy.mock.calls.length).toBe(1);
+    const disposer = reaction(() => countModel.profile.name, spy);
+    expect(spy.mock.calls.length).toBe(0);
     countModel.profile.firstName = 'lsfe';
     expect(countModel.profile.name).toEqual('lsfe Smith');
-    expect(spy.mock.calls.length).toBe(2);
+    expect(spy.mock.calls.length).toBe(1);
+    disposer();
   });
 
   it('self', function () {

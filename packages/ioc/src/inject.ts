@@ -69,7 +69,6 @@ export const Inject = <T extends interfaces.ServiceIdentifier<any> | LazyService
       injectService(serviceIdentifier, target, key, index);
     }
     if (target && typeof target === 'object' && isClassComponent(target.constructor)) {
-
       (window as any).abc = target;
       Object.defineProperty(target, key, {
         configurable: true,

@@ -1,8 +1,13 @@
+import { configure } from 'mobx';
 import './middleware';
-export { observe, observable, unobserve } from '@rabjs/observer-util';
+configure({
+  enforceActions: 'never',
+});
+export * from 'mobx';
+export * from 'mobx-react';
 export * from '@rabjs/ioc';
-export * from './service';
 export * from './react';
 export * from './symbols';
 export * from './types';
 export * from './instance';
+export * from './decorator/service';

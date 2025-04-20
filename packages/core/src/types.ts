@@ -1,5 +1,3 @@
-import { Service } from './service';
-
 // https://stackoverflow.com/questions/55541275/typescript-check-for-the-any-type
 type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
@@ -25,14 +23,14 @@ export type Omit<T, K> = Pick<T, Exclude<keyof T, K>>;
 // using class type to avoid conflict with user defined params
 export class ArgumentsType<_Arguments extends any[]> {}
 
-export type PayloadMethodKeySet<M, K extends keyof M = Exclude<keyof M, keyof Service>> = {
+export type PayloadMethodKeySet<M, K extends keyof M = keyof M> = {
   [key in K]: M[key] extends (...args: any[]) => Promise<any> ? key : never;
 }[K];
 
 // https://stackoverflow.com/questions/44323441/changing-property-name-in-typescript-mapped-type
 // https://github.com/Microsoft/TypeScript/issues/12754
 // @ts-ignore
-export type ActionMethodStatesOfService<M extends Service> = {
+export type ActionMethodStatesOfService<M> = {
   // [key: string]: {
   //   loading: boolean;
   //   error: Error | null;
@@ -44,10 +42,7 @@ export type ActionMethodStatesOfService<M extends Service> = {
   // [key in keyof Pick<M, PayloadMethodKeySet<M, S>>]: () => ReturnType<M[key]>;
 };
 
-export type ServiceResult<
-  M extends Service,
-  K extends keyof M = Exclude<keyof M, keyof Service>
-> = {
+export type ServiceResult<M, K extends keyof M = Exclude<keyof M, 'subscribe'>> = {
   [key in K]: M[key];
 } & {
   $model: ActionMethodStatesOfService<M>;

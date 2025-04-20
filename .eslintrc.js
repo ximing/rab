@@ -1,12 +1,14 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'react'],
+  plugins: ['@typescript-eslint', 'react', 'prettier'],
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
+    'plugin:react/recommended',
+    'plugin:react/jsx-runtime',
     'airbnb',
+    'airbnb/hooks',
+    'prettier'
   ],
   globals: {
 
@@ -14,6 +16,7 @@ module.exports = {
   env: {
     browser: true,
     node: true,
+    es2022: true,
   },
   settings: {
     'import/resolver': {
@@ -21,8 +24,12 @@ module.exports = {
         extensions: ['.js', '.jsx', '.ts', '.tsx', '.d.ts'],
       },
     },
+    react: {
+      version: 'detect',
+    },
   },
   rules: {
+    'prettier/prettier': ['error'],
     'arrow-body-style': 'off',
     'global-require': 'off',
     camelcase: 'off',
@@ -109,5 +116,12 @@ module.exports = {
     'prefer-object-spread': 'off',
     'react/jsx-uses-react': 'off',
     'react/react-in-jsx-scope': 'off',
+  },
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    ecmaFeatures: {
+      jsx: true,
+    },
   },
 };

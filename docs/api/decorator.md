@@ -48,12 +48,14 @@ scope 见 [框架导出的三种 scope](../guide/ioc.md#框架导出的三种-sc
 #### ts 定义
 
 ```typescript
-export declare const Inject: <T extends
-  | string
-  | symbol
-  | interfaces.Newable<any>
-  | interfaces.Abstract<any>
-  | LazyServiceIdentifer<any>>(
+export declare const Inject: <
+  T extends
+    | string
+    | symbol
+    | interfaces.Newable<any>
+    | interfaces.Abstract<any>
+    | LazyServiceIdentifer<any>,
+>(
   serviceIdentifier: T
 ) => (target: any, key: string, index?: number | undefined) => void;
 ```

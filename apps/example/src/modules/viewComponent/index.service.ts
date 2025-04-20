@@ -1,7 +1,7 @@
-import { Service, Injectable } from '@rabjs/core';
+import { Service } from '@rabjs/core';
 
-@Injectable()
-export class ViewComponentService extends Service {
+@Service()
+export class ViewComponentService {
   count = 0;
   start = 0;
   add(num: number) {

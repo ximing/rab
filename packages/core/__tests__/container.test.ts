@@ -71,7 +71,7 @@ describe('container spec:', () => {
 
     expect(container.getAllTagged(ConfigKey, 'key1', 'A')).toEqual([
       { id: 1, name: 'topic1' },
-      { id: 2, name: 'topic2' }
+      { id: 2, name: 'topic2' },
     ]);
   });
 });

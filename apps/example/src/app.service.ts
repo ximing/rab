@@ -1,4 +1,9 @@
-import { Injectable, Service } from '@rabjs/core';
+import { Service } from '@rabjs/core';
 
-@Injectable()
-export class AppService extends Service {}
+@Service()
+export class AppService {
+  count = 0;
+  add(value: number) {
+    this.count += value;
+  }
+}
