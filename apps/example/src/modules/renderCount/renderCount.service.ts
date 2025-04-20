@@ -6,11 +6,12 @@ export class RenderCount {
   start = 0;
 
   add(count: number) {
+    console.log('---->add', this.count);
     this.count += count;
+    console.log('---->add2', this.count);
   }
 
   changeStart() {
-    console.error('---->', this);
     this.start += 1;
   }
 

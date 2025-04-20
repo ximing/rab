@@ -14,6 +14,7 @@ export function Service() {
     // Add service metadata
     Reflect.defineMetadata(serviceDecorator, true, constructor);
 
+    // Return the constructor
     return constructor;
   };
 }

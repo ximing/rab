@@ -59,7 +59,13 @@ export const getObserverService = (service: any) => {
     } catch (e) {
       console.error(e);
     }
-    const observerService = makeAutoObservable(service);
+    const observerService = makeAutoObservable(
+      service,
+      {},
+      {
+        autoBind: true,
+      }
+    );
 
     rawToObservable.set(service, observerService);
     return observerService;

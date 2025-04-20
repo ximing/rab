@@ -1,7 +1,7 @@
-import { Injectable, Service } from '@rabjs/core';
+import { Service } from '@rabjs/core';
 
-@Injectable()
-export class CountService extends Service {
+@Service()
+export class CountService {
   count = 0;
   start = 0;
 

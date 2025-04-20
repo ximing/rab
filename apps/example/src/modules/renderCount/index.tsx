@@ -7,8 +7,9 @@ export const RenderCountComponent = view(() => {
   const addOne = useCallback(() => countService.add(1), [countService]);
   return (
     <div>
-      {countService.start}
+      {countService.count}
       <button onClick={addOne}>add one</button>
+      {countService.start}
       <button onClick={countService.changeStart}>change start</button>
     </div>
   );
