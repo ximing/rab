@@ -1,8 +1,17 @@
 {
   "name": "rabjs",
-  "version": "8.0.0",
+  "version": "7.0.1",
   "description": "rabjs is a JavaScript framework for low code",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "website"
+  ],
+  "resolutions": {
+    "inversify": "5.0.1",
+    "reflect-metadata": "0.1.13"
+  },
   "scripts": {
     "i": "pnpm install",
     "dev": "pnpm -r run dev",
@@ -14,13 +23,10 @@
     "lint:es": "eslint --ext \"**/*.ts\" packages",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky install",
-    "cs": "changeset",
-    "cs:version": "changeset version",
-    "cs:tag": "changeset tag",
-    "prerelease": "pnpm build",
-    "release": "changeset publish",
+    "version:patch": "pnpm version patch -r",
+    "version:minor": "pnpm version minor -r",
+    "version:major": "pnpm version major -r",
     "publish:packages": "pnpm -r publish --access public --no-git-checks",
-    "version:packages": "changeset version",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
