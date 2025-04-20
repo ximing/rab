@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/router",
-  "version": "7.0.1",
+  "version": "8.0.0",
   "description": "rabjs router",
   "main": "dist/router.js",
   "types": "dist/index.d.ts",
@@ -35,7 +35,7 @@
     "@rabjs/core": "workspace:*",
     "inversify": "^5.0.1",
     "react": "^16.x||^17.x||^18.x",
-    "react-dom":  "^16.x||^17.x||^18.x",
+    "react-dom": "^16.x||^17.x||^18.x",
     "react-router": "^4.0.0 || ^5.0.0",
     "reflect-metadata": "^0.1.13"
   },
