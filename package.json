@@ -3,10 +3,6 @@
   "version": "8.0.0",
   "description": "rabjs is a JavaScript framework for low code",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
   "scripts": {
     "i": "pnpm install",
     "dev": "pnpm -r run dev",
@@ -23,7 +19,8 @@
     "cs:tag": "changeset tag",
     "prerelease": "pnpm build",
     "release": "changeset publish",
-    "publish:pkg": "pnpm -r publish --access public",
+    "publish:packages": "pnpm -r publish --access public --no-git-checks",
+    "version:packages": "changeset version",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
