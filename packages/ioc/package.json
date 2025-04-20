@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/ioc",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "rabjs ioc",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

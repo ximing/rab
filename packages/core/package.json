@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/core",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "rabjs core.",
   "main": "dist/cjs.es6.js",
   "module": "dist/es.es6.js",

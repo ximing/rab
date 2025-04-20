@@ -1,6 +1,6 @@
 {
   "name": "rabjs",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "rabjs is a JavaScript framework for low code",
   "private": true,
   "workspaces": [
