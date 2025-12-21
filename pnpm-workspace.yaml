@@ -2,7 +2,7 @@ packages:
   - configs/*
   - packages/*
   - examples/*
-  - website/*
+  - website
 
 onlyBuiltDependencies:
   - '@swc/core'

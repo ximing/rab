@@ -44,6 +44,6 @@ jobs:
         with:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: website/dist
+          FOLDER: website/build
           GIT_CONFIG_NAME: ${{ secrets.GIT_CONFIG_NAME}}
           GIT_CONFIG_EMAIL: ${{ secrets.GIT_CONFIG_EMAIL}}

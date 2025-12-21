@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "build:website": "cd website && rm -rf dist && npm run build",
+    "build:website": "cd website && rm -rf build && npm run build",
     "dev": "turbo run dev",
     "lint": "echo lint",
     "test": "echo test",
