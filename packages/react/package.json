@@ -26,7 +26,7 @@
     "state",
     "hooks"
   ],
-  "author": "OSG Frontend Engineering",
+  "author": "ximing",
   "license": "MIT",
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
@@ -63,7 +63,8 @@
     "CHANGELOG.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@rabjs/observer": "workspace:*",

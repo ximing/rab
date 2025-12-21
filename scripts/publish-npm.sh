@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 美团内网发布脚本
+# 发布脚本
 # 在发布时临时使用 .mnpmrc 配置，发布完成后恢复
 
 set -e
 
-echo "🚀 开始发布到美团内网npm..."
+echo "🚀 开始发布到npm..."
 # 清理产物
 echo "🧹 清理产物..."
 pnpm run clean

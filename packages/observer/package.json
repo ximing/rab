@@ -27,7 +27,7 @@
     "monitoring",
     "tracing"
   ],
-  "author": "OSG Frontend Engineering",
+  "author": "ximing",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.0.0",
@@ -49,6 +49,7 @@
     "CHANGELOG.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

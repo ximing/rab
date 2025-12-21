@@ -18,7 +18,3 @@ coverage
 .ob
 build
 .docusaurus
-jiemo
-rsjs
-mobx-react-lite
-reactive-state/basic

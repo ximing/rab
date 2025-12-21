@@ -223,6 +223,9 @@ describe('reactionRunner - 边界情况覆盖', () => {
         add: (reaction: any) => {
           addedReactions.push(reaction);
         },
+        delete: (reaction: any) => {
+          // 在测试中 delete 方法不需要实际功能
+        },
       };
 
       observe(
