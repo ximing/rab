@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Node.js Library",
+  "extends": "./library.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "esnext",
+    "lib": [
+      "ES2018",
+      "ES2020",
+      "ESNext"
+    ],
+    "types": [
+      "node",
+      "jest"
+    ],
+    "allowJs": false,
+    "checkJs": false,
+    "isolatedModules": false,
+    "noImplicitReturns": false,
+    "importHelpers": false
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Vue Library",
+  "extends": "./library.json",
+  "compilerOptions": {
+
+    "lib": ["ES2019", "DOM", "DOM.Iterable"],
+
+
+    "allowJs": true,
+    "checkJs": false,
+
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+
+    "moduleResolution": "node",
+
+
+    "noImplicitReturns": false,
+    "noImplicitAny": false
+  }
+}
