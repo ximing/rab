@@ -1,5 +1,11 @@
 # @rabjs/observer
 
+## 9.0.4
+
+### Patch Changes
+
+- 70f555c: fix: 并发模式下 unmount 问题
+
 ## 9.0.3
 
 ### Patch Changes
