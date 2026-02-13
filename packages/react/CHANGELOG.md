@@ -1,5 +1,14 @@
 # @rabjs/react
 
+## 9.0.1
+
+### Patch Changes
+
+- fix: $model access
+- Updated dependencies
+  - @rabjs/observer@9.0.1
+  - @rabjs/service@9.0.1
+
 ## 9.0.0
 
 ### Major Changes

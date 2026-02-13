@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/observer",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "description": "响应式状态库",
   "main": "lib/main.cjs",
   "module": "lib/main.js",

@@ -24,7 +24,7 @@
     "changeset": "changeset",
     "changeset:sync-fixed": "node scripts/sync-changeset-fixed.cjs",
     "changeset:check-fixed": "node scripts/sync-changeset-fixed.cjs --check",
-    "version-packages": "./scripts/version-packages.sh",
+    "changeset:version": "./scripts/version-packages.sh",
     "publish:check": "node scripts/publish-check.cjs",
     "publish:nmp": "./scripts/publish-npm.sh"
   },

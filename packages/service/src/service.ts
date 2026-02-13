@@ -182,6 +182,7 @@ export class Service {
     methodName: string,
     isNoAction: boolean
   ): Function {
+    const observableInstance = this;
     return function (this: any, ...args: any[]) {
       // 执行方法并收集结果
       let result: any;
@@ -195,7 +196,7 @@ export class Service {
 
       // 检查是否是 Promise（异步方法）
       if (result && typeof result.then === 'function') {
-        const modelState = this.$model[methodName];
+        const modelState = observableInstance.$model[methodName];
         // 异步方法：立即设置 loading 状态
         modelState.loading = true;
         if (modelState.error) {
