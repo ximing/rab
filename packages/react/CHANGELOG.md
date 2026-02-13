@@ -1,5 +1,14 @@
 # @rabjs/react
 
+## 9.0.3
+
+### Patch Changes
+
+- f3e54d5: fix: workflow publish
+- Updated dependencies [f3e54d5]
+  - @rabjs/observer@9.0.3
+  - @rabjs/service@9.0.3
+
 ## 9.0.2
 
 ### Patch Changes
