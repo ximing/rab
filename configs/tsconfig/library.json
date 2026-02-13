@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Library",
+  "extends": "./base.json",
+  "compilerOptions": {
+
+    "composite": true,
+    "rootDir": "./src",
+    "outDir": "./lib",
+
+
+    "removeComments": false,
+
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "lib", "dist", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+}

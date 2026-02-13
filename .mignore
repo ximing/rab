@@ -1,0 +1,13 @@
+output
+dist
+lib
+es
+tsconfig.tsbuildinfo
+old
+node_modules
+deprecated
+build
+.docusaurus
+*.log
+coverage
+jiemo

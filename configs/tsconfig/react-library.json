@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "React Library",
+  "extends": "./library.json",
+  "compilerOptions": {
+
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+
+    "lib": ["ES2019", "DOM", "DOM.Iterable"],
+
+
+    "allowJs": true,
+    "checkJs": false,
+
+
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "noImplicitThis": false,
+
+
+    "skipLibCheck": true,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "isolatedModules": false
+  }
+} 

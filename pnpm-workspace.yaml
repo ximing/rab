@@ -1,4 +1,9 @@
 packages:
-  - 'packages/*'
-  - 'apps/*'
-  - 'website'
+  - configs/*
+  - packages/*
+  - examples/*
+  - website
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild

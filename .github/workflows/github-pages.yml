@@ -28,10 +28,10 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-      - name: use Node.js 20
+      - name: use Node.js 22
         uses: actions/setup-node@v1
         with:
-          node-version: '20.x'
+          node-version: '22.x'
       - name: npm script 🔧
         run: |
           npm i -g pnpm
@@ -44,6 +44,6 @@ jobs:
         with:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: website/dist
+          FOLDER: website/build
           GIT_CONFIG_NAME: ${{ secrets.GIT_CONFIG_NAME}}
           GIT_CONFIG_EMAIL: ${{ secrets.GIT_CONFIG_EMAIL}}

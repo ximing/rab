@@ -1,37 +1,35 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ES2017",
-    "module": "ESNext",
-    "declaration": true,
-    "removeComments": false,
-    "preserveConstEnums": false,
-    "moduleResolution": "node",
-    "experimentalDecorators": true,
-    "noImplicitAny": false,
-    "allowSyntheticDefaultImports": true,
-    "outDir": "lib",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    // 基础配置 - 仅用于编辑器支持
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2019", "ES2020", "ESNext"],
+
+    // 严格模式
+    "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    // 模块解析
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "sourceMap": true,
-    "baseUrl": ".",
-    "rootDir": ".",
-    "paths": {
-    }
-  },
-  "include": [
-    "packages/global.d.ts",
-    "packages/*/src"
-  ],
-  "exclude": [
-    "__tests__",
-    "node_modules",
-    "dist",
-    "tests",
-    "jest",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
-  "compileOnSave": false
+    "forceConsistentCasingInFileNames": true,
+
+    // 其他
+    "skipLibCheck": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  }
 }

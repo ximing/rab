@@ -1,0 +1,13 @@
+{
+  "name": "tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "base.json",
+    "library.json",
+    "node-library.json",
+    "react-library.json",
+    "vue-library.json",
+    "nextjs.json"
+  ]
+} 
