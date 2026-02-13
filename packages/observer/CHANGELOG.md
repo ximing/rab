@@ -1,5 +1,11 @@
 # @rabjs/observer
 
+## 9.0.3
+
+### Patch Changes
+
+- f3e54d5: fix: workflow publish
+
 ## 9.0.2
 
 ### Patch Changes
