@@ -38,6 +38,16 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Configure npm for publish
+        run: |
+          cat > .npmrc << EOF
+          # for publish
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          registry=https://registry.npmjs.org
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
@@ -49,22 +59,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org'
 
       - name: Create GitHub Releases
         if: steps.changesets.outputs.published == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 获取发布的包信息并创建 release
           echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -c '.[]' | while read -r pkg; do
             NAME=$(echo "$pkg" | jq -r '.name')
             VERSION=$(echo "$pkg" | jq -r '.version')
             TAG_NAME="${NAME}@${VERSION}"
             
-            echo "🏷️  Creating release for $TAG_NAME..."
+            echo "Creating release for $TAG_NAME..."
             
             gh release create "$TAG_NAME" \
               --title "$TAG_NAME" \
               --notes "Release ${VERSION} of ${NAME}" \
-              --target master || echo "⚠️ Release may already exist"
+              --target master || echo "Release may already exist"
           done
