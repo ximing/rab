@@ -196,7 +196,7 @@ export class Service {
 
       // 检查是否是 Promise（异步方法）
       if (result && typeof result.then === 'function') {
-        const modelState = observableInstance.$model[methodName];
+        const modelState = observableInstance.$model[methodName as keyof ExtractMethods<Service>];
         // 异步方法：立即设置 loading 状态
         modelState.loading = true;
         if (modelState.error) {
