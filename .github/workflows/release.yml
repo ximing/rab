@@ -61,6 +61,10 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org'
 
+      - name: Push Tags
+        if: steps.changesets.outputs.published == 'true'
+        run: git push --tags
+
       - name: Create GitHub Releases
         if: steps.changesets.outputs.published == 'true'
         env:
