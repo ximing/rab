@@ -108,12 +108,13 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       // 防止 concurrent 模式下内存泄露
       universalFinalizationRegistry.register(admRef, adm, adm);
     }
+    const adm = admRef.current!;
     useEffect(() => {
       // 走到这里就会确保一定会销毁了，所以可以 unregister 钩子
-      universalFinalizationRegistry.unregister(admRef);
+      universalFinalizationRegistry.unregister(adm);
       return () => {
         // 兜底进行 destroy的，业务不应该依赖此做任何事情
-        universalFinalizationRegistry.register(admRef, admRef.current!, admRef.current!);
+        universalFinalizationRegistry.register(admRef, adm, adm);
       };
     }, []);
     // 如果组件已经被 observer 或 view 包裹过，直接使用；否则调用 view 进行包裹
