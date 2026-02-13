@@ -1,5 +1,14 @@
 # @rabjs/react
 
+## 9.0.2
+
+### Patch Changes
+
+- a1b663b: fix: workflow
+- Updated dependencies [a1b663b]
+  - @rabjs/observer@9.0.2
+  - @rabjs/service@9.0.2
+
 ## 9.0.1
 
 ### Patch Changes
