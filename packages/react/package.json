@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/react",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "description": "React 响应式状态库集成",
   "main": "lib/cjs/main.js",
   "module": "lib/esm/main.js",

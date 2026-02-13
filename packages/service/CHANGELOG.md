@@ -1,5 +1,11 @@
 # @rabjs/service
 
+## 9.0.2
+
+### Patch Changes
+
+- a1b663b: fix: workflow
+
 ## 9.0.1
 
 ### Patch Changes
