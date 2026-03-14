@@ -1,5 +1,16 @@
 # @rabjs/react
 
+## 9.0.4
+
+### Patch Changes
+
+- 70f555c: fix: 并发模式下 unmount 问题
+- 支持 service 内 resolve
+- Updated dependencies [70f555c]
+- Updated dependencies
+  - @rabjs/observer@9.0.4
+  - @rabjs/service@9.0.4
+
 ## 9.0.3
 
 ### Patch Changes

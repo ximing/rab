@@ -1,5 +1,12 @@
 # @rabjs/service
 
+## 9.0.4
+
+### Patch Changes
+
+- 70f555c: fix: 并发模式下 unmount 问题
+- 支持 service 内 resolve
+
 ## 9.0.3
 
 ### Patch Changes
