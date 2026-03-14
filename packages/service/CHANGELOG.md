@@ -1,5 +1,11 @@
 # @rabjs/service
 
+## 9.0.5
+
+### Patch Changes
+
+- 支持 service 内 resolve
+
 ## 9.0.4
 
 ### Patch Changes

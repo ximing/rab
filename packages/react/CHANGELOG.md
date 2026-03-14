@@ -1,5 +1,14 @@
 # @rabjs/react
 
+## 9.0.5
+
+### Patch Changes
+
+- 支持 service 内 resolve
+- Updated dependencies
+  - @rabjs/observer@9.0.5
+  - @rabjs/service@9.0.5
+
 ## 9.0.4
 
 ### Patch Changes
