@@ -367,6 +367,64 @@ export class Service {
   }
 
   /**
+   * 解析依赖服务（重载1：传入类构造函数，自动推导类型）
+   * 从当前 Service 所属的容器中解析指定的服务
+   *
+   * @param identifier Service 类构造函数
+   * @returns 解析后的服务实例
+   * @throws 如果服务未找到、容器不存在或容器已销毁
+   *
+   * @example
+   * ```typescript
+   * class UserService extends Service {
+   *   async fetchUser(id: string) {
+   *     // 解析依赖的 TodoService
+   *     const todoService = this.resolve(TodoService);
+   *     return todoService.getTodos(id);
+   *   }
+   * }
+   * ```
+   */
+  public resolve<T extends Service>(identifier: new (...args: any[]) => T): T;
+
+  /**
+   * 解析依赖服务（重载2：传入字符串或 Symbol，需要显式指定泛型）
+   * 从当前 Service 所属的容器中解析指定的服务
+   *
+   * @param identifier 服务标识符（字符串或 Symbol）
+   * @returns 解析后的服务实例
+   * @throws 如果服务未找到、容器不存在或容器已销毁
+   *
+   * @example
+   * ```typescript
+   * class UserService extends Service {
+   *   async fetchUser(id: string) {
+   *     // 使用字符串标识符解析依赖
+   *     const todoService = this.resolve<TodoService>('todoService');
+   *     return todoService.getTodos(id);
+   *   }
+   * }
+   * ```
+   */
+  public resolve<T extends Service = Service>(identifier: string | symbol): T;
+
+  /**
+   * 解析依赖服务（实现）
+   */
+  public resolve<T extends Service = Service>(
+    identifier: string | symbol | (new (...args: any[]) => T)
+  ): T {
+    if (!this._container) {
+      throw new Error(
+        `Cannot resolve dependency: Service instance is not associated with any container. ` +
+          `Make sure the service is resolved from a container.`
+      );
+    }
+
+    return this._container.resolve<T>(identifier as any);
+  }
+
+  /**
    * 销毁 Service 实例，清理所有装饰器绑定的事件和资源
    *
    * 清理内容包括：
