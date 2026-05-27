@@ -38,16 +38,6 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Configure npm for publish
-        run: |
-          cat > .npmrc << EOF
-          # for publish
-          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
-          registry=https://registry.npmjs.org
-          EOF
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
@@ -58,8 +48,7 @@ jobs:
           title: 'chore: release packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org'
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Push Tags
         if: steps.changesets.outputs.published == 'true'
