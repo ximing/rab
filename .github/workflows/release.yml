@@ -38,10 +38,9 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Configure npm auth for publish
+      - name: Configure npm for publish
         run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          echo "@rabjs:registry=https://registry.npmjs.org" >> ~/.npmrc
+          printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > .npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
