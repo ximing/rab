@@ -10,6 +10,8 @@ export { view } from './view';
 export { useObserver } from './useObserver';
 export { useLocalObservable } from './useLocalObservable';
 export { useAsObservableSource } from './useAsObservableSource';
+export { useReaction } from './useReaction';
+export type { UseReactionOptions } from './useReaction';
 
 // 静态渲染支持（SSR）
 export { enableStaticRendering, isUsingStaticRendering } from './staticRendering';

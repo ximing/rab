@@ -77,6 +77,13 @@ export type ExtractMethods<T> = {
  */
 export class Service {
   /**
+   * 服务实例的唯一标识符
+   * 格式：`{identifierLabel}#{全局自增序号}`，例如 `CartService#0`
+   * 由 Container 在实例化完成后回写，可用于日志、调试、MCP 路由等场景
+   */
+  public instanceId: string = '';
+
+  /**
    * 响应式状态对象，包含所有方法的 loading 和 error 状态
    * 类型会根据子类的方法自动推导
    */

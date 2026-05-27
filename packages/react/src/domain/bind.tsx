@@ -73,12 +73,17 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
         RegisterOptions
       ]
     | ServiceClass
-  )[]
+  )[],
+  options?: { name?: string }
 ) {
+  // 如果组件已经被 observer 或 view 包裹过，直接使用；否则调用 view 进行包裹
+  const ViewComp = isAlreadyWrapped(Comp) ? Comp : view(Comp);
+  const compName = options?.name ?? Comp.displayName ?? Comp.name ?? 'comp';
+
   // 默认父节点是全局
   function createADM(parrent: Container = getGlobalContainer()) {
     const container = new Container({
-      name: `c_${++containerId}`,
+      name: `${compName}_${++containerId}`,
     });
     container.setParent(parrent);
     servicesList.forEach(params => {
@@ -117,8 +122,6 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
         universalFinalizationRegistry.register(admRef, adm, adm);
       };
     }, []);
-    // 如果组件已经被 observer 或 view 包裹过，直接使用；否则调用 view 进行包裹
-    const ViewComp = isAlreadyWrapped(Comp) ? Comp : view(Comp);
     return (
       <DomainContext.Provider
         value={{
@@ -130,7 +133,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
     );
   });
 
-  BindWrapper.displayName = `BindWrapper(${Comp.displayName || Comp.name || 'Component'})`;
+  BindWrapper.displayName = `BindWrapper(${compName})`;
 
   return BindWrapper;
 }

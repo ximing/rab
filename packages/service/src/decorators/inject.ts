@@ -43,7 +43,11 @@ export interface InjectOptions {}
 export function Inject<T extends Service = Service>(
   identifier: ServiceIdentifier<T>
 ): PropertyDecorator {
-  return function (target: any, propertyKey: string | symbol | undefined) {
+  return function (
+    target: any,
+    propertyKey: string | symbol | undefined,
+    descriptor?: PropertyDescriptor
+  ): PropertyDescriptor {
     if (!propertyKey) {
       throw new Error('Inject decorator must be used on a property');
     }
@@ -61,7 +65,8 @@ export function Inject<T extends Service = Service>(
     let cachedValue: T | undefined;
     let isInitialized = false;
 
-    Object.defineProperty(target, propertyKey, {
+    // 返回描述符对象，兼容 TypeScript experimentalDecorators 和 Babel legacy 模式
+    return {
       get(this: Service): T {
         // 如果已经初始化过，直接返回缓存的值
         if (isInitialized) {
@@ -105,7 +110,7 @@ export function Inject<T extends Service = Service>(
 
       configurable: true,
       enumerable: true,
-    });
+    } as PropertyDescriptor;
   };
 }
 

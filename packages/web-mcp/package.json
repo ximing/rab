@@ -1,7 +1,7 @@
 {
-  "name": "@rabjs/service",
+  "name": "@rabjs/web-mcp",
   "version": "9.1.0",
-  "description": "响应式状态库核心",
+  "description": "Web MCP 集成 - 将 @rabjs/service 的 Service 系统与 WebMCP 协议桥接",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
   "types": "lib/main.d.ts",
@@ -17,36 +17,45 @@
     "build": "tsx build.config.ts",
     "dev": "tsx build.config.ts --watch",
     "clean": "rm -rf lib build dist coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
   "keywords": [
+    "mcp",
+    "web",
     "reactive",
     "state",
-    "core"
+    "webmcp"
   ],
   "author": "ximing",
   "license": "MIT",
-  "optionalDependencies": {
-    "@rabjs/observer": "workspace:*"
+  "peerDependencies": {
+    "@rabjs/service": "workspace:*",
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "eventemitter3": "^5.0.1"
+    "zod-to-json-schema": "^3.23.0"
   },
   "devDependencies": {
-    "@rabjs/observer": "workspace:*",
+    "@rabjs/service": "workspace:*",
     "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.59.0",
-    "@typescript-eslint/parser": "^5.59.0",
     "esbuild": "^0.19.12",
     "jest": "^29.0.0",
     "jest-environment-jsdom": "^29.0.0",
     "ts-jest": "^29.0.0",
     "tsconfig": "workspace:*",
     "tsx": "^4.0.0",
-    "typescript": "^5.1.3"
+    "typescript": "^5.1.3",
+    "zod": "^3.22.0"
   },
   "files": [
     "lib/**/*",

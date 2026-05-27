@@ -23,6 +23,14 @@ import { isRegisterOptions, isServiceClass } from './utils';
 
 let containerId = 0;
 
+let instanceCounter = 0;
+
+function getIdentifierLabel(id: ServiceIdentifier): string {
+  if (typeof id === 'function') return (id as Function).name || 'AnonymousService';
+  if (typeof id === 'string') return id;
+  return `Symbol(${(id as symbol).description ?? ''})`;
+}
+
 /**
  * 容器类 - 专门为 Service 定制的 IoC 容器
  *
@@ -99,9 +107,10 @@ export class Container {
     this.name = options?.name || `Container-${containerId++}`;
     this.events = new EventEmitter();
 
-    // 将自己添加到父容器的子容器集合中
+    // 将自己添加到父容器的子容器集合中，并发射 child:added 事件通知父容器
     if (this.parent) {
       this.parent.children.add(this);
+      this.parent.events.emit('child:added', this, this.parent);
     }
   }
 
@@ -484,6 +493,9 @@ export class Container {
     // 添加到子容器集合
     this.children.add(child);
 
+    // 发射 child:added 事件，通知监听者有新子容器加入
+    this.events.emit('child:added', child, this);
+
     return this;
   }
 
@@ -610,9 +622,10 @@ export class Container {
     // 设置新的父容器
     this.parent = newParent;
 
-    // 添加到新父容器的子容器集合
+    // 添加到新父容器的子容器集合，并发射 child:added 事件通知父容器
     if (newParent) {
       newParent.children.add(this);
+      newParent.events.emit('child:added', this, newParent);
     }
 
     return this;
@@ -633,6 +646,14 @@ export class Container {
    */
   getServiceIdentifiers(): ServiceIdentifier[] {
     return Array.from(this.services.keys());
+  }
+
+  /**
+   * 获取当前容器中所有已注册的服务定义（仅当前层级，不含父容器）
+   * 用于 MCP 等场景遍历已实例化的 Service
+   */
+  getServiceDefinitions(): ServiceDefinition[] {
+    return Array.from(this.services.values());
   }
 
   /**
@@ -725,6 +746,9 @@ export class Container {
           // 调用构造函数
           instance = new (definition.factory as any)(this);
           Container.setContainerOf(instance as Service, this);
+          // 回写带语义的 instanceId：{identifierLabel}#{全局自增序号}
+          (instance as Service).instanceId =
+            `${getIdentifierLabel(definition.identifier)}#${instanceCounter++}`;
         } finally {
           // 清除当前正在实例化的容器
           setCurrentInstantiatingContainer(null);
@@ -744,6 +768,9 @@ export class Container {
               );
             }
             Container.setContainerOf(instance, this);
+            // 工厂函数同样回写 instanceId
+            (instance as Service).instanceId =
+              `${getIdentifierLabel(definition.identifier)}#${instanceCounter++}`;
           } else {
             throw new Error(
               `Factory function must return a Service instance. ` +
@@ -763,6 +790,9 @@ export class Container {
     if (definition.scope === ServiceScopeEnum.Singleton) {
       definition.instance = instance;
     }
+
+    // 发射 service:instantiated 事件，通知监听者有新 Service 被实例化
+    this.events.emit('service:instantiated', instance, this);
 
     return instance;
   }
