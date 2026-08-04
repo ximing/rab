@@ -1,5 +1,5 @@
 ---
-name: km-rs-cdp-debug
+name: rab-cdp-debug
 description: 用于指导 Agent 通过 Chrome DevTools MCP 的 `evaluate_script` 工具，结合 `window.__RS_ROOT_CONTAINER__` API 对 `@rabjs/react` 应用进行逻辑验证。当用户提到 Service 逻辑验证、Chrome DevTools 调试 Service、CDP 操控 rsjs Service、浏览器页面中调试 Service 实例 时，应优先使用这个 skill。适用场景包括：使用 chrome-devtools-mcp 的 evaluate_script 访问 Service 实例、验证 Service 状态、调用 Service 方法、通过 listServices 枚举当前页面所有 Service。
 version: 0.2.10-beta.0
 npm: '@rabjs/devtools'

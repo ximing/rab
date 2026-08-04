@@ -9,8 +9,8 @@
  */
 
 import { Service } from "@rabjs/react";
-import { bindServices, useService, observer } from "@rabjs/react";
-import { Button, Card, Space, Alert } from "antd";
+import { bindServices, useService } from "@rabjs/react";
+import { Button, Card, Space } from "antd";
 
 /**
  * 最小化 Service - 只有一个计数器

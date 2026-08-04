@@ -1,5 +1,5 @@
 ---
-name: km-rs-react
+name: rab-react
 description: React响应式状态管理库，用于 `@rabjs/react` 包的 React 响应式开发指导。当用户提到 `@rabjs/react`、响应式组件、`RSRoot`、`RSStrict`、`observer`、`view`、`useService`、`useObserver`、`bindServices`、Service 注入、可观察状态管理或相关页面改造时，应优先使用这个 skill。覆盖 `@rabjs/react` 的核心模式、包内导出的组件名称 `RSRoot` 与 `RSStrict`，以及 observer/view 模式、依赖注入、Service 生命周期、异步状态追踪、事件系统和领域架构。
 ---
 

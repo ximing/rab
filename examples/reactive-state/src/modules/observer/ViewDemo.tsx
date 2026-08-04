@@ -44,7 +44,7 @@ class ClassCounter extends Component {
 }
 
 // 使用 view 包装类组件
-const ReactiveClassCounter = view(ClassCounter);
+const ReactiveClassCounter = view(ClassCounter as any);
 
 // 带有生命周期的类组件
 class ClassWithLifecycle extends Component {
@@ -56,7 +56,7 @@ class ClassWithLifecycle extends Component {
     console.log("ClassWithLifecycle will unmount");
   }
 
-  shouldComponentUpdate(nextProps: any, nextState: any) {
+  shouldComponentUpdate(_nextProps: any, _nextState: any) {
     console.log("ClassWithLifecycle shouldComponentUpdate");
     return true;
   }
@@ -83,7 +83,7 @@ class ClassWithLifecycle extends Component {
   }
 }
 
-const ReactiveClassWithLifecycle = view(ClassWithLifecycle);
+const ReactiveClassWithLifecycle = view(ClassWithLifecycle as any);
 
 // 带有 state 的类组件
 class ClassWithState extends Component<{}, { localCount: number }> {
@@ -131,7 +131,7 @@ class ClassWithState extends Component<{}, { localCount: number }> {
   }
 }
 
-const ReactiveClassWithState = view(ClassWithState);
+const ReactiveClassWithState = view(ClassWithState as any);
 
 // 函数组件 - view 也支持函数组件（内部使用 observer）
 const FunctionCounter = view(() => {
