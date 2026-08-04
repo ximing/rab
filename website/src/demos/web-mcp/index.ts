@@ -20,7 +20,8 @@ class TodoService extends Service {
     this.todos.push(text);
   }
 
-  @mcpTool({ description: "清空所有待办事项", params: [] })
+  // 显式命名：生产构建压缩会改写类名，默认的 {类名}__{方法名} 会随之改变
+  @mcpTool({ name: "TodoService__clear", description: "清空所有待办事项", params: [] })
   clear() {
     this.todos = [];
   }
