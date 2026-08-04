@@ -9,15 +9,37 @@ repository: git@github.com:ximing/rab.git
 
 # window.__RS_ROOT_CONTAINER__ 调试指南（Chrome DevTools MCP）
 
-本 skill 告知 Agent 如何通过 **Chrome DevTools MCP** 的 `evaluate_script` 工具，利用 `@rabjs/react` 提供的 `window.__RS_ROOT_CONTAINER__` 能力，对 Service 层进行功能验证与状态检查。
+本 skill 告知 Agent 如何通过 **Chrome DevTools MCP** 的 `evaluate_script` 工具，利用 `@rabjs/devtools` 挂载的 `window.__RS_ROOT_CONTAINER__` 能力，对 Service 层进行功能验证与状态检查。
+
+---
+
+## 前置条件：初始化挂载
+
+`window.__RS_ROOT_CONTAINER__` **不会自动挂载**，必须由应用入口显式初始化。
+
+1. 安装依赖：
+
+```bash
+pnpm add @rabjs/devtools
+```
+
+2. 在应用入口（如 `main.tsx`）调用一次：
+
+```ts
+import { setupWindowRootContainer } from '@rabjs/devtools';
+
+setupWindowRootContainer();
+```
+
+如果目标页面尚未接入，先引导用户完成上述初始化步骤，再进行后续调试。SSR 安全：非浏览器环境下调用会自动跳过。
 
 ---
 
 ## 能力概述
 
-`window.__RS_ROOT_CONTAINER__` 是 `@rabjs/react` 在浏览器环境下自动挂载的全局访问句柄，暴露整棵容器树的查询接口。
+`window.__RS_ROOT_CONTAINER__` 是 `setupWindowRootContainer()` 在浏览器环境下挂载的全局访问句柄，暴露整棵容器树的查询接口。
 
-**挂载时机**：页面加载完成（`@rabjs/react` 的 `main.ts` 末尾触发）。
+**挂载时机**：应用入口调用 `setupWindowRootContainer()` 时。
 
 ### 容器树结构
 
