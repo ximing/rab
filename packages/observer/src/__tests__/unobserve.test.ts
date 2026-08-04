@@ -1,39 +1,39 @@
-import { observable, observe, unobserve } from '../main';
+import { observable, observe, unobserve } from "../main";
 
-describe('unobserve', () => {
-  test('should unobserve the observed function', () => {
+describe("unobserve", () => {
+  test("should unobserve the observed function", () => {
     let dummy: string | number;
     const counter = observable({ num: 0 });
     const counterSpy = jest.fn(() => (dummy = counter.num));
     const reaction = observe(counterSpy);
 
     expect(counterSpy).toHaveBeenCalledTimes(1);
-    counter.num = 'Hello' as any;
+    counter.num = "Hello" as any;
     expect(counterSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Hello');
+    expect(dummy!).toBe("Hello");
     unobserve(reaction);
-    counter.num = 'World' as any;
+    counter.num = "World" as any;
     expect(counterSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Hello');
+    expect(dummy!).toBe("Hello");
   });
 
-  test('should unobserve when the same key is used multiple times', () => {
+  test("should unobserve when the same key is used multiple times", () => {
     let dummy: string;
-    const user = observable({ name: { name: 'Bob' } });
+    const user = observable({ name: { name: "Bob" } });
     const nameSpy = jest.fn(() => (dummy = user.name.name));
     const reaction = observe(nameSpy);
 
     expect(nameSpy).toHaveBeenCalledTimes(1);
-    user.name.name = 'Dave';
+    user.name.name = "Dave";
     expect(nameSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Dave');
+    expect(dummy!).toBe("Dave");
     unobserve(reaction);
-    user.name.name = 'Ann';
+    user.name.name = "Ann";
     expect(nameSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Dave');
+    expect(dummy!).toBe("Dave");
   });
 
-  test('should unobserve multiple reactions for the same target and key', () => {
+  test("should unobserve multiple reactions for the same target and key", () => {
     let dummy: number;
     const counter = observable({ num: 0 });
 
@@ -49,7 +49,7 @@ describe('unobserve', () => {
     expect(dummy!).toBe(0);
   });
 
-  test('should not reobserve unobserved reactions on manual execution', () => {
+  test("should not reobserve unobserved reactions on manual execution", () => {
     let dummy: string | undefined;
     const obj = observable<Record<string, string>>({});
     const reaction = observe(() => (dummy = obj.prop));
@@ -57,29 +57,29 @@ describe('unobserve', () => {
     expect(dummy).toBe(undefined);
     unobserve(reaction);
     reaction();
-    obj.prop = '12';
+    obj.prop = "12";
     expect(dummy).toBe(undefined);
   });
 
-  test('should have the same effect, when called multiple times', () => {
+  test("should have the same effect, when called multiple times", () => {
     let dummy: string | number;
     const counter = observable({ num: 0 });
     const counterSpy = jest.fn(() => (dummy = counter.num));
     const reaction = observe(counterSpy);
 
     expect(counterSpy).toHaveBeenCalledTimes(1);
-    counter.num = 'Hello' as any;
+    counter.num = "Hello" as any;
     expect(counterSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Hello');
+    expect(dummy!).toBe("Hello");
     unobserve(reaction);
     unobserve(reaction);
     unobserve(reaction);
-    counter.num = 'World' as any;
+    counter.num = "World" as any;
     expect(counterSpy).toHaveBeenCalledTimes(2);
-    expect(dummy!).toBe('Hello');
+    expect(dummy!).toBe("Hello");
   });
 
-  test('should call scheduler.delete', () => {
+  test("should call scheduler.delete", () => {
     const counter = observable({ num: 0 });
     const fn = jest.fn(() => counter.num);
     const scheduler = { add: () => {}, delete: jest.fn(() => {}) };

@@ -1,7 +1,11 @@
-import { Throttle, cancelThrottle, cleanupAllThrottles } from '../../decorators/throttle';
-import { Service } from '../../service';
+import {
+  Throttle,
+  cancelThrottle,
+  cleanupAllThrottles,
+} from "../../decorators/throttle";
+import { Service } from "../../service";
 
-describe('Throttle 装饰器', () => {
+describe("Throttle 装饰器", () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -10,8 +14,8 @@ describe('Throttle 装饰器', () => {
     jest.useRealTimers();
   });
 
-  describe('基础节流功能', () => {
-    it('应该在时间窗口内最多执行一次', () => {
+  describe("基础节流功能", () => {
+    it("应该在时间窗口内最多执行一次", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -40,7 +44,7 @@ describe('Throttle 装饰器', () => {
       expect(service.callCount).toBe(2);
     });
 
-    it('应该支持 leading: false', () => {
+    it("应该支持 leading: false", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -59,7 +63,7 @@ describe('Throttle 装饰器', () => {
       expect(service.callCount).toBe(1);
     });
 
-    it('应该支持 trailing: false', () => {
+    it("应该支持 trailing: false", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -81,8 +85,8 @@ describe('Throttle 装饰器', () => {
     });
   });
 
-  describe('清理功能', () => {
-    it('cancelThrottle 应该清理指定方法的定时器', () => {
+  describe("清理功能", () => {
+    it("cancelThrottle 应该清理指定方法的定时器", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -98,14 +102,14 @@ describe('Throttle 装饰器', () => {
       expect(service.callCount).toBe(1);
 
       // 清理定时器
-      cancelThrottle(service, 'throttledMethod');
+      cancelThrottle(service, "throttledMethod");
 
       // 时间窗口结束后不应该执行
       jest.advanceTimersByTime(1000);
       expect(service.callCount).toBe(1);
     });
 
-    it('cleanupAllThrottles 应该清理所有 Throttle 定时器', () => {
+    it("cleanupAllThrottles 应该清理所有 Throttle 定时器", () => {
       class TestService extends Service {
         count1 = 0;
         count2 = 0;
@@ -137,7 +141,7 @@ describe('Throttle 装饰器', () => {
       expect(service.count2).toBe(1);
     });
 
-    it('清理后应该重置状态，允许重新调用', () => {
+    it("清理后应该重置状态，允许重新调用", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -154,14 +158,14 @@ describe('Throttle 装饰器', () => {
       expect(service.callCount).toBe(1);
 
       // 清理
-      cancelThrottle(service, 'throttledMethod');
+      cancelThrottle(service, "throttledMethod");
 
       // 清理后立即调用应该能执行（状态已重置）
       service.throttledMethod();
       expect(service.callCount).toBe(2);
     });
 
-    it('在 Service destroy 时应该清理定时器', () => {
+    it("在 Service destroy 时应该清理定时器", () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -189,8 +193,8 @@ describe('Throttle 装饰器', () => {
     });
   });
 
-  describe('返回值处理', () => {
-    it('应该返回最近一次执行的结果', () => {
+  describe("返回值处理", () => {
+    it("应该返回最近一次执行的结果", () => {
       class TestService extends Service {
         counter = 0;
 

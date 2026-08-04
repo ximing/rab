@@ -2,9 +2,9 @@
  * IOC 容器工具函数
  */
 
-import { Service } from '../service';
+import { Service } from "../service";
 
-import type { RegisterOptions } from './types';
+import type { RegisterOptions } from "./types";
 
 /**
  * 判断是否是 RegisterOptions
@@ -12,9 +12,11 @@ import type { RegisterOptions } from './types';
 export function isRegisterOptions(obj: any): obj is RegisterOptions {
   return (
     obj &&
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     !isServiceClass(obj) &&
-    (obj.scope === undefined || obj.scope === 'singleton' || obj.scope === 'transient')
+    (obj.scope === undefined ||
+      obj.scope === "singleton" ||
+      obj.scope === "transient")
   );
 }
 
@@ -33,7 +35,7 @@ export function isRegisterOptions(obj: any): obj is RegisterOptions {
  * ```
  */
 export function isServiceClass(func: any): boolean {
-  if (typeof func !== 'function') {
+  if (typeof func !== "function") {
     return false;
   }
 
@@ -53,13 +55,13 @@ export function isServiceClass(func: any): boolean {
  */
 export function isClass(func: Function): boolean {
   // 检查是否有 prototype 且 prototype 不是 Object.prototype
-  if (typeof func !== 'function') {
+  if (typeof func !== "function") {
     return false;
   }
 
   // 检查函数字符串表示是否包含 'class' 关键字
   const str = func.toString();
-  if (str.startsWith('class ')) {
+  if (str.startsWith("class ")) {
     return true;
   }
 

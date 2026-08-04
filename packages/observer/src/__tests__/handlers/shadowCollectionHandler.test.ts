@@ -4,52 +4,52 @@
  * 影子集合不会包装嵌套对象，返回原始值
  */
 
-import { shadowObservable } from '../../shadowObservable';
-import { observe, unobserve, isObservable } from '../../main';
+import { shadowObservable } from "../../shadow-observable";
+import { observe, unobserve, isObservable } from "../../main";
 
-describe('shadowCollectionHandler', () => {
-  describe('Map 操作', () => {
-    test('应该处理 Map.set 新增键', () => {
+describe("shadowCollectionHandler", () => {
+  describe("Map 操作", () => {
+    test("应该处理 Map.set 新增键", () => {
       const map = shadowObservable(new Map<string, number>());
       const reactions: number[] = [];
       const reaction = observe(() => {
         reactions.push(map.size);
       });
       expect(reactions).toEqual([0]);
-      map.set('key1', 1);
+      map.set("key1", 1);
       expect(reactions).toEqual([0, 1]);
       unobserve(reaction);
     });
 
-    test('应该处理 Map.set 相同值不触发', () => {
-      const map = shadowObservable(new Map([['key', 1]]));
+    test("应该处理 Map.set 相同值不触发", () => {
+      const map = shadowObservable(new Map([["key", 1]]));
       const reactions: any[] = [];
       const reaction = observe(() => {
-        reactions.push(map.get('key'));
+        reactions.push(map.get("key"));
       });
       expect(reactions).toEqual([1]);
-      map.set('key', 1);
+      map.set("key", 1);
       expect(reactions).toEqual([1]); // 不应该触发
       unobserve(reaction);
     });
 
-    test('应该处理 Map.set 不同值触发', () => {
-      const map = shadowObservable(new Map([['key', 1]]));
+    test("应该处理 Map.set 不同值触发", () => {
+      const map = shadowObservable(new Map([["key", 1]]));
       const reactions: any[] = [];
       const reaction = observe(() => {
-        reactions.push(map.get('key'));
+        reactions.push(map.get("key"));
       });
       expect(reactions).toEqual([1]);
-      map.set('key', 2);
+      map.set("key", 2);
       expect(reactions).toEqual([1, 2]); // 应该触发
       unobserve(reaction);
     });
 
-    test('应该处理 Map.delete 存在的键', () => {
+    test("应该处理 Map.delete 存在的键", () => {
       const map = shadowObservable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
@@ -57,28 +57,28 @@ describe('shadowCollectionHandler', () => {
         reactions.push(map.size);
       });
       expect(reactions).toEqual([2]);
-      map.delete('key1');
+      map.delete("key1");
       expect(reactions).toEqual([2, 1]);
       unobserve(reaction);
     });
 
-    test('应该处理 Map.delete 不存在的键', () => {
-      const map = shadowObservable(new Map([['key1', 1]]));
+    test("应该处理 Map.delete 不存在的键", () => {
+      const map = shadowObservable(new Map([["key1", 1]]));
       const reactions: number[] = [];
       const reaction = observe(() => {
         reactions.push(map.size);
       });
       expect(reactions).toEqual([1]);
-      map.delete('key2');
+      map.delete("key2");
       expect(reactions).toEqual([1]); // 不应该触发
       unobserve(reaction);
     });
 
-    test('应该处理 Map.clear', () => {
+    test("应该处理 Map.clear", () => {
       const map = shadowObservable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
@@ -91,7 +91,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Map.clear 空集合', () => {
+    test("应该处理 Map.clear 空集合", () => {
       const map = shadowObservable(new Map());
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -103,83 +103,83 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Map.get 返回原始值', () => {
+    test("应该处理 Map.get 返回原始值", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
-      const val = map.get('key');
+      const map = shadowObservable(new Map([["key", nestedObj]]));
+      const val = map.get("key");
       expect(val).toBe(nestedObj);
       expect(isObservable(val)).toBe(false);
     });
 
-    test('应该处理 Map.has', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
-      expect(map.has('key')).toBe(true);
-      expect(map.has('nonexistent')).toBe(false);
+    test("应该处理 Map.has", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
+      expect(map.has("key")).toBe(true);
+      expect(map.has("nonexistent")).toBe(false);
     });
 
-    test('应该处理 Map.forEach 返回原始值', () => {
+    test("应该处理 Map.forEach 返回原始值", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
+      const map = shadowObservable(new Map([["key", nestedObj]]));
       let receivedValue: any;
-      map.forEach(v => {
+      map.forEach((v) => {
         receivedValue = v;
       });
       expect(receivedValue).toBe(nestedObj);
       expect(isObservable(receivedValue)).toBe(false);
     });
 
-    test('应该处理 Map.keys', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
+    test("应该处理 Map.keys", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
       const reactions: any[] = [];
       const reaction = observe(() => {
         const keys = Array.from(map.keys());
         reactions.push(keys);
       });
       expect(reactions.length).toBe(1);
-      map.set('key2', 'value2');
+      map.set("key2", "value2");
       expect(reactions.length).toBe(2);
       unobserve(reaction);
     });
 
-    test('应该处理 Map.values 返回原始值', () => {
+    test("应该处理 Map.values 返回原始值", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
+      const map = shadowObservable(new Map([["key", nestedObj]]));
       const values = Array.from(map.values());
       expect(values[0]).toBe(nestedObj);
       expect(isObservable(values[0])).toBe(false);
     });
 
-    test('应该处理 Map.entries 返回原始值', () => {
+    test("应该处理 Map.entries 返回原始值", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
+      const map = shadowObservable(new Map([["key", nestedObj]]));
       const entries = Array.from(map.entries());
       expect(entries[0][1]).toBe(nestedObj);
       expect(isObservable(entries[0][1])).toBe(false);
     });
 
-    test('应该处理 Map[Symbol.iterator] 返回原始值', () => {
+    test("应该处理 Map[Symbol.iterator] 返回原始值", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
+      const map = shadowObservable(new Map([["key", nestedObj]]));
       const entries = Array.from(map);
       expect(entries[0][1]).toBe(nestedObj);
       expect(isObservable(entries[0][1])).toBe(false);
     });
 
-    test('应该处理 Map.size', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
+    test("应该处理 Map.size", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
       const reactions: number[] = [];
       const reaction = observe(() => {
         reactions.push(map.size);
       });
       expect(reactions).toEqual([1]);
-      map.set('key2', 'value2');
+      map.set("key2", "value2");
       expect(reactions).toEqual([1, 2]);
       unobserve(reaction);
     });
   });
 
-  describe('Set 操作', () => {
-    test('应该处理 Set.add 新值', () => {
+  describe("Set 操作", () => {
+    test("应该处理 Set.add 新值", () => {
       const set = shadowObservable(new Set<number>());
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -191,7 +191,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.add 重复值', () => {
+    test("应该处理 Set.add 重复值", () => {
       const set = shadowObservable(new Set([1]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -203,7 +203,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.delete 存在的值', () => {
+    test("应该处理 Set.delete 存在的值", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -215,7 +215,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.delete 不存在的值', () => {
+    test("应该处理 Set.delete 不存在的值", () => {
       const set = shadowObservable(new Set([1]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -227,7 +227,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.clear', () => {
+    test("应该处理 Set.clear", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -239,7 +239,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.clear 空集合', () => {
+    test("应该处理 Set.clear 空集合", () => {
       const set = shadowObservable(new Set());
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -251,18 +251,18 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.has', () => {
+    test("应该处理 Set.has", () => {
       const set = shadowObservable(new Set([1, 2, 3]));
       expect(set.has(1)).toBe(true);
       expect(set.has(999)).toBe(false);
     });
 
-    test('应该处理 Set.forEach', () => {
+    test("应该处理 Set.forEach", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: any[] = [];
       const reaction = observe(() => {
         const items: any[] = [];
-        set.forEach(v => {
+        set.forEach((v) => {
           items.push(v);
         });
         reactions.push(items);
@@ -273,7 +273,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.values', () => {
+    test("应该处理 Set.values", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -286,7 +286,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.keys', () => {
+    test("应该处理 Set.keys", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -299,7 +299,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.entries', () => {
+    test("应该处理 Set.entries", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -312,7 +312,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set[Symbol.iterator]', () => {
+    test("应该处理 Set[Symbol.iterator]", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -325,7 +325,7 @@ describe('shadowCollectionHandler', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Set.size', () => {
+    test("应该处理 Set.size", () => {
       const set = shadowObservable(new Set([1, 2]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -338,8 +338,8 @@ describe('shadowCollectionHandler', () => {
     });
   });
 
-  describe('WeakMap 操作', () => {
-    test('应该处理 WeakMap 基本操作', () => {
+  describe("WeakMap 操作", () => {
+    test("应该处理 WeakMap 基本操作", () => {
       const key1 = {};
       const key2 = {};
       const weakMap = shadowObservable(new WeakMap([[key1, { value: 1 }]]));
@@ -366,7 +366,7 @@ describe('shadowCollectionHandler', () => {
       expect(weakMap.has(key1)).toBe(false);
     });
 
-    test('应该处理 WeakMap.get 返回 undefined', () => {
+    test("应该处理 WeakMap.get 返回 undefined", () => {
       const wm = shadowObservable(new WeakMap());
       const key = {};
       const result = wm.get(key);
@@ -374,8 +374,8 @@ describe('shadowCollectionHandler', () => {
     });
   });
 
-  describe('WeakSet 操作', () => {
-    test('应该处理 WeakSet 基本操作', () => {
+  describe("WeakSet 操作", () => {
+    test("应该处理 WeakSet 基本操作", () => {
       const obj1 = {};
       const obj2 = {};
       const weakSet = shadowObservable(new WeakSet([obj1]));
@@ -399,81 +399,81 @@ describe('shadowCollectionHandler', () => {
     });
   });
 
-  describe('非集合对象处理', () => {
-    test('应该处理非集合对象的 has', () => {
-      const shadow = shadowObservable({ prop: 'value' });
-      const result = (shadow as any).has?.('prop');
+  describe("非集合对象处理", () => {
+    test("应该处理非集合对象的 has", () => {
+      const shadow = shadowObservable({ prop: "value" });
+      const result = (shadow as any).has?.("prop");
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 get', () => {
-      const shadow = shadowObservable({ prop: 'value' });
-      const result = (shadow as any).get?.('prop');
+    test("应该处理非集合对象的 get", () => {
+      const shadow = shadowObservable({ prop: "value" });
+      const result = (shadow as any).get?.("prop");
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 add', () => {
-      const shadow = shadowObservable({ prop: 'value' });
-      const result = (shadow as any).add?.('value');
+    test("应该处理非集合对象的 add", () => {
+      const shadow = shadowObservable({ prop: "value" });
+      const result = (shadow as any).add?.("value");
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 set', () => {
-      const shadow = shadowObservable({ prop: 'value' });
-      const result = (shadow as any).set?.('key', 'value');
+    test("应该处理非集合对象的 set", () => {
+      const shadow = shadowObservable({ prop: "value" });
+      const result = (shadow as any).set?.("key", "value");
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 delete', () => {
-      const shadow = shadowObservable({ prop: 'value' });
-      const result = (shadow as any).delete?.('key');
+    test("应该处理非集合对象的 delete", () => {
+      const shadow = shadowObservable({ prop: "value" });
+      const result = (shadow as any).delete?.("key");
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 clear', () => {
-      const shadow = shadowObservable({ prop: 'value' });
+    test("应该处理非集合对象的 clear", () => {
+      const shadow = shadowObservable({ prop: "value" });
       const result = (shadow as any).clear?.();
       expect(result).toBeUndefined();
     });
 
-    test('应该处理非集合对象的 forEach', () => {
-      const shadow = shadowObservable({ prop: 'value' });
+    test("应该处理非集合对象的 forEach", () => {
+      const shadow = shadowObservable({ prop: "value" });
       const callback = jest.fn();
       const result = (shadow as any).forEach?.(callback);
       expect(result).toBeUndefined();
       expect(callback).not.toHaveBeenCalled();
     });
 
-    test('应该处理非集合对象的 size', () => {
-      const shadow = shadowObservable({ prop: 'value' });
+    test("应该处理非集合对象的 size", () => {
+      const shadow = shadowObservable({ prop: "value" });
       const result = (shadow as any).size;
       expect(result).toBeUndefined();
     });
   });
 
-  describe('返回值验证', () => {
-    test('Map.set 应该返回 this', () => {
+  describe("返回值验证", () => {
+    test("Map.set 应该返回 this", () => {
       const map = shadowObservable(new Map());
-      const result = map.set('key', 'value');
+      const result = map.set("key", "value");
       expect(result).toBe(map);
     });
 
-    test('Set.add 应该返回 this', () => {
+    test("Set.add 应该返回 this", () => {
       const set = shadowObservable(new Set());
-      const result = set.add('value');
+      const result = set.add("value");
       expect(result).toBe(set);
     });
 
-    test('Map.delete 应该返回 boolean', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
-      const result = map.delete('key');
-      expect(typeof result).toBe('boolean');
+    test("Map.delete 应该返回 boolean", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
+      const result = map.delete("key");
+      expect(typeof result).toBe("boolean");
     });
 
-    test('Set.delete 应该返回 boolean', () => {
+    test("Set.delete 应该返回 boolean", () => {
       const set = shadowObservable(new Set([1]));
       const result = set.delete(1);
-      expect(typeof result).toBe('boolean');
+      expect(typeof result).toBe("boolean");
     });
   });
 });

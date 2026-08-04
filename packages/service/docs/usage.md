@@ -17,7 +17,7 @@
 ### 1. 创建 Service 类
 
 ```typescript
-import { Service } from '@rabjs/service';
+import { Service } from "@rabjs/service";
 
 class UserService extends Service {
   async fetchUser(id: string) {
@@ -27,7 +27,7 @@ class UserService extends Service {
 
   async updateUser(id: string, data: any) {
     const response = await fetch(`/api/users/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
     return response.json();
@@ -35,7 +35,7 @@ class UserService extends Service {
 
   getUserList() {
     // 同步方法也支持
-    return [{ id: '1', name: 'John' }];
+    return [{ id: "1", name: "John" }];
   }
 }
 ```
@@ -50,7 +50,7 @@ console.log(userService.$model.fetchUser.loading); // false
 console.log(userService.$model.fetchUser.error); // null
 
 // 调用异步方法
-const userPromise = userService.fetchUser('123');
+const userPromise = userService.fetchUser("123");
 
 // 在调用时，loading 状态自动变为 true
 console.log(userService.$model.fetchUser.loading); // true
@@ -94,7 +94,7 @@ fetchUserState.error; // ✅ 类型正确
 ### 显式类型注解
 
 ```typescript
-import { Service, type MethodState } from '@rabjs/service';
+import { Service, type MethodState } from "@rabjs/service";
 
 class UserService extends Service {
   async fetchUser(id: string) {
@@ -117,7 +117,7 @@ class UserService extends Service {
   async fetchUser(id: string) {
     const response = await fetch(`/api/users/${id}`);
     if (!response.ok) {
-      throw new Error('Failed to fetch user');
+      throw new Error("Failed to fetch user");
     }
     return response.json();
   }
@@ -126,7 +126,7 @@ class UserService extends Service {
 const service = new UserService();
 
 try {
-  await service.fetchUser('invalid-id');
+  await service.fetchUser("invalid-id");
 } catch (error) {
   // 错误会被自动捕获到 $model 中
   console.log(service.$model.fetchUser.error); // Error: Failed to fetch user
@@ -141,14 +141,14 @@ try {
 ```typescript
 // 第一次调用失败
 try {
-  await service.fetchUser('invalid-id');
+  await service.fetchUser("invalid-id");
 } catch (e) {
   // ...
 }
 console.log(service.$model.fetchUser.error); // Error
 
 // 第二次调用时，错误自动清除
-const promise = service.fetchUser('valid-id');
+const promise = service.fetchUser("valid-id");
 console.log(service.$model.fetchUser.error); // null
 ```
 
@@ -157,8 +157,8 @@ console.log(service.$model.fetchUser.error); // null
 ### 使用 React Hooks
 
 ```typescript
-import { useEffect, useState } from 'react';
-import { Service } from '@rabjs/service';
+import { useEffect, useState } from "react";
+import { Service } from "@rabjs/service";
 
 class UserService extends Service {
   async fetchUser(id: string) {
@@ -190,8 +190,8 @@ function UserComponent({ userId }: { userId: string }) {
 ### 与 @rabjs/observer 集成
 
 ```typescript
-import { Service } from '@rabjs/service';
-import { observe } from '@rabjs/observer';
+import { Service } from "@rabjs/service";
+import { observe } from "@rabjs/observer";
 
 class UserService extends Service {
   async fetchUser(id: string) {
@@ -205,16 +205,16 @@ const service = new UserService();
 // 使用 observe 监听状态变化
 observe(() => {
   if (service.$model.fetchUser.loading) {
-    console.log('正在加载...');
+    console.log("正在加载...");
   } else if (service.$model.fetchUser.error) {
-    console.log('加载失败:', service.$model.fetchUser.error.message);
+    console.log("加载失败:", service.$model.fetchUser.error.message);
   } else {
-    console.log('加载完成');
+    console.log("加载完成");
   }
 });
 
 // 调用方法
-service.fetchUser('123');
+service.fetchUser("123");
 ```
 
 ## 高级用法
@@ -239,7 +239,11 @@ class DataService extends Service {
 const service = new DataService();
 
 // 并行调用
-Promise.all([service.fetchUsers(), service.fetchPosts(), service.fetchComments()]);
+Promise.all([
+  service.fetchUsers(),
+  service.fetchPosts(),
+  service.fetchComments(),
+]);
 
 // 分别监听各个方法的状态
 console.log(service.$model.fetchUsers.loading);
@@ -251,7 +255,7 @@ console.log(service.$model.fetchComments.loading);
 
 ```typescript
 class BaseService extends Service {
-  protected baseUrl = 'https://api.example.com';
+  protected baseUrl = "https://api.example.com";
 
   protected async request(path: string) {
     const response = await fetch(`${this.baseUrl}${path}`);
@@ -267,7 +271,7 @@ class UserService extends BaseService {
 
 const service = new UserService();
 // 继承的方法也支持状态管理
-await service.fetchUser('123');
+await service.fetchUser("123");
 console.log(service.$model.fetchUser.loading);
 ```
 

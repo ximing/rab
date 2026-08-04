@@ -11,8 +11,8 @@
  * 5. 支持选择器函数，可以选择特定的属性或计算值
  */
 
-import { DeleteOutlined, PlusOutlined, ClearOutlined } from '@ant-design/icons';
-import { bindServices, useObserverService } from '@rabjs/react';
+import { DeleteOutlined, PlusOutlined, ClearOutlined } from "@ant-design/icons";
+import { bindServices, useObserverService } from "@rabjs/react";
 import {
   Card,
   Button,
@@ -26,11 +26,11 @@ import {
   Col,
   Checkbox,
   Radio,
-} from 'antd';
-import { useState } from 'react';
+} from "antd";
+import { useState } from "react";
 
-import type { Todo } from './TodoService';
-import { TodoService } from './TodoService';
+import type { Todo } from "./TodoService";
+import { TodoService } from "./TodoService";
 
 /**
  * Todo 列表组件 - 使用 useObserverService 自动追踪过滤后的 todos
@@ -42,7 +42,7 @@ const TodoListComponent = () => {
   // 使用 selector 选择 filteredTodos，自动追踪其变化
   const [filteredTodos, todoService] = useObserverService(
     TodoService,
-    service => service.filteredTodos
+    (service) => service.filteredTodos
   );
 
   return (
@@ -73,8 +73,8 @@ const TodoListComponent = () => {
                 title={
                   <span
                     style={{
-                      textDecoration: todo.completed ? 'line-through' : 'none',
-                      color: todo.completed ? '#999' : 'inherit',
+                      textDecoration: todo.completed ? "line-through" : "none",
+                      color: todo.completed ? "#999" : "inherit",
                     }}
                   >
                     {todo.title}
@@ -84,11 +84,11 @@ const TodoListComponent = () => {
                   <Space size="small">
                     <Tag
                       color={
-                        todo.priority === 'high'
-                          ? 'red'
-                          : todo.priority === 'medium'
-                          ? 'orange'
-                          : 'green'
+                        todo.priority === "high"
+                          ? "red"
+                          : todo.priority === "medium"
+                          ? "orange"
+                          : "green"
                       }
                     >
                       {todo.priority}
@@ -112,14 +112,17 @@ const TodoListComponent = () => {
  */
 const StatsComponent = () => {
   // 使用 selector 选择 stats 对象，自动追踪其变化
-  const [stats] = useObserverService(TodoService, service => service.stats);
+  const [stats] = useObserverService(TodoService, (service) => service.stats);
 
   // 使用 selector 选择完成率，自动追踪其变化
-  const [completionRate] = useObserverService(TodoService, service => service.completionRate);
+  const [completionRate] = useObserverService(
+    TodoService,
+    (service) => service.completionRate
+  );
 
   return (
     <Card title="统计信息" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         <div>
           <strong>总数:</strong> <Tag>{stats.total}</Tag>
         </div>
@@ -146,16 +149,19 @@ const StatsComponent = () => {
  */
 const FilterComponent = () => {
   // 使用 selector 选择 filter，自动追踪其变化
-  const [currentFilter, todoService] = useObserverService(TodoService, service => service.filter);
+  const [currentFilter, todoService] = useObserverService(
+    TodoService,
+    (service) => service.filter
+  );
 
   return (
     <Card title="过滤器" size="small">
       <Radio.Group
         value={currentFilter}
-        onChange={e => todoService.setFilter(e.target.value)}
-        style={{ width: '100%' }}
+        onChange={(e) => todoService.setFilter(e.target.value)}
+        style={{ width: "100%" }}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" style={{ width: "100%" }}>
           <Radio value="all">全部</Radio>
           <Radio value="active">未完成</Radio>
           <Radio value="completed">已完成</Radio>
@@ -169,38 +175,41 @@ const FilterComponent = () => {
  * 添加 Todo 组件
  */
 const AddTodoComponent = () => {
-  const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [, todoService] = useObserverService(TodoService, service => service.todos);
+  const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [, todoService] = useObserverService(
+    TodoService,
+    (service) => service.todos
+  );
 
   const handleAdd = () => {
     if (title.trim()) {
       todoService.addTodo(title, priority);
-      setTitle('');
-      setPriority('medium');
+      setTitle("");
+      setPriority("medium");
     }
   };
 
   return (
     <Card title="添加 Todo" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         <input
           type="text"
           placeholder="输入 Todo 标题"
           value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyPress={e => e.key === 'Enter' && handleAdd()}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleAdd()}
           style={{
-            width: '100%',
-            padding: '8px 12px',
-            border: '1px solid #d9d9d9',
-            borderRadius: '4px',
+            width: "100%",
+            padding: "8px 12px",
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
           }}
         />
         <Radio.Group
           value={priority}
-          onChange={e => setPriority(e.target.value)}
-          style={{ width: '100%' }}
+          onChange={(e) => setPriority(e.target.value)}
+          style={{ width: "100%" }}
         >
           <Space>
             <Radio value="low">低</Radio>
@@ -208,7 +217,12 @@ const AddTodoComponent = () => {
             <Radio value="high">高</Radio>
           </Space>
         </Radio.Group>
-        <Button type="primary" block icon={<PlusOutlined />} onClick={handleAdd}>
+        <Button
+          type="primary"
+          block
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+        >
           添加
         </Button>
       </Space>
@@ -220,11 +234,19 @@ const AddTodoComponent = () => {
  * 操作组件
  */
 const ActionsComponent = () => {
-  const [, todoService] = useObserverService(TodoService, service => service.todos);
+  const [, todoService] = useObserverService(
+    TodoService,
+    (service) => service.todos
+  );
 
   return (
     <Card title="操作" size="small">
-      <Button block danger icon={<ClearOutlined />} onClick={() => todoService.clearCompleted()}>
+      <Button
+        block
+        danger
+        icon={<ClearOutlined />}
+        onClick={() => todoService.clearCompleted()}
+      >
         清除已完成的 Todo
       </Button>
     </Card>
@@ -237,10 +259,15 @@ const ActionsComponent = () => {
 const UseObserverServiceDemoContent = () => {
   return (
     <div>
-      <Card type="inner" title="useObserverService Hook 演示" style={{ marginBottom: 24 }}>
+      <Card
+        type="inner"
+        title="useObserverService Hook 演示"
+        style={{ marginBottom: 24 }}
+      >
         <p>
-          <strong>useObserverService</strong> 结合了 <code>useService</code> 和{' '}
-          <code>useObserver</code> 的功能，让你可以在不使用 observer HOC 的情况下实现响应式更新。
+          <strong>useObserverService</strong> 结合了 <code>useService</code> 和{" "}
+          <code>useObserver</code> 的功能，让你可以在不使用 observer HOC
+          的情况下实现响应式更新。
         </p>
         <p>
           关键特性：
@@ -256,14 +283,14 @@ const UseObserverServiceDemoContent = () => {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <AddTodoComponent />
             <FilterComponent />
             <ActionsComponent />
           </Space>
         </Col>
         <Col xs={24} sm={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <StatsComponent />
             <TodoListComponent />
           </Space>
@@ -273,7 +300,14 @@ const UseObserverServiceDemoContent = () => {
       <Divider />
 
       <Card title="使用示例" size="small">
-        <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto' }}>
+        <pre
+          style={{
+            background: "#f5f5f5",
+            padding: 12,
+            borderRadius: 4,
+            overflow: "auto",
+          }}
+        >
           {`// 基础用法 - 选择单个属性
 const [filteredTodos, todoService] = useObserverService(
   TodoService,
@@ -305,31 +339,33 @@ return (
       </Card>
 
       <Card title="与 useService 的区别" size="small" style={{ marginTop: 16 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
-              <th style={{ padding: 8, textAlign: 'left' }}>特性</th>
-              <th style={{ padding: 8, textAlign: 'left' }}>useService</th>
-              <th style={{ padding: 8, textAlign: 'left' }}>useObserverService</th>
+            <tr style={{ borderBottom: "1px solid #d9d9d9" }}>
+              <th style={{ padding: 8, textAlign: "left" }}>特性</th>
+              <th style={{ padding: 8, textAlign: "left" }}>useService</th>
+              <th style={{ padding: 8, textAlign: "left" }}>
+                useObserverService
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+            <tr style={{ borderBottom: "1px solid #d9d9d9" }}>
               <td style={{ padding: 8 }}>获取服务实例</td>
               <td style={{ padding: 8 }}>✅</td>
               <td style={{ padding: 8 }}>✅</td>
             </tr>
-            <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+            <tr style={{ borderBottom: "1px solid #d9d9d9" }}>
               <td style={{ padding: 8 }}>自动追踪响应式更新</td>
               <td style={{ padding: 8 }}>❌</td>
               <td style={{ padding: 8 }}>✅</td>
             </tr>
-            <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+            <tr style={{ borderBottom: "1px solid #d9d9d9" }}>
               <td style={{ padding: 8 }}>需要 observer HOC</td>
               <td style={{ padding: 8 }}>✅</td>
               <td style={{ padding: 8 }}>❌</td>
             </tr>
-            <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+            <tr style={{ borderBottom: "1px solid #d9d9d9" }}>
               <td style={{ padding: 8 }}>支持选择器函数</td>
               <td style={{ padding: 8 }}>❌</td>
               <td style={{ padding: 8 }}>✅</td>

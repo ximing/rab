@@ -1,4 +1,4 @@
-import { observable as internalObservable } from './internals/observable';
+import { observable as internalObservable } from "./internals/observable";
 
 /**
  * Creates an observable proxy for the given object.

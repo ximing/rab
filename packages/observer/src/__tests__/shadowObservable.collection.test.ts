@@ -1,16 +1,16 @@
-import { shadowObservable } from '../shadowObservable';
-import { observe, unobserve } from '../observer';
-import { isObservable } from '../internals/utils';
+import { shadowObservable } from "../shadow-observable";
+import { observe, unobserve } from "../observer";
+import { isObservable } from "../internals/utils";
 
-describe('shadowObservable - 集合类型支持', () => {
-  describe('Map 集合支持', () => {
-    it('应该创建一个浅层响应式的 Map', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
+describe("shadowObservable - 集合类型支持", () => {
+  describe("Map 集合支持", () => {
+    it("应该创建一个浅层响应式的 Map", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
       expect(isObservable(map)).toBe(true);
-      expect(map.get('key')).toBe('value');
+      expect(map.get("key")).toBe("value");
     });
 
-    it('Map.set 操作应该触发 observer', () => {
+    it("Map.set 操作应该触发 observer", () => {
       const map = shadowObservable(new Map<string, number>());
       const reactions: number[] = [];
 
@@ -20,20 +20,20 @@ describe('shadowObservable - 集合类型支持', () => {
 
       expect(reactions).toEqual([0]);
 
-      map.set('key1', 1);
+      map.set("key1", 1);
       expect(reactions).toEqual([0, 1]);
 
-      map.set('key2', 2);
+      map.set("key2", 2);
       expect(reactions).toEqual([0, 1, 2]);
 
       unobserve(reaction);
     });
 
-    it('Map.delete 操作应该触发 observer', () => {
+    it("Map.delete 操作应该触发 observer", () => {
       const map = shadowObservable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
@@ -44,17 +44,17 @@ describe('shadowObservable - 集合类型支持', () => {
 
       expect(reactions).toEqual([2]);
 
-      map.delete('key1');
+      map.delete("key1");
       expect(reactions).toEqual([2, 1]);
 
       unobserve(reaction);
     });
 
-    it('Map.clear 操作应该触发 observer', () => {
+    it("Map.clear 操作应该触发 observer", () => {
       const map = shadowObservable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
@@ -71,18 +71,18 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Map 中的嵌套对象不应该被转换为 observable', () => {
+    it("Map 中的嵌套对象不应该被转换为 observable", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
-      const val = map.get('key');
+      const map = shadowObservable(new Map([["key", nestedObj]]));
+      const val = map.get("key");
 
       expect(val).toBe(nestedObj);
       expect(isObservable(val)).toBe(false);
     });
 
-    it('Map 中嵌套对象的属性变化不应该触发 observer', () => {
+    it("Map 中嵌套对象的属性变化不应该触发 observer", () => {
       const nestedObj = { value: 1 };
-      const map = shadowObservable(new Map([['key', nestedObj]]));
+      const map = shadowObservable(new Map([["key", nestedObj]]));
       const reactions: number[] = [];
 
       const reaction = observe(() => {
@@ -92,57 +92,57 @@ describe('shadowObservable - 集合类型支持', () => {
       expect(reactions).toEqual([1]);
 
       // 修改嵌套对象的属性，不应该触发 observer
-      const val = map.get('key') as any;
+      const val = map.get("key") as any;
       val.value = 2;
       expect(reactions).toEqual([1]);
 
       unobserve(reaction);
     });
 
-    it('Map.has 操作应该建立依赖关系', () => {
-      const map = shadowObservable(new Map([['key', 'value']]));
+    it("Map.has 操作应该建立依赖关系", () => {
+      const map = shadowObservable(new Map([["key", "value"]]));
       const reactions: boolean[] = [];
 
       const reaction = observe(() => {
-        reactions.push(map.has('key'));
+        reactions.push(map.has("key"));
       });
 
       expect(reactions).toEqual([true]);
 
-      map.delete('key');
+      map.delete("key");
       expect(reactions).toEqual([true, false]);
 
       unobserve(reaction);
     });
 
-    it('Map.get 操作应该建立依赖关系', () => {
-      const map = shadowObservable(new Map([['key', 'value1']]));
+    it("Map.get 操作应该建立依赖关系", () => {
+      const map = shadowObservable(new Map([["key", "value1"]]));
       const reactions: (string | undefined)[] = [];
 
       const reaction = observe(() => {
-        reactions.push(map.get('key'));
+        reactions.push(map.get("key"));
       });
 
-      expect(reactions).toEqual(['value1']);
+      expect(reactions).toEqual(["value1"]);
 
-      map.set('key', 'value2');
-      expect(reactions).toEqual(['value1', 'value2']);
+      map.set("key", "value2");
+      expect(reactions).toEqual(["value1", "value2"]);
 
       unobserve(reaction);
     });
 
-    it('Map.forEach 应该建立迭代依赖', () => {
+    it("Map.forEach 应该建立迭代依赖", () => {
       const map = shadowObservable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
 
       const reaction = observe(() => {
         let sum = 0;
-        map.forEach(value => {
+        map.forEach((value) => {
           sum += value as number;
         });
         reactions.push(sum);
@@ -150,72 +150,72 @@ describe('shadowObservable - 集合类型支持', () => {
 
       expect(reactions).toEqual([3]);
 
-      map.set('key3', 3);
+      map.set("key3", 3);
       expect(reactions).toEqual([3, 6]);
 
       unobserve(reaction);
     });
 
-    it('Map.values 迭代应该返回原始值', () => {
+    it("Map.values 迭代应该返回原始值", () => {
       const nestedObj1 = { value: 1 };
       const nestedObj2 = { value: 2 };
       const map = shadowObservable(
         new Map([
-          ['key1', nestedObj1],
-          ['key2', nestedObj2],
+          ["key1", nestedObj1],
+          ["key2", nestedObj2],
         ])
       );
 
       const values = Array.from(map.values());
       expect(values).toEqual([nestedObj1, nestedObj2]);
-      expect(values.every(v => !isObservable(v))).toBe(true);
+      expect(values.every((v) => !isObservable(v))).toBe(true);
     });
 
-    it('Map.entries 迭代应该返回原始值', () => {
+    it("Map.entries 迭代应该返回原始值", () => {
       const nestedObj1 = { value: 1 };
       const nestedObj2 = { value: 2 };
       const map = shadowObservable(
         new Map([
-          ['key1', nestedObj1],
-          ['key2', nestedObj2],
+          ["key1", nestedObj1],
+          ["key2", nestedObj2],
         ])
       );
 
       const entries = Array.from(map.entries());
       expect(entries).toEqual([
-        ['key1', nestedObj1],
-        ['key2', nestedObj2],
+        ["key1", nestedObj1],
+        ["key2", nestedObj2],
       ]);
       expect(entries.every(([, v]) => !isObservable(v))).toBe(true);
     });
 
-    it('Map Symbol.iterator 应该返回原始值', () => {
+    it("Map Symbol.iterator 应该返回原始值", () => {
       const nestedObj1 = { value: 1 };
       const nestedObj2 = { value: 2 };
       const map = shadowObservable(
         new Map([
-          ['key1', nestedObj1],
-          ['key2', nestedObj2],
+          ["key1", nestedObj1],
+          ["key2", nestedObj2],
         ])
       );
 
       const entries = Array.from(map);
       expect(entries).toEqual([
-        ['key1', nestedObj1],
-        ['key2', nestedObj2],
+        ["key1", nestedObj1],
+        ["key2", nestedObj2],
       ]);
       expect(entries.every(([, v]) => !isObservable(v))).toBe(true);
     });
   });
 
-  describe('Set 集合支持', () => {
-    it('应该创建一个浅层响应式的 Set', () => {
-      const set = shadowObservable(new Set(['value1', 'value2']));
+  describe("Set 集合支持", () => {
+    it("应该创建一个浅层响应式的 Set", () => {
+      const set = shadowObservable(new Set(["value1", "value2"]));
       expect(isObservable(set)).toBe(true);
-      expect(set.has('value1')).toBe(true);
+      expect(set.has("value1")).toBe(true);
     });
 
-    it('Set.add 操作应该触发 observer', () => {
+    it("Set.add 操作应该触发 observer", () => {
       const set = shadowObservable(new Set<number>());
       const reactions: number[] = [];
 
@@ -234,7 +234,7 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set.delete 操作应该触发 observer', () => {
+    it("Set.delete 操作应该触发 observer", () => {
       const set = shadowObservable(new Set([1, 2, 3]));
       const reactions: number[] = [];
 
@@ -250,7 +250,7 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set.clear 操作应该触发 observer', () => {
+    it("Set.clear 操作应该触发 observer", () => {
       const set = shadowObservable(new Set([1, 2, 3]));
       const reactions: number[] = [];
 
@@ -266,7 +266,7 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set 中的嵌套对象不应该被转换为 observable', () => {
+    it("Set 中的嵌套对象不应该被转换为 observable", () => {
       const nestedObj = { value: 1 };
       const set = shadowObservable(new Set([nestedObj]));
 
@@ -275,7 +275,7 @@ describe('shadowObservable - 集合类型支持', () => {
       expect(isObservable(values[0])).toBe(false);
     });
 
-    it('Set 中嵌套对象的属性变化不应该触发 observer', () => {
+    it("Set 中嵌套对象的属性变化不应该触发 observer", () => {
       const nestedObj = { value: 1 };
       const set = shadowObservable(new Set([nestedObj]));
       const reactions: number[] = [];
@@ -293,7 +293,7 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set.has 操作应该建立依赖关系', () => {
+    it("Set.has 操作应该建立依赖关系", () => {
       const obj = { value: 1 };
       const set = shadowObservable(new Set([obj]));
       const reactions: boolean[] = [];
@@ -310,13 +310,13 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set.forEach 应该建立迭代依赖', () => {
+    it("Set.forEach 应该建立迭代依赖", () => {
       const set = shadowObservable(new Set([1, 2, 3]));
       const reactions: number[] = [];
 
       const reaction = observe(() => {
         let sum = 0;
-        set.forEach(value => {
+        set.forEach((value) => {
           sum += value as number;
         });
         reactions.push(sum);
@@ -330,36 +330,36 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('Set.values 迭代应该返回原始值', () => {
+    it("Set.values 迭代应该返回原始值", () => {
       const nestedObj1 = { value: 1 };
       const nestedObj2 = { value: 2 };
       const set = shadowObservable(new Set([nestedObj1, nestedObj2]));
 
       const values = Array.from(set.values());
       expect(values).toEqual([nestedObj1, nestedObj2]);
-      expect(values.every(v => !isObservable(v))).toBe(true);
+      expect(values.every((v) => !isObservable(v))).toBe(true);
     });
 
-    it('Set Symbol.iterator 应该返回原始值', () => {
+    it("Set Symbol.iterator 应该返回原始值", () => {
       const nestedObj1 = { value: 1 };
       const nestedObj2 = { value: 2 };
       const set = shadowObservable(new Set([nestedObj1, nestedObj2]));
 
       const values = Array.from(set);
       expect(values).toEqual([nestedObj1, nestedObj2]);
-      expect(values.every(v => !isObservable(v))).toBe(true);
+      expect(values.every((v) => !isObservable(v))).toBe(true);
     });
   });
 
-  describe('WeakMap 集合支持', () => {
-    it('应该创建一个浅层响应式的 WeakMap', () => {
+  describe("WeakMap 集合支持", () => {
+    it("应该创建一个浅层响应式的 WeakMap", () => {
       const key = { id: 1 };
-      const weakMap = shadowObservable(new WeakMap([[key, 'value']]));
+      const weakMap = shadowObservable(new WeakMap([[key, "value"]]));
       expect(isObservable(weakMap)).toBe(true);
-      expect(weakMap.get(key)).toBe('value');
+      expect(weakMap.get(key)).toBe("value");
     });
 
-    it('WeakMap.set 操作应该触发 observer', () => {
+    it("WeakMap.set 操作应该触发 observer", () => {
       const key1 = { id: 1 };
       const key2 = { id: 2 };
       const weakMap = shadowObservable(new WeakMap<object, number>());
@@ -385,9 +385,9 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('WeakMap.has 操作应该建立依赖关系', () => {
+    it("WeakMap.has 操作应该建立依赖关系", () => {
       const key = { id: 1 };
-      const weakMap = shadowObservable(new WeakMap([[key, 'value']]));
+      const weakMap = shadowObservable(new WeakMap([[key, "value"]]));
       const reactions: boolean[] = [];
 
       const reaction = observe(() => {
@@ -402,24 +402,24 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('WeakMap.get 操作应该建立依赖关系', () => {
+    it("WeakMap.get 操作应该建立依赖关系", () => {
       const key = { id: 1 };
-      const weakMap = shadowObservable(new WeakMap([[key, 'value1']]));
+      const weakMap = shadowObservable(new WeakMap([[key, "value1"]]));
       const reactions: (string | undefined)[] = [];
 
       const reaction = observe(() => {
         reactions.push(weakMap.get(key));
       });
 
-      expect(reactions).toEqual(['value1']);
+      expect(reactions).toEqual(["value1"]);
 
-      weakMap.set(key, 'value2');
-      expect(reactions).toEqual(['value1', 'value2']);
+      weakMap.set(key, "value2");
+      expect(reactions).toEqual(["value1", "value2"]);
 
       unobserve(reaction);
     });
 
-    it('WeakMap 中的嵌套对象不应该被转换为 observable', () => {
+    it("WeakMap 中的嵌套对象不应该被转换为 observable", () => {
       const key = { id: 1 };
       const nestedObj = { value: 1 };
       const weakMap = shadowObservable(new WeakMap([[key, nestedObj]]));
@@ -430,15 +430,15 @@ describe('shadowObservable - 集合类型支持', () => {
     });
   });
 
-  describe('WeakSet 集合支持', () => {
-    it('应该创建一个浅层响应式的 WeakSet', () => {
+  describe("WeakSet 集合支持", () => {
+    it("应该创建一个浅层响应式的 WeakSet", () => {
       const obj = { id: 1 };
       const weakSet = shadowObservable(new WeakSet([obj]));
       expect(isObservable(weakSet)).toBe(true);
       expect(weakSet.has(obj)).toBe(true);
     });
 
-    it('WeakSet.add 操作应该触发 observer', () => {
+    it("WeakSet.add 操作应该触发 observer", () => {
       const obj1 = { id: 1 };
       const obj2 = { id: 2 };
       const weakSet = shadowObservable(new WeakSet<object>());
@@ -465,7 +465,7 @@ describe('shadowObservable - 集合类型支持', () => {
       unobserve(reaction);
     });
 
-    it('WeakSet.has 操作应该建立依赖关系', () => {
+    it("WeakSet.has 操作应该建立依赖关系", () => {
       const obj = { id: 1 };
       const weakSet = shadowObservable(new WeakSet([obj]));
       const reactions: boolean[] = [];

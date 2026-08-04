@@ -2,56 +2,64 @@
  * @rabjs/react - React 响应式状态库集成
  * 参考 mobx-react-lite 实现，支持 React 并发模式和严格模式
  */
-import './batch';
+import "./batch";
 // 核心 API
-export { observer } from './observer';
-export { view } from './view';
+export { observer } from "./observer";
+export { view } from "./view";
 
-export { useObserver } from './useObserver';
-export { useLocalObservable } from './useLocalObservable';
-export { useAsObservableSource } from './useAsObservableSource';
-export { useReaction } from './useReaction';
-export type { UseReactionOptions } from './useReaction';
+export { useObserver } from "./use-observer";
+export { useLocalObservable } from "./use-local-observable";
+export { useAsObservableSource } from "./use-as-observable-source";
+export { useReaction } from "./use-reaction";
+export type { UseReactionOptions } from "./use-reaction";
 
 // 静态渲染支持（SSR）
-export { enableStaticRendering, isUsingStaticRendering } from './staticRendering';
+export {
+  enableStaticRendering,
+  isUsingStaticRendering,
+} from "./static-rendering";
 
 // 工具函数
-export { observerFinalizationRegistry } from './utils/observerFinalizationRegistry';
-export { debuggerReaction } from './utils/debug';
-export { printDebugValue } from './utils/printDebugValue';
+export { observerFinalizationRegistry } from "./utils/observer-finalization-registry";
+export { debuggerReaction } from "./utils/debug";
+export { printDebugValue } from "./utils/print-debug-value";
 
 // ============================================================================
 // 重新导出 @rabjs/observer 的所有 API
 // ============================================================================
 
 // Observable API - Create reactive objects
-export { observable, shadowObservable } from '@rabjs/observer';
+export { observable, shadowObservable } from "@rabjs/observer";
 
 // Observer API - Create reactions that respond to observable changes
-export { observe, unobserve } from '@rabjs/observer';
-export type { ObserveOptions } from '@rabjs/observer';
+export { observe, unobserve } from "@rabjs/observer";
+export type { ObserveOptions } from "@rabjs/observer";
 
 // Configuration API - Configure global defaults
-export { configure, resetGlobalConfig } from '@rabjs/observer';
-export type { ConfigureOptions } from '@rabjs/observer';
+export { configure, resetGlobalConfig } from "@rabjs/observer";
+export type { ConfigureOptions } from "@rabjs/observer";
 
 // Re-export types for advanced usage
-export type { Reaction, ReactionScheduler, Operation, OperationType } from '@rabjs/observer';
+export type {
+  Reaction,
+  ReactionScheduler,
+  Operation,
+  OperationType,
+} from "@rabjs/observer";
 
 // Re-export utility functions
-export { isObservable, raw } from '@rabjs/observer';
+export { isObservable, raw } from "@rabjs/observer";
 
 // Re-export handlers for testing
-export { proxyHandlers, shadowProxyHandler } from '@rabjs/observer';
+export { proxyHandlers, shadowProxyHandler } from "@rabjs/observer";
 
 // ============================================================================
 // 重新导出 @rabjs/service 的所有 API
 // ============================================================================
 
 // 核心 Service 类和类型
-export { Service } from '@rabjs/service';
-export type { MethodState, ExtractMethods } from '@rabjs/service';
+export { Service } from "@rabjs/service";
+export type { MethodState, ExtractMethods } from "@rabjs/service";
 
 // 装饰器
 export {
@@ -76,7 +84,7 @@ export {
   setupEventListeners,
   cleanupEventListeners,
   cleanupAllEventListeners,
-} from '@rabjs/service';
+} from "@rabjs/service";
 export type {
   InjectOptions,
   DebounceOptions,
@@ -84,14 +92,20 @@ export type {
   MemoOptions,
   OnOptions,
   OnceOptions,
-} from '@rabjs/service';
+} from "@rabjs/service";
 
 // 事件系统
-export { EventSystem } from '@rabjs/service';
-export type { EventScope, EventSystemOptions } from '@rabjs/service';
+export { EventSystem } from "@rabjs/service";
+export type { EventScope, EventSystemOptions } from "@rabjs/service";
 
 // IOC 容器
-export { Container, getGlobalContainer, register, resolve, has } from '@rabjs/service';
+export {
+  Container,
+  getGlobalContainer,
+  register,
+  resolve,
+  has,
+} from "@rabjs/service";
 export type {
   ServiceIdentifier,
   ServiceClass,
@@ -99,7 +113,7 @@ export type {
   RegisterOptions,
   ContainerOptions,
   DestroyCallback,
-} from '@rabjs/service';
+} from "@rabjs/service";
 
 // ============================================================================
 // Domain 依赖注入系统（React 集成）
@@ -115,7 +129,7 @@ export {
   useContainerEvents,
   useViewService,
   bindServices,
-} from './domain';
+} from "./domain";
 
 export type {
   // ServiceIdentifier 和 ServiceFactory 已从 @rabjs/service 导出
@@ -124,4 +138,4 @@ export type {
   ProviderResult,
   DomainComponent,
   DomainContextValue,
-} from './domain';
+} from "./domain";

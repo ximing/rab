@@ -1,15 +1,15 @@
-import { observable } from '../observable';
-import { observe, unobserve } from '../observer';
-import { configure, resetGlobalConfig } from '../configure';
+import { observable } from "../observable";
+import { observe, unobserve } from "../observer";
+import { configure, resetGlobalConfig } from "../configure";
 
-describe('configure', () => {
+describe("configure", () => {
   afterEach(() => {
     // 每个测试后重置全局配置
     resetGlobalConfig();
   });
 
-  describe('global scheduler configuration', () => {
-    it('should use global scheduler when no scheduler is provided', () => {
+  describe("global scheduler configuration", () => {
+    it("should use global scheduler when no scheduler is provided", () => {
       const scheduledReactions: any[] = [];
       const globalScheduler = (reaction: any) => {
         scheduledReactions.push(reaction);
@@ -43,7 +43,7 @@ describe('configure', () => {
       unobserve(reaction);
     });
 
-    it('should prefer local scheduler over global scheduler', () => {
+    it("should prefer local scheduler over global scheduler", () => {
       const globalScheduledReactions: any[] = [];
       const localScheduledReactions: any[] = [];
 
@@ -81,7 +81,7 @@ describe('configure', () => {
       unobserve(reaction);
     });
 
-    it('should support object-based scheduler (like Set)', () => {
+    it("should support object-based scheduler (like Set)", () => {
       const schedulerSet = new Set<any>();
       configure({ scheduler: schedulerSet });
 
@@ -105,14 +105,14 @@ describe('configure', () => {
 
       // 手动执行 reaction
       const reactions = Array.from(schedulerSet);
-      reactions.forEach(r => r());
+      reactions.forEach((r) => r());
 
       expect(callCount).toBe(2);
 
       unobserve(reaction);
     });
 
-    it('should work with lazy reactions', () => {
+    it("should work with lazy reactions", () => {
       const scheduledReactions: any[] = [];
       const globalScheduler = (reaction: any) => {
         scheduledReactions.push(reaction);
@@ -157,7 +157,7 @@ describe('configure', () => {
       unobserve(reaction);
     });
 
-    it('should handle multiple reactions with global scheduler', () => {
+    it("should handle multiple reactions with global scheduler", () => {
       const scheduledReactions: any[] = [];
       const globalScheduler = (reaction: any) => {
         scheduledReactions.push(reaction);
@@ -165,7 +165,7 @@ describe('configure', () => {
 
       configure({ scheduler: globalScheduler });
 
-      const state = observable({ count: 0, name: 'test' });
+      const state = observable({ count: 0, name: "test" });
       let count1 = 0;
       let count2 = 0;
 
@@ -195,7 +195,7 @@ describe('configure', () => {
       scheduledReactions.length = 0;
 
       // 修改 name
-      state.name = 'updated';
+      state.name = "updated";
 
       // 只有 reaction2 应该被调度
       expect(scheduledReactions.length).toBe(1);
@@ -206,7 +206,7 @@ describe('configure', () => {
       unobserve(reaction2);
     });
 
-    it('should allow reconfiguring global scheduler for new reactions', () => {
+    it("should allow reconfiguring global scheduler for new reactions", () => {
       const scheduler1Reactions: any[] = [];
       const scheduler2Reactions: any[] = [];
 
@@ -254,7 +254,7 @@ describe('configure', () => {
       unobserve(reaction2);
     });
 
-    it('should work without global scheduler (default behavior)', () => {
+    it("should work without global scheduler (default behavior)", () => {
       // 不配置全局 scheduler
       const state = observable({ count: 0 });
       let callCount = 0;

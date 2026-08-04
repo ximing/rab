@@ -8,9 +8,9 @@
  * 4. 观察数据变化是否触发重新渲染
  */
 
-import { Service } from '@rabjs/react';
-import { bindServices, useService, observer } from '@rabjs/react';
-import { Button, Card, Space, Alert } from 'antd';
+import { Service } from "@rabjs/react";
+import { bindServices, useService, observer } from "@rabjs/react";
+import { Button, Card, Space, Alert } from "antd";
 
 /**
  * 最小化 Service - 只有一个计数器
@@ -20,18 +20,18 @@ class CounterService extends Service {
 
   increment() {
     this.count++;
-    console.log('CounterService.increment() called, count =', this.count);
+    console.log("CounterService.increment() called, count =", this.count);
   }
 
   decrement() {
     debugger;
     this.count--;
-    console.log('CounterService.decrement() called, count =', this.count);
+    console.log("CounterService.decrement() called, count =", this.count);
   }
 
   reset() {
     this.count = 0;
-    console.log('CounterService.reset() called, count =', this.count);
+    console.log("CounterService.reset() called, count =", this.count);
   }
 }
 

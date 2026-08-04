@@ -1,12 +1,16 @@
-import { observable } from '@rabjs/observer';
+import { observable } from "@rabjs/observer";
 
-import { cleanupAllDebounces } from './decorators/debounce';
-import { cleanupAllMemos } from './decorators/memo';
-import { setupEventListeners, cleanupEventListeners } from './decorators/on';
-import { cleanupAllThrottles } from './decorators/throttle';
-import { EventSystem, type EventScope } from './event';
-import { Container } from './ioc';
-import { getCurrentInstantiatingContainer } from './ioc/globals';
+import { cleanupAllDebounces } from "./decorators/debounce";
+import { cleanupAllMemos } from "./decorators/memo";
+import { setupEventListeners, cleanupEventListeners } from "./decorators/on";
+import { cleanupAllThrottles } from "./decorators/throttle";
+import { EventSystem, type EventScope } from "./event";
+import {
+  bindTrackedEventListener,
+  unbindTrackedEventListeners,
+} from "./event-listener-registry";
+import { Container } from "./ioc";
+import { getCurrentInstantiatingContainer } from "./ioc/globals";
 
 /**
  * 方法状态类型定义
@@ -78,7 +82,7 @@ export type ExtractMethods<T> = {
 export class Service {
   /**
    * 服务实例的唯一标识符
-   * 格式：`{identifierLabel}#{全局自增序号}`，例如 `CartService#0`
+   * 格式：`{identifierLabel}#{全局自增序号}`，例如 `CartService#0`、`Symbol(payment)#3`
    * 由 Container 在实例化完成后回写，可用于日志、调试、MCP 路由等场景
    */
   public instanceId: string = '';
@@ -93,7 +97,8 @@ export class Service {
   constructor() {
     // 获取当前实例关联的容器（由 Container 在实例化时建立）
     // 首先尝试从 WeakMap 中获取，如果失败则从当前正在实例化的容器中获取
-    let container: Container | null | undefined = Container.getContainerOf?.(this);
+    let container: Container | null | undefined =
+      Container.getContainerOf?.(this);
     if (!container) {
       container = getCurrentInstantiatingContainer();
     }
@@ -127,10 +132,10 @@ export class Service {
     const prototype = Object.getPrototypeOf(instance);
     const methodNames = this.__getMethodNames(prototype);
 
-    methodNames.forEach(methodName => {
+    for (const methodName of methodNames) {
       const originalMethod = prototype[methodName];
 
-      if (typeof originalMethod === 'function') {
+      if (typeof originalMethod === "function") {
         // 初始化状态
         (instance.$model as any)[methodName] = {
           loading: false,
@@ -145,10 +150,11 @@ export class Service {
         (instance as any)[methodName] = this.__createMethodWrapper(
           boundMethod,
           methodName,
-          isNoAction
+          isNoAction,
+          instance
         );
       }
-    });
+    }
   }
 
   /**
@@ -160,16 +166,28 @@ export class Service {
 
     // 遍历原型链上的所有属性
     let current = prototype;
-    while (current && current !== Object.prototype && current !== Service.prototype) {
-      Object.getOwnPropertyNames(current).forEach(name => {
-        if (name !== 'constructor' && !name.startsWith('_') && !methodNames.includes(name)) {
+    while (
+      current &&
+      current !== Object.prototype &&
+      current !== Service.prototype
+    ) {
+      for (const name of Object.getOwnPropertyNames(current)) {
+        if (
+          name !== "constructor" &&
+          !name.startsWith("_") &&
+          !methodNames.includes(name)
+        ) {
           // 使用 getOwnPropertyDescriptor 来检查属性类型，避免触发 getter
           const descriptor = Object.getOwnPropertyDescriptor(current, name);
-          if (descriptor && descriptor.value && typeof descriptor.value === 'function') {
+          if (
+            descriptor &&
+            descriptor.value &&
+            typeof descriptor.value === "function"
+          ) {
             methodNames.push(name);
           }
         }
-      });
+      }
       current = Object.getPrototypeOf(current);
     }
 
@@ -187,22 +205,16 @@ export class Service {
   private __createMethodWrapper(
     originalMethod: Function,
     methodName: string,
-    isNoAction: boolean
+    isNoAction: boolean,
+    observableInstance: this
   ): Function {
-    const observableInstance = this;
     return function (this: any, ...args: any[]) {
       // 执行方法并收集结果
-      let result: any;
-      if (!isNoAction) {
-        // 对于 Action 方法，observable 会自动处理批量更新
-        result = originalMethod(...args);
-      } else {
-        // 对于 @SyncAction 方法，直接执行
-        result = originalMethod(...args);
-      }
+      // 对于 @SyncAction 方法，直接执行；对于 Action 方法，observable 会自动处理批量更新
+      const result: any = originalMethod(...args);
 
       // 检查是否是 Promise（异步方法）
-      if (result && typeof result.then === 'function') {
+      if (result && typeof result.then === "function") {
         const modelState = observableInstance.$model[methodName as keyof ExtractMethods<Service>];
         // 异步方法：立即设置 loading 状态
         modelState.loading = true;
@@ -215,10 +227,10 @@ export class Service {
             modelState.loading = false;
             return res;
           })
-          .catch((err: any) => {
+          .catch((error: any) => {
             modelState.loading = false;
-            modelState.error = err;
-            throw err;
+            modelState.error = error;
+            throw error;
           });
       }
 
@@ -255,10 +267,16 @@ export class Service {
   public on<T = any>(
     eventName: string,
     handler: (data: T) => void,
-    scope: EventScope = 'container'
+    scope: EventScope = "container"
   ): this {
-    const emitter = EventSystem.getEmitter(scope, this._container);
-    emitter.on(eventName, handler);
+    bindTrackedEventListener(this, {
+      eventName,
+      handler: handler as (...args: any[]) => void,
+      scope,
+      once: false,
+      container: this._container,
+      source: "manual",
+    });
     return this;
   }
 
@@ -291,18 +309,24 @@ export class Service {
   public once<T = any>(
     eventName: string,
     handler: (data: T) => void,
-    scope: EventScope = 'container'
+    scope: EventScope = "container"
   ): this {
-    const emitter = EventSystem.getEmitter(scope, this._container);
-    emitter.once(eventName, handler);
+    bindTrackedEventListener(this, {
+      eventName,
+      handler: handler as (...args: any[]) => void,
+      scope,
+      once: true,
+      container: this._container,
+      source: "manual",
+    });
     return this;
   }
 
   /**
-   * 移除事件监听器
+   * 移除当前 Service 注册的事件监听器
    *
    * @param eventName 事件名称
-   * @param handler 事件处理函数（可选，如果不提供则移除该事件的所有监听器）
+   * @param handler 事件处理函数（可选，如果不提供则移除当前 Service 在该事件下的所有监听器）
    * @param scope 事件作用域，默认为 'container'（容器级别），可选 'global'（全局）
    *
    * @example
@@ -329,13 +353,16 @@ export class Service {
    * }
    * ```
    */
-  public off(eventName: string, handler?: Function, scope: EventScope = 'container'): this {
-    const emitter = EventSystem.getEmitter(scope, this._container);
-    if (handler) {
-      emitter.off(eventName, handler as any);
-    } else {
-      emitter.removeAllListeners(eventName);
-    }
+  public off(
+    eventName: string,
+    handler?: Function,
+    scope: EventScope = "container"
+  ): this {
+    unbindTrackedEventListeners(this, {
+      eventName,
+      handler: handler as ((...args: any[]) => void) | undefined,
+      scope,
+    });
     return this;
   }
 
@@ -367,7 +394,11 @@ export class Service {
    * }
    * ```
    */
-  public emit<T = any>(eventName: string, data?: T, scope: EventScope = 'container'): this {
+  public emit<T = any>(
+    eventName: string,
+    data?: T,
+    scope: EventScope = "container"
+  ): this {
     const emitter = EventSystem.getEmitter(scope, this._container);
     emitter.emit(eventName, data);
     return this;
@@ -432,10 +463,10 @@ export class Service {
   }
 
   /**
-   * 销毁 Service 实例，清理所有装饰器绑定的事件和资源
+   * 销毁 Service 实例，清理所有已登记的事件和资源
    *
    * 清理内容包括：
-   * - @On 和 @Once 装饰器绑定的事件监听器
+   * - 手动或装饰器绑定的事件监听器
    * - @Debounce 装饰器的定时器
    * - @Throttle 装饰器的定时器
    * - @Memo 装饰器的缓存和响应式追踪
@@ -465,7 +496,7 @@ export class Service {
    * ```
    */
   public destroy(): void {
-    // 清理 @On 和 @Once 装饰器的事件监听器
+    // 清理当前 Service 注册的所有事件监听器
     cleanupEventListeners(this);
 
     // 清理 @Debounce 装饰器的定时器

@@ -3,15 +3,16 @@
  * 测试 Service 类的 on、once、off、emit 方法
  */
 
-import { Service } from '../service';
-import { Container } from '../ioc';
-import { EventSystem } from '../event';
+import { Service } from "../service";
+import { Container } from "../ioc";
+import { EventSystem } from "../event";
+import { getTrackedEventListenerRecords } from "../event-listener-registry";
 
-describe('Service 事件方法', () => {
+describe("Service 事件方法", () => {
   let container: Container;
 
   beforeEach(() => {
-    container = new Container({ name: 'test' });
+    container = new Container({ name: "test" });
     EventSystem.clearAllGlobalEvents();
   });
 
@@ -20,15 +21,15 @@ describe('Service 事件方法', () => {
     EventSystem.clearAllGlobalEvents();
   });
 
-  describe('on 方法', () => {
-    it('应该能够监听容器级别事件（默认）', done => {
+  describe("on 方法", () => {
+    it("应该能够监听容器级别事件（默认）", (done) => {
       class TestService extends Service {
         public receivedData: any = null;
 
         constructor(container: Container) {
           super();
 
-          this.on('test:event', (data: any) => {
+          this.on("test:event", (data: any) => {
             this.receivedData = data;
           });
         }
@@ -37,8 +38,8 @@ describe('Service 事件方法', () => {
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      const testData = { id: 1, name: 'test' };
-      service.emit('test:event', testData);
+      const testData = { id: 1, name: "test" };
+      service.emit("test:event", testData);
 
       setTimeout(() => {
         expect(service.receivedData).toEqual(testData);
@@ -46,7 +47,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该能够监听全局事件', done => {
+    it("应该能够监听全局事件", (done) => {
       class TestService extends Service {
         public receivedData: any = null;
 
@@ -54,11 +55,11 @@ describe('Service 事件方法', () => {
           super();
 
           this.on(
-            'global:event',
+            "global:event",
             (data: any) => {
               this.receivedData = data;
             },
-            'global'
+            "global"
           );
         }
       }
@@ -66,8 +67,8 @@ describe('Service 事件方法', () => {
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      const testData = { id: 2, name: 'global' };
-      service.emit('global:event', testData, 'global');
+      const testData = { id: 2, name: "global" };
+      service.emit("global:event", testData, "global");
 
       setTimeout(() => {
         expect(service.receivedData).toEqual(testData);
@@ -75,12 +76,12 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该支持链式调用', () => {
+    it("应该支持链式调用", () => {
       class TestService extends Service {
         constructor(container: Container) {
           super();
 
-          const result = this.on('event1', () => {}).on('event2', () => {});
+          const result = this.on("event1", () => {}).on("event2", () => {});
 
           expect(result).toBe(this);
         }
@@ -91,15 +92,15 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('once 方法', () => {
-    it('应该只触发一次容器级别事件', done => {
+  describe("once 方法", () => {
+    it("应该只触发一次容器级别事件", (done) => {
       let callCount = 0;
 
       class TestService extends Service {
         constructor(container: Container) {
           super();
 
-          this.once('test:once', () => {
+          this.once("test:once", () => {
             callCount++;
           });
         }
@@ -108,9 +109,9 @@ describe('Service 事件方法', () => {
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      service.emit('test:once');
-      service.emit('test:once');
-      service.emit('test:once');
+      service.emit("test:once");
+      service.emit("test:once");
+      service.emit("test:once");
 
       setTimeout(() => {
         expect(callCount).toBe(1);
@@ -118,7 +119,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该只触发一次全局事件', done => {
+    it("应该只触发一次全局事件", (done) => {
       let callCount = 0;
 
       class TestService extends Service {
@@ -126,11 +127,11 @@ describe('Service 事件方法', () => {
           super();
 
           this.once(
-            'global:once',
+            "global:once",
             () => {
               callCount++;
             },
-            'global'
+            "global"
           );
         }
       }
@@ -138,9 +139,9 @@ describe('Service 事件方法', () => {
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      service.emit('global:once', undefined, 'global');
-      service.emit('global:once', undefined, 'global');
-      service.emit('global:once', undefined, 'global');
+      service.emit("global:once", undefined, "global");
+      service.emit("global:once", undefined, "global");
+      service.emit("global:once", undefined, "global");
 
       setTimeout(() => {
         expect(callCount).toBe(1);
@@ -149,8 +150,8 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('off 方法', () => {
-    it('应该能够移除特定的事件监听器', done => {
+  describe("off 方法", () => {
+    it("应该能够移除特定的事件监听器", (done) => {
       let callCount = 0;
 
       class TestService extends Service {
@@ -160,24 +161,24 @@ describe('Service 事件方法', () => {
 
         constructor(container: Container) {
           super();
-          this.on('test:event', this.handler);
+          this.on("test:event", this.handler);
         }
 
         removeListener() {
-          this.off('test:event', this.handler);
+          this.off("test:event", this.handler);
         }
       }
 
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      service.emit('test:event');
+      service.emit("test:event");
 
       setTimeout(() => {
         expect(callCount).toBe(1);
 
         service.removeListener();
-        service.emit('test:event');
+        service.emit("test:event");
 
         setTimeout(() => {
           expect(callCount).toBe(1); // 不应该增加
@@ -186,7 +187,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该能够移除事件的所有监听器', done => {
+    it("应该能够移除事件的所有监听器", (done) => {
       let count1 = 0;
       let count2 = 0;
 
@@ -194,31 +195,31 @@ describe('Service 事件方法', () => {
         constructor(container: Container) {
           super();
 
-          this.on('test:event', () => {
+          this.on("test:event", () => {
             count1++;
           });
 
-          this.on('test:event', () => {
+          this.on("test:event", () => {
             count2++;
           });
         }
 
         removeAllListeners() {
-          this.off('test:event');
+          this.off("test:event");
         }
       }
 
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      service.emit('test:event');
+      service.emit("test:event");
 
       setTimeout(() => {
         expect(count1).toBe(1);
         expect(count2).toBe(1);
 
         service.removeAllListeners();
-        service.emit('test:event');
+        service.emit("test:event");
 
         setTimeout(() => {
           expect(count1).toBe(1); // 不应该增加
@@ -228,7 +229,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该能够移除全局事件监听器', done => {
+    it("应该能够移除全局事件监听器", (done) => {
       let callCount = 0;
 
       class TestService extends Service {
@@ -238,24 +239,24 @@ describe('Service 事件方法', () => {
 
         constructor(container: Container) {
           super();
-          this.on('global:event', this.handler, 'global');
+          this.on("global:event", this.handler, "global");
         }
 
         removeListener() {
-          this.off('global:event', this.handler, 'global');
+          this.off("global:event", this.handler, "global");
         }
       }
 
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      service.emit('global:event', undefined, 'global');
+      service.emit("global:event", undefined, "global");
 
       setTimeout(() => {
         expect(callCount).toBe(1);
 
         service.removeListener();
-        service.emit('global:event', undefined, 'global');
+        service.emit("global:event", undefined, "global");
 
         setTimeout(() => {
           expect(callCount).toBe(1); // 不应该增加
@@ -265,21 +266,21 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('emit 方法', () => {
-    it('应该能够发送容器级别事件', done => {
+  describe("emit 方法", () => {
+    it("应该能够发送容器级别事件", (done) => {
       const receivedData: any[] = [];
 
       class TestService extends Service {
         constructor(container: Container) {
           super();
 
-          this.on('test:event', (data: any) => {
+          this.on("test:event", (data: any) => {
             receivedData.push(data);
           });
         }
 
         sendEvent(data: any) {
-          this.emit('test:event', data);
+          this.emit("test:event", data);
         }
       }
 
@@ -295,7 +296,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该能够发送全局事件', done => {
+    it("应该能够发送全局事件", (done) => {
       const receivedData: any[] = [];
 
       class TestService extends Service {
@@ -303,16 +304,16 @@ describe('Service 事件方法', () => {
           super();
 
           this.on(
-            'global:event',
+            "global:event",
             (data: any) => {
               receivedData.push(data);
             },
-            'global'
+            "global"
           );
         }
 
         sendGlobalEvent(data: any) {
-          this.emit('global:event', data, 'global');
+          this.emit("global:event", data, "global");
         }
       }
 
@@ -328,20 +329,20 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('应该能够发送不带数据的事件', done => {
+    it("应该能够发送不带数据的事件", (done) => {
       let callCount = 0;
 
       class TestService extends Service {
         constructor(container: Container) {
           super();
 
-          this.on('test:event', () => {
+          this.on("test:event", () => {
             callCount++;
           });
         }
 
         sendEvent() {
-          this.emit('test:event');
+          this.emit("test:event");
         }
       }
 
@@ -357,8 +358,8 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('容器隔离', () => {
-    it('容器级别事件应该在不同容器间隔离', done => {
+  describe("容器隔离", () => {
+    it("容器级别事件应该在不同容器间隔离", (done) => {
       const container1Messages: any[] = [];
       const container2Messages: any[] = [];
 
@@ -366,9 +367,9 @@ describe('Service 事件方法', () => {
         constructor(container: Container) {
           super();
 
-          this.on('test:event', (data: any) => {
+          this.on("test:event", (data: any) => {
             const containerName = this._container.getName();
-            if (containerName === 'container1') {
+            if (containerName === "container1") {
               container1Messages.push(data);
             } else {
               container2Messages.push(data);
@@ -377,8 +378,8 @@ describe('Service 事件方法', () => {
         }
       }
 
-      const container1 = new Container({ name: 'container1' });
-      const container2 = new Container({ name: 'container2' });
+      const container1 = new Container({ name: "container1" });
+      const container2 = new Container({ name: "container2" });
 
       container1.register(TestService);
       container2.register(TestService);
@@ -386,12 +387,12 @@ describe('Service 事件方法', () => {
       const service1 = container1.resolve(TestService);
       const service2 = container2.resolve(TestService);
 
-      service1.emit('test:event', { from: 'service1' });
-      service2.emit('test:event', { from: 'service2' });
+      service1.emit("test:event", { from: "service1" });
+      service2.emit("test:event", { from: "service2" });
 
       setTimeout(() => {
-        expect(container1Messages).toEqual([{ from: 'service1' }]);
-        expect(container2Messages).toEqual([{ from: 'service2' }]);
+        expect(container1Messages).toEqual([{ from: "service1" }]);
+        expect(container2Messages).toEqual([{ from: "service2" }]);
 
         container1.destroy();
         container2.destroy();
@@ -399,7 +400,7 @@ describe('Service 事件方法', () => {
       }, 10);
     });
 
-    it('全局事件应该在所有容器间共享', done => {
+    it("全局事件应该在所有容器间共享", (done) => {
       const allMessages: any[] = [];
 
       class TestService extends Service {
@@ -407,17 +408,17 @@ describe('Service 事件方法', () => {
           super();
 
           this.on(
-            'global:event',
+            "global:event",
             (data: any) => {
               allMessages.push(data);
             },
-            'global'
+            "global"
           );
         }
       }
 
-      const container1 = new Container({ name: 'container1' });
-      const container2 = new Container({ name: 'container2' });
+      const container1 = new Container({ name: "container1" });
+      const container2 = new Container({ name: "container2" });
 
       container1.register(TestService);
       container2.register(TestService);
@@ -425,14 +426,14 @@ describe('Service 事件方法', () => {
       const service1 = container1.resolve(TestService);
       const service2 = container2.resolve(TestService);
 
-      service1.emit('global:event', { from: 'service1' }, 'global');
-      service2.emit('global:event', { from: 'service2' }, 'global');
+      service1.emit("global:event", { from: "service1" }, "global");
+      service2.emit("global:event", { from: "service2" }, "global");
 
       setTimeout(() => {
         // 两个 service 都应该收到两条消息
         expect(allMessages.length).toBe(4);
-        expect(allMessages).toContainEqual({ from: 'service1' });
-        expect(allMessages).toContainEqual({ from: 'service2' });
+        expect(allMessages).toContainEqual({ from: "service1" });
+        expect(allMessages).toContainEqual({ from: "service2" });
 
         container1.destroy();
         container2.destroy();
@@ -441,15 +442,15 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('Service 间通信', () => {
-    it('同一容器内的 Service 应该能够通过事件通信', done => {
+  describe("Service 间通信", () => {
+    it("同一容器内的 Service 应该能够通过事件通信", (done) => {
       class ServiceA extends Service {
         constructor(container: Container) {
           super();
         }
 
         sendMessage(message: string) {
-          this.emit('service:message', message);
+          this.emit("service:message", message);
         }
       }
 
@@ -459,7 +460,7 @@ describe('Service 事件方法', () => {
         constructor(container: Container) {
           super();
 
-          this.on('service:message', (message: string) => {
+          this.on("service:message", (message: string) => {
             this.receivedMessages.push(message);
           });
         }
@@ -471,23 +472,26 @@ describe('Service 事件方法', () => {
       const serviceA = container.resolve(ServiceA);
       const serviceB = container.resolve(ServiceB);
 
-      serviceA.sendMessage('Hello from A');
-      serviceA.sendMessage('Another message');
+      serviceA.sendMessage("Hello from A");
+      serviceA.sendMessage("Another message");
 
       setTimeout(() => {
-        expect(serviceB.receivedMessages).toEqual(['Hello from A', 'Another message']);
+        expect(serviceB.receivedMessages).toEqual([
+          "Hello from A",
+          "Another message",
+        ]);
         done();
       }, 10);
     });
 
-    it('不同容器的 Service 应该能够通过全局事件通信', done => {
+    it("不同容器的 Service 应该能够通过全局事件通信", (done) => {
       class ServiceA extends Service {
         constructor(container: Container) {
           super();
         }
 
         sendGlobalMessage(message: string) {
-          this.emit('global:message', message, 'global');
+          this.emit("global:message", message, "global");
         }
       }
 
@@ -498,17 +502,17 @@ describe('Service 事件方法', () => {
           super();
 
           this.on(
-            'global:message',
+            "global:message",
             (message: string) => {
               this.receivedMessages.push(message);
             },
-            'global'
+            "global"
           );
         }
       }
 
-      const container1 = new Container({ name: 'container1' });
-      const container2 = new Container({ name: 'container2' });
+      const container1 = new Container({ name: "container1" });
+      const container2 = new Container({ name: "container2" });
 
       container1.register(ServiceA);
       container2.register(ServiceB);
@@ -516,10 +520,10 @@ describe('Service 事件方法', () => {
       const serviceA = container1.resolve(ServiceA);
       const serviceB = container2.resolve(ServiceB);
 
-      serviceA.sendGlobalMessage('Hello from container1');
+      serviceA.sendGlobalMessage("Hello from container1");
 
       setTimeout(() => {
-        expect(serviceB.receivedMessages).toEqual(['Hello from container1']);
+        expect(serviceB.receivedMessages).toEqual(["Hello from container1"]);
 
         container1.destroy();
         container2.destroy();
@@ -528,8 +532,182 @@ describe('Service 事件方法', () => {
     });
   });
 
-  describe('类型推导', () => {
-    it('应该支持泛型类型推导', done => {
+  describe("destroy 生命周期", () => {
+    it("应该在 destroy 后清理手动注册的全局监听", () => {
+      const handler = jest.fn();
+
+      class TestService extends Service {
+        constructor(container: Container) {
+          super();
+          this.on("global:destroy", handler, "global");
+        }
+      }
+
+      container.register(TestService);
+      const service = container.resolve(TestService);
+
+      service.emit("global:destroy", { from: "before" }, "global");
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      service.destroy();
+      service.emit("global:destroy", { from: "after" }, "global");
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it("应该在 destroy 后清理手动注册的容器监听", () => {
+      const handler = jest.fn();
+
+      class TestService extends Service {
+        constructor(container: Container) {
+          super();
+          this.on("container:destroy", handler);
+        }
+      }
+
+      container.register(TestService);
+      const service = container.resolve(TestService);
+
+      service.emit("container:destroy", { from: "before" });
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      service.destroy();
+      service.emit("container:destroy", { from: "after" });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it("应该在 destroy 前移除未触发的 once 监听", () => {
+      const handler = jest.fn();
+
+      class TestService extends Service {
+        constructor(container: Container) {
+          super();
+          this.once("once:destroy", handler);
+        }
+      }
+
+      container.register(TestService);
+      const service = container.resolve(TestService);
+
+      service.destroy();
+      service.emit("once:destroy");
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("手动 once 触发后应该自动从 registry 中移除", () => {
+      const handler = jest.fn();
+
+      class TestService extends Service {
+        constructor(container: Container) {
+          super();
+          this.once("once:registry", handler);
+        }
+      }
+
+      container.register(TestService);
+      const service = container.resolve(TestService);
+
+      expect(getTrackedEventListenerRecords(service)).toHaveLength(1);
+
+      service.emit("once:registry");
+      service.emit("once:registry");
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(getTrackedEventListenerRecords(service)).toHaveLength(0);
+
+      expect(() => service.destroy()).not.toThrow();
+      expect(getTrackedEventListenerRecords(service)).toHaveLength(0);
+    });
+
+    it("off(eventName, handler) 只应移除当前 service 的匹配监听", () => {
+      const handlerA = jest.fn();
+      const handlerB = jest.fn();
+
+      class ServiceA extends Service {
+        private readonly trackedHandler = handlerA;
+
+        constructor(container: Container) {
+          super();
+          this.on("shared:event", this.trackedHandler);
+        }
+
+        removeOwnHandler() {
+          this.off("shared:event", this.trackedHandler);
+        }
+      }
+
+      class ServiceB extends Service {
+        constructor(container: Container) {
+          super();
+          this.on("shared:event", handlerB);
+        }
+      }
+
+      container.register(ServiceA);
+      container.register(ServiceB);
+
+      const serviceA = container.resolve(ServiceA);
+      container.resolve(ServiceB);
+
+      serviceA.emit("shared:event", { phase: "before" });
+      expect(handlerA).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(1);
+
+      serviceA.removeOwnHandler();
+      serviceA.emit("shared:event", { phase: "after" });
+
+      expect(handlerA).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(2);
+    });
+
+    it("off(eventName) 不应误删其他 service 的监听", () => {
+      const handlerA1 = jest.fn();
+      const handlerA2 = jest.fn();
+      const handlerB = jest.fn();
+
+      class ServiceA extends Service {
+        constructor(container: Container) {
+          super();
+          this.on("shared:all", handlerA1);
+          this.on("shared:all", handlerA2);
+        }
+
+        removeOwnHandlers() {
+          this.off("shared:all");
+        }
+      }
+
+      class ServiceB extends Service {
+        constructor(container: Container) {
+          super();
+          this.on("shared:all", handlerB);
+        }
+      }
+
+      container.register(ServiceA);
+      container.register(ServiceB);
+
+      const serviceA = container.resolve(ServiceA);
+      container.resolve(ServiceB);
+
+      serviceA.emit("shared:all", { phase: "before" });
+      expect(handlerA1).toHaveBeenCalledTimes(1);
+      expect(handlerA2).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(1);
+
+      serviceA.removeOwnHandlers();
+      serviceA.emit("shared:all", { phase: "after" });
+
+      expect(handlerA1).toHaveBeenCalledTimes(1);
+      expect(handlerA2).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("类型推导", () => {
+    it("应该支持泛型类型推导", (done) => {
       interface UserData {
         id: number;
         name: string;
@@ -541,20 +719,20 @@ describe('Service 事件方法', () => {
         constructor(container: Container) {
           super();
 
-          this.on<UserData>('user:login', user => {
+          this.on<UserData>("user:login", (user) => {
             this.receivedUser = user;
           });
         }
 
         login(user: UserData) {
-          this.emit<UserData>('user:login', user);
+          this.emit<UserData>("user:login", user);
         }
       }
 
       container.register(TestService);
       const service = container.resolve(TestService);
 
-      const user: UserData = { id: 1, name: 'John' };
+      const user: UserData = { id: 1, name: "John" };
       service.login(user);
 
       setTimeout(() => {

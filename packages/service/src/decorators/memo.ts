@@ -1,5 +1,5 @@
-import { observe, unobserve } from '@rabjs/observer';
-import type { Reaction } from '@rabjs/observer';
+import { observe, unobserve } from "@rabjs/observer";
+import type { Reaction } from "@rabjs/observer";
 
 /**
  * Memo 装饰器配置选项
@@ -87,7 +87,9 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
   ): PropertyDescriptor {
     if (!descriptor || !descriptor.get) {
       throw new Error(
-        `@Memo 装饰器只能用于 getter 方法，但 ${String(propertyKey)} 不是一个 getter`
+        `@Memo 装饰器只能用于 getter 方法，但 ${String(
+          propertyKey
+        )} 不是一个 getter`
       );
     }
 
@@ -118,13 +120,6 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
       }
 
       return state;
-    };
-
-    /**
-     * 失效缓存
-     */
-    const invalidateCache = (state: CacheState) => {
-      state.computed = false;
     };
 
     /**
@@ -159,7 +154,7 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
           lazy: false,
           // 当依赖变化时，失效缓存
           scheduler: () => {
-            invalidateCache(state);
+            state.computed = false;
           },
         }
       );
@@ -231,9 +226,12 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
  * }
  * ```
  */
-export function invalidateMemo(instance: any, propertyKey: string | symbol): void {
+export function invalidateMemo(
+  instance: any,
+  propertyKey: string | symbol
+): void {
   const cleanupMethodName = `__cleanup_memo_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === 'function') {
+  if (typeof instance[cleanupMethodName] === "function") {
     instance[cleanupMethodName]();
   }
 }
@@ -263,10 +261,10 @@ export function cleanupAllMemos(instance: any): void {
   const proto = Object.getPrototypeOf(instance);
   const propertyNames = Object.getOwnPropertyNames(proto);
 
-  propertyNames.forEach(propertyName => {
+  for (const propertyName of propertyNames) {
     const cleanupMethodName = `__cleanup_memo_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === 'function') {
+    if (typeof instance[cleanupMethodName] === "function") {
       instance[cleanupMethodName]();
     }
-  });
+  }
 }

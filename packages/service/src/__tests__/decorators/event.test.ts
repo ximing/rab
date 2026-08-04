@@ -1,13 +1,14 @@
-import { Service } from '../../service';
-import { Container } from '../../ioc';
-import { On, Once, cleanupEventListeners } from '../../decorators';
-import { EventSystem } from '../../event';
+import { Service } from "../../service";
+import { Container } from "../../ioc";
+import { On, Once, cleanupEventListeners } from "../../decorators";
+import { EventSystem } from "../../event";
+import { getTrackedEventListenerRecords } from "../../event-listener-registry";
 
-describe('@On 和 @Once 装饰器', () => {
+describe("@On 和 @Once 装饰器", () => {
   let container: Container;
 
   beforeEach(() => {
-    container = new Container({ name: 'test' });
+    container = new Container({ name: "test" });
     EventSystem.clearAllGlobalEvents();
   });
 
@@ -16,12 +17,12 @@ describe('@On 和 @Once 装饰器', () => {
     container.destroy();
   });
 
-  describe('@On 装饰器 - 容器级别事件', () => {
-    it('应该能够监听容器级别的事件', done => {
+  describe("@On 装饰器 - 容器级别事件", () => {
+    it("应该能够监听容器级别的事件", (done) => {
       class UserService extends Service {
         public loginUser: any = null;
 
-        @On('user:login')
+        @On("user:login")
         onUserLogin(user: any) {
           this.loginUser = user;
         }
@@ -30,10 +31,10 @@ describe('@On 和 @Once 装饰器', () => {
       container.register(UserService);
       const userService = container.resolve(UserService);
 
-      const testUser = { id: 1, name: 'John' };
+      const testUser = { id: 1, name: "John" };
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('user:login', testUser);
+      emitter.emit("user:login", testUser);
 
       setTimeout(() => {
         expect(userService.loginUser).toEqual(testUser);
@@ -41,17 +42,17 @@ describe('@On 和 @Once 装饰器', () => {
       }, 10);
     });
 
-    it('应该能够监听多个事件', done => {
+    it("应该能够监听多个事件", (done) => {
       class DataService extends Service {
         public data: any = null;
         public error: any = null;
 
-        @On('data:update')
+        @On("data:update")
         onDataUpdate(data: any) {
           this.data = data;
         }
 
-        @On('data:error')
+        @On("data:error")
         onDataError(error: any) {
           this.error = error;
         }
@@ -62,21 +63,21 @@ describe('@On 和 @Once 装饰器', () => {
 
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('data:update', { id: 1, value: 'test' });
-      emitter.emit('data:error', new Error('Test error'));
+      emitter.emit("data:update", { id: 1, value: "test" });
+      emitter.emit("data:error", new Error("Test error"));
 
       setTimeout(() => {
-        expect(dataService.data).toEqual({ id: 1, value: 'test' });
-        expect(dataService.error).toEqual(new Error('Test error'));
+        expect(dataService.data).toEqual({ id: 1, value: "test" });
+        expect(dataService.error).toEqual(new Error("Test error"));
         done();
       }, 10);
     });
 
-    it('应该能够移除事件监听器', done => {
+    it("应该能够移除事件监听器", (done) => {
       class CounterService extends Service {
         public count = 0;
 
-        @On('counter:increment')
+        @On("counter:increment")
         onIncrement() {
           this.count++;
         }
@@ -87,8 +88,8 @@ describe('@On 和 @Once 装饰器', () => {
 
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('counter:increment');
-      emitter.emit('counter:increment');
+      emitter.emit("counter:increment");
+      emitter.emit("counter:increment");
 
       setTimeout(() => {
         expect(counterService.count).toBe(2);
@@ -96,7 +97,7 @@ describe('@On 和 @Once 装饰器', () => {
         // 移除监听器
         cleanupEventListeners(counterService);
 
-        emitter.emit('counter:increment');
+        emitter.emit("counter:increment");
 
         setTimeout(() => {
           expect(counterService.count).toBe(2); // 不应该增加
@@ -106,12 +107,12 @@ describe('@On 和 @Once 装饰器', () => {
     });
   });
 
-  describe('@On 装饰器 - 全局事件', () => {
-    it('应该能够监听全局事件', done => {
+  describe("@On 装饰器 - 全局事件", () => {
+    it("应该能够监听全局事件", (done) => {
       class GlobalService extends Service {
         public appState: any = null;
 
-        @On('app:initialized', { scope: 'global' })
+        @On("app:initialized", { scope: "global" })
         onAppInitialized(state: any) {
           this.appState = state;
         }
@@ -122,35 +123,35 @@ describe('@On 和 @Once 装饰器', () => {
 
       const globalEmitter = EventSystem.getGlobalEvents();
 
-      globalEmitter.emit('app:initialized', { version: '1.0.0' });
+      globalEmitter.emit("app:initialized", { version: "1.0.0" });
 
       setTimeout(() => {
-        expect(globalService.appState).toEqual({ version: '1.0.0' });
+        expect(globalService.appState).toEqual({ version: "1.0.0" });
         done();
       }, 10);
     });
 
-    it('全局事件应该在所有容器中共享', done => {
+    it("全局事件应该在所有容器中共享", (done) => {
       class Service1 extends Service {
-        public message: string = '';
+        public message: string = "";
 
-        @On('global:message', { scope: 'global' })
+        @On("global:message", { scope: "global" })
         onMessage(msg: string) {
           this.message = msg;
         }
       }
 
       class Service2 extends Service {
-        public message: string = '';
+        public message: string = "";
 
-        @On('global:message', { scope: 'global' })
+        @On("global:message", { scope: "global" })
         onMessage(msg: string) {
           this.message = msg;
         }
       }
 
-      const container1 = new Container({ name: 'container1' });
-      const container2 = new Container({ name: 'container2' });
+      const container1 = new Container({ name: "container1" });
+      const container2 = new Container({ name: "container2" });
 
       container1.register(Service1);
       container2.register(Service2);
@@ -159,22 +160,22 @@ describe('@On 和 @Once 装饰器', () => {
       const service2 = container2.resolve(Service2);
 
       const globalEmitter = EventSystem.getGlobalEvents();
-      globalEmitter.emit('global:message', 'Hello World');
+      globalEmitter.emit("global:message", "Hello World");
 
       setTimeout(() => {
-        expect(service1.message).toBe('Hello World');
-        expect(service2.message).toBe('Hello World');
+        expect(service1.message).toBe("Hello World");
+        expect(service2.message).toBe("Hello World");
         done();
       }, 10);
     });
   });
 
-  describe('@Once 装饰器 - 一次性事件', () => {
-    it('应该只监听一次事件', done => {
+  describe("@Once 装饰器 - 一次性事件", () => {
+    it("应该只监听一次事件", (done) => {
       class OnceService extends Service {
         public count = 0;
 
-        @Once('event:once')
+        @Once("event:once")
         onEventOnce() {
           this.count++;
         }
@@ -185,9 +186,9 @@ describe('@On 和 @Once 装饰器', () => {
 
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('event:once');
-      emitter.emit('event:once');
-      emitter.emit('event:once');
+      emitter.emit("event:once");
+      emitter.emit("event:once");
+      emitter.emit("event:once");
 
       setTimeout(() => {
         expect(onceService.count).toBe(1);
@@ -195,11 +196,11 @@ describe('@On 和 @Once 装饰器', () => {
       }, 10);
     });
 
-    it('应该支持全局一次性事件', done => {
+    it("应该支持全局一次性事件", (done) => {
       class GlobalOnceService extends Service {
         public initialized = false;
 
-        @Once('app:ready', { scope: 'global' })
+        @Once("app:ready", { scope: "global" })
         onAppReady() {
           this.initialized = true;
         }
@@ -210,8 +211,8 @@ describe('@On 和 @Once 装饰器', () => {
 
       const globalEmitter = EventSystem.getGlobalEvents();
 
-      globalEmitter.emit('app:ready');
-      globalEmitter.emit('app:ready');
+      globalEmitter.emit("app:ready");
+      globalEmitter.emit("app:ready");
 
       setTimeout(() => {
         expect(globalOnceService.initialized).toBe(true);
@@ -220,18 +221,18 @@ describe('@On 和 @Once 装饰器', () => {
     });
   });
 
-  describe('混合使用 @On 和 @Once', () => {
-    it('应该能够同时使用 @On 和 @Once', done => {
+  describe("混合使用 @On 和 @Once", () => {
+    it("应该能够同时使用 @On 和 @Once", (done) => {
       class MixedService extends Service {
         public messages: string[] = [];
-        public firstMessage: string = '';
+        public firstMessage: string = "";
 
-        @On('message:send')
+        @On("message:send")
         onMessageSend(msg: string) {
           this.messages.push(msg);
         }
 
-        @Once('message:first')
+        @Once("message:first")
         onFirstMessage(msg: string) {
           this.firstMessage = msg;
         }
@@ -242,25 +243,25 @@ describe('@On 和 @Once 装饰器', () => {
 
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('message:send', 'msg1');
-      emitter.emit('message:first', 'first');
-      emitter.emit('message:send', 'msg2');
-      emitter.emit('message:first', 'second');
+      emitter.emit("message:send", "msg1");
+      emitter.emit("message:first", "first");
+      emitter.emit("message:send", "msg2");
+      emitter.emit("message:first", "second");
 
       setTimeout(() => {
-        expect(mixedService.messages).toEqual(['msg1', 'msg2']);
-        expect(mixedService.firstMessage).toBe('first');
+        expect(mixedService.messages).toEqual(["msg1", "msg2"]);
+        expect(mixedService.firstMessage).toBe("first");
         done();
       }, 10);
     });
   });
 
-  describe('事件监听器的生命周期', () => {
-    it('应该在 Service 初始化时自动绑定监听器', done => {
+  describe("事件监听器的生命周期", () => {
+    it("应该在 Service 初始化时自动绑定监听器", (done) => {
       class AutoBindService extends Service {
         public initialized = false;
 
-        @On('service:init')
+        @On("service:init")
         onInit() {
           this.initialized = true;
         }
@@ -270,7 +271,7 @@ describe('@On 和 @Once 装饰器', () => {
       const autoBindService = container.resolve(AutoBindService);
 
       const emitter = EventSystem.getContainerEvents(container);
-      emitter.emit('service:init');
+      emitter.emit("service:init");
 
       setTimeout(() => {
         expect(autoBindService.initialized).toBe(true);
@@ -278,11 +279,11 @@ describe('@On 和 @Once 装饰器', () => {
       }, 10);
     });
 
-    it('应该能够手动清理事件监听器', done => {
+    it("应该能够手动清理事件监听器", (done) => {
       class CleanupService extends Service {
         public count = 0;
 
-        @On('cleanup:test')
+        @On("cleanup:test")
         onTest() {
           this.count++;
         }
@@ -293,31 +294,78 @@ describe('@On 和 @Once 装饰器', () => {
 
       const emitter = EventSystem.getContainerEvents(container);
 
-      emitter.emit('cleanup:test');
+      emitter.emit("cleanup:test");
       expect(cleanupService.count).toBe(1);
 
       cleanupEventListeners(cleanupService);
 
-      emitter.emit('cleanup:test');
+      emitter.emit("cleanup:test");
       expect(cleanupService.count).toBe(1); // 不应该增加
 
       done();
     });
+
+    it("装饰器 once 触发后应该自动从 registry 中移除", () => {
+      class CleanupOnceService extends Service {
+        public count = 0;
+
+        @Once("cleanup:once")
+        onCleanupOnce() {
+          this.count++;
+        }
+      }
+
+      container.register(CleanupOnceService);
+      const service = container.resolve(CleanupOnceService);
+      const emitter = EventSystem.getContainerEvents(container);
+
+      expect(getTrackedEventListenerRecords(service)).toHaveLength(1);
+
+      emitter.emit("cleanup:once");
+      emitter.emit("cleanup:once");
+
+      expect(service.count).toBe(1);
+      expect(getTrackedEventListenerRecords(service)).toHaveLength(0);
+      expect(() => cleanupEventListeners(service)).not.toThrow();
+    });
+
+    it("destroy 应该清理装饰器注册的全局监听", () => {
+      class GlobalCleanupService extends Service {
+        public count = 0;
+
+        @On("cleanup:global", { scope: "global" })
+        onCleanupGlobal() {
+          this.count++;
+        }
+      }
+
+      container.register(GlobalCleanupService);
+      const service = container.resolve(GlobalCleanupService);
+      const globalEmitter = EventSystem.getGlobalEvents();
+
+      globalEmitter.emit("cleanup:global");
+      expect(service.count).toBe(1);
+
+      service.destroy();
+      globalEmitter.emit("cleanup:global");
+
+      expect(service.count).toBe(1);
+    });
   });
 
-  describe('容器级别事件隔离', () => {
-    it('不同容器的事件应该相互隔离', done => {
+  describe("容器级别事件隔离", () => {
+    it("不同容器的事件应该相互隔离", (done) => {
       class IsolatedService extends Service {
         public count = 0;
 
-        @On('isolated:event')
+        @On("isolated:event")
         onEvent() {
           this.count++;
         }
       }
 
-      const container1 = new Container({ name: 'container1' });
-      const container2 = new Container({ name: 'container2' });
+      const container1 = new Container({ name: "container1" });
+      const container2 = new Container({ name: "container2" });
 
       container1.register(IsolatedService);
       container2.register(IsolatedService);
@@ -328,9 +376,9 @@ describe('@On 和 @Once 装饰器', () => {
       const emitter1 = EventSystem.getContainerEvents(container1);
       const emitter2 = EventSystem.getContainerEvents(container2);
 
-      emitter1.emit('isolated:event');
-      emitter2.emit('isolated:event');
-      emitter2.emit('isolated:event');
+      emitter1.emit("isolated:event");
+      emitter2.emit("isolated:event");
+      emitter2.emit("isolated:event");
 
       setTimeout(() => {
         expect(service1.count).toBe(1);
@@ -340,12 +388,12 @@ describe('@On 和 @Once 装饰器', () => {
     });
   });
 
-  describe('事件参数传递', () => {
-    it('应该能够正确传递事件参数', done => {
+  describe("事件参数传递", () => {
+    it("应该能够正确传递事件参数", (done) => {
       class ParamService extends Service {
         public receivedParams: any[] = [];
 
-        @On('param:test')
+        @On("param:test")
         onParamTest(...params: any[]) {
           this.receivedParams = params;
         }
@@ -355,10 +403,14 @@ describe('@On 和 @Once 装饰器', () => {
       const paramService = container.resolve(ParamService);
 
       const emitter = EventSystem.getContainerEvents(container);
-      emitter.emit('param:test', 'arg1', 42, { key: 'value' });
+      emitter.emit("param:test", "arg1", 42, { key: "value" });
 
       setTimeout(() => {
-        expect(paramService.receivedParams).toEqual(['arg1', 42, { key: 'value' }]);
+        expect(paramService.receivedParams).toEqual([
+          "arg1",
+          42,
+          { key: "value" },
+        ]);
         done();
       }, 10);
     });

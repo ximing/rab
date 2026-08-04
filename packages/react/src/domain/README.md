@@ -17,8 +17,8 @@
 ### 1. 定义服务
 
 ```typescript
-import { Service } from '@rabjs/service';
-import { observable } from '@rabjs/observer';
+import { Service } from "@rabjs/service";
+import { observable } from "@rabjs/observer";
 
 class MainPageService extends Service {
   @observable
@@ -37,7 +37,7 @@ class MainPageService extends Service {
 ### 2. 创建 Domain 组件
 
 ```typescript
-import { createDomain, useService } from '@rabjs/react';
+import { createDomain, useService } from "@rabjs/react";
 
 const MainPageComponent = () => {
   const mainPageService = useService(MainPageService);
@@ -105,7 +105,7 @@ function createDomain<P = any>(
 const { Provider, Component } = createDomain(
   MainPageComponent,
   [{ identifier: MainPageService, factory: MainPageService }],
-  { name: 'MainPage', strict: true }
+  { name: "MainPage", strict: true }
 );
 ```
 
@@ -181,8 +181,8 @@ function useContainerEvents(): EventEmitter;
 **示例:**
 
 ```typescript
-import { useContainerEvents } from '@rabjs/react';
-import { useEffect } from 'react';
+import { useContainerEvents } from "@rabjs/react";
+import { useEffect } from "react";
 
 function UserList() {
   const events = useContainerEvents();
@@ -190,21 +190,21 @@ function UserList() {
   useEffect(() => {
     // 监听事件
     const onUserAdded = (user: User) => {
-      console.log('User added:', user);
+      console.log("User added:", user);
       // 更新 UI 或执行其他操作
     };
 
-    events.on('user:added', onUserAdded);
+    events.on("user:added", onUserAdded);
 
     // 清理监听器
     return () => {
-      events.off('user:added', onUserAdded);
+      events.off("user:added", onUserAdded);
     };
   }, [events]);
 
   const addUser = () => {
     // 发送事件
-    events.emit('user:added', { id: 1, name: 'John' });
+    events.emit("user:added", { id: 1, name: "John" });
   };
 
   return <button onClick={addUser}>Add User</button>;
@@ -273,11 +273,13 @@ const MainPageComponent = () => {
 ```typescript
 class MyService extends Service {
   getValue(): string {
-    return 'value';
+    return "value";
   }
 }
 
-const { Provider } = createDomain(Component, [{ identifier: MyService, factory: MyService }]);
+const { Provider } = createDomain(Component, [
+  { identifier: MyService, factory: MyService },
+]);
 ```
 
 ### 使用工厂函数
@@ -285,9 +287,9 @@ const { Provider } = createDomain(Component, [{ identifier: MyService, factory: 
 ```typescript
 const { Provider } = createDomain(Component, [
   {
-    identifier: 'myService',
-    factory: container => ({
-      getValue: () => 'value',
+    identifier: "myService",
+    factory: (container) => ({
+      getValue: () => "value",
     }),
   },
 ]);
@@ -296,11 +298,11 @@ const { Provider } = createDomain(Component, [
 ### 使用实例
 
 ```typescript
-const instance = { getValue: () => 'value' };
+const instance = { getValue: () => "value" };
 
 const { Provider } = createDomain(Component, [
   {
-    identifier: 'myService',
+    identifier: "myService",
     factory: instance,
   },
 ]);
@@ -341,7 +343,9 @@ const ChildComponent = () => {
 服务实例与 Provider 的生命周期一致。
 
 ```typescript
-const { Provider } = createDomain(Component, [{ identifier: MyService, factory: MyService }]);
+const { Provider } = createDomain(Component, [
+  { identifier: MyService, factory: MyService },
+]);
 
 // 当 Provider 挂载时，创建容器和服务实例
 // 当 Provider 卸载时，销毁容器和服务实例
@@ -376,10 +380,10 @@ const { Provider } = createDomain(
 ## 完整示例
 
 ```typescript
-import React from 'react';
-import { Service } from '@rabjs/service';
-import { observable } from '@rabjs/observer';
-import { createDomain, useService } from '@rabjs/react';
+import React from "react";
+import { Service } from "@rabjs/service";
+import { observable } from "@rabjs/observer";
+import { createDomain, useService } from "@rabjs/react";
 
 // 1. 定义服务
 class CounterService extends Service {
@@ -452,7 +456,7 @@ const { Provider } = createDomain(Component, [
   { identifier: Service1, factory: Service1 },
   {
     identifier: Service2,
-    factory: container => {
+    factory: (container) => {
       const service1 = container.resolve(Service1);
       return new Service2(service1);
     },
@@ -465,19 +469,19 @@ const { Provider } = createDomain(Component, [
 A: 使用 `createDomain` 返回的 `Provider` 包装组件。
 
 ```typescript
-import { render } from '@testing-library/react';
+import { render } from "@testing-library/react";
 
 const { Provider, Component } = createDomain(MyComponent, [
   { identifier: MyService, factory: MyService },
 ]);
 
-test('should render', () => {
+test("should render", () => {
   const { getByText } = render(
     <Provider>
       <Component />
     </Provider>
   );
-  expect(getByText('...')).toBeInTheDocument();
+  expect(getByText("...")).toBeInTheDocument();
 });
 ```
 
@@ -486,7 +490,7 @@ test('should render', () => {
 A: 使用全局容器或通过 props 传递服务实例。
 
 ```typescript
-import { getGlobalContainer } from '@rabjs/service';
+import { getGlobalContainer } from "@rabjs/service";
 
 const globalContainer = getGlobalContainer();
 const service = globalContainer.resolve(MyService);

@@ -1,7 +1,7 @@
-import { observe, observable } from '../main';
+import { observe, observable } from "../main";
 
-describe('debugger', () => {
-  test('should debug get operations', () => {
+describe("debugger", () => {
+  test("should debug get operations", () => {
     let dummy: number;
     const rawCounter = { num: 0 };
     const counter = observable(rawCounter);
@@ -13,32 +13,32 @@ describe('debugger', () => {
     expect(dummy!).toBe(0);
     expect(debugSpy).toHaveBeenCalledTimes(1);
     expect(debugSpy).toHaveBeenCalledWith({
-      type: 'get',
+      type: "get",
       target: rawCounter,
-      key: 'num',
+      key: "num",
       receiver: counter,
     });
   });
 
-  test('should debug has operations', () => {
+  test("should debug has operations", () => {
     let dummy: boolean;
     const rawCounter: Record<string, number> = {};
     const counter = observable(rawCounter);
     const debugSpy = jest.fn();
-    observe(() => (dummy = 'num' in counter), {
+    observe(() => (dummy = "num" in counter), {
       debugger: debugSpy,
     });
 
     expect(dummy!).toBe(false);
     expect(debugSpy).toHaveBeenCalledTimes(1);
     expect(debugSpy).toHaveBeenCalledWith({
-      type: 'has',
+      type: "has",
       target: rawCounter,
-      key: 'num',
+      key: "num",
     });
   });
 
-  test('should debug iteration operations', () => {
+  test("should debug iteration operations", () => {
     let dummy: string;
     const rawCounter = { num: 0 };
     const counter = observable(rawCounter);
@@ -54,16 +54,16 @@ describe('debugger', () => {
       }
     );
 
-    expect(dummy!).toBe('num');
+    expect(dummy!).toBe("num");
     expect(debugSpy).toHaveBeenCalledTimes(1);
     expect(debugSpy).toHaveBeenCalledWith({
-      key: '',
-      type: 'iterate',
+      key: "",
+      type: "iterate",
       target: rawCounter,
     });
   });
 
-  test('should debug add operations', () => {
+  test("should debug add operations", () => {
     let dummy: number | undefined;
     const rawCounter: Record<string, number> = {};
     const counter = observable(rawCounter);
@@ -81,15 +81,15 @@ describe('debugger', () => {
     // called once for the add operation and once for the get operation in the tirggered reaction
     expect(debugSpy).toHaveBeenCalledTimes(2);
     expect(debugSpy).toHaveBeenCalledWith({
-      type: 'add',
+      type: "add",
       target: rawCounter,
-      key: 'num',
+      key: "num",
       value: 12,
       receiver: counter,
     });
   });
 
-  test('should debug set operations', () => {
+  test("should debug set operations", () => {
     let dummy: number;
     const rawCounter = { num: 0 };
     const counter = observable(rawCounter);
@@ -107,16 +107,16 @@ describe('debugger', () => {
     // called once for the add operation and once for the get operation in the tirggered reaction
     expect(debugSpy).toHaveBeenCalledTimes(2);
     expect(debugSpy).toHaveBeenCalledWith({
-      type: 'set',
+      type: "set",
       target: rawCounter,
-      key: 'num',
+      key: "num",
       value: 12,
       oldValue: 0,
       receiver: counter,
     });
   });
 
-  test('should debug delete operations', () => {
+  test("should debug delete operations", () => {
     let dummy: number | undefined;
     const rawCounter = { num: 0 };
     const counter = observable(rawCounter);
@@ -135,24 +135,24 @@ describe('debugger', () => {
     // called once for the add operation and once for the get operation in the tirggered reaction
     expect(debugSpy).toHaveBeenCalledTimes(2);
     expect(debugSpy).toHaveBeenCalledWith({
-      type: 'delete',
+      type: "delete",
       target: rawCounter,
-      key: 'num',
+      key: "num",
       oldValue: 0,
     });
   });
 
-  test('should debug clear operations', () => {
+  test("should debug clear operations", () => {
     let dummy: string | undefined;
     const rawMap = new Map<string, string>();
-    rawMap.set('key', 'value');
+    rawMap.set("key", "value");
     const map = observable(rawMap);
     const debugSpy = jest.fn();
-    observe(() => (dummy = map.get('key')), {
+    observe(() => (dummy = map.get("key")), {
       debugger: debugSpy,
     });
 
-    expect(dummy).toBe('value');
+    expect(dummy).toBe("value");
     expect(debugSpy).toHaveBeenCalledTimes(1);
     const oldMap = new Map(rawMap);
     debugSpy.mockClear();
@@ -162,18 +162,20 @@ describe('debugger', () => {
     // called once for the add operation and once for the get operation in the tirggered reaction
     expect(debugSpy).toHaveBeenCalledTimes(2);
     expect(debugSpy).toHaveBeenCalledWith({
-      key: '',
-      type: 'clear',
+      key: "",
+      type: "clear",
       target: rawMap,
       oldValue: oldMap,
     });
   });
 
-  test('should not cause infinite loops', () => {
+  test("should not cause infinite loops", () => {
     let receiverDummy: number;
     const rawCounter = { num: 0 };
     const counter = observable(rawCounter);
-    const debugSpy = jest.fn(({ receiver }: any) => (receiverDummy = receiver.num));
+    const debugSpy = jest.fn(
+      ({ receiver }: any) => (receiverDummy = receiver.num)
+    );
     observe(() => counter.num, {
       debugger: debugSpy,
     });

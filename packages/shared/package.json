@@ -1,0 +1,54 @@
+{
+  "name": "@rabjs/shared",
+  "version": "9.1.0",
+  "description": "RABjs 共享工具库（断言、路径解析等）",
+  "main": "lib/main.cjs",
+  "module": "lib/main.js",
+  "types": "lib/main.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./lib/main.d.ts",
+      "import": "./lib/main.js",
+      "require": "./lib/main.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsx build.config.ts",
+    "dev": "tsx build.config.ts --watch",
+    "clean": "rm -rf lib build dist coverage",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "shared",
+    "assertion",
+    "utils"
+  ],
+  "author": "ximing",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "esbuild": "^0.19.12",
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "tsconfig": "workspace:*",
+    "tsx": "^4.0.0",
+    "typescript": "^5.1.3"
+  },
+  "files": [
+    "lib/**/*",
+    "build/**/*",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

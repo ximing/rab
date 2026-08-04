@@ -10,14 +10,14 @@
 
 ```typescript
 // 创建根容器
-const root = createContainer('root');
+const root = createContainer("root");
 
 // 创建子容器
-const child = root.createChild('child');
+const child = root.createChild("child");
 
 // 子容器继承父容器的服务
-root.registerInstance('config', { apiUrl: 'http://api.example.com' });
-const config = child.resolve('config'); // 可以访问
+root.registerInstance("config", { apiUrl: "http://api.example.com" });
+const config = child.resolve("config"); // 可以访问
 ```
 
 **特点**：
@@ -33,34 +33,34 @@ const config = child.resolve('config'); // 可以访问
 
 ```typescript
 // 注册类
-container.register('userService', UserService);
+container.register("userService", UserService);
 
 // 注册实例
-container.registerInstance('config', { apiUrl: '...' });
+container.registerInstance("config", { apiUrl: "..." });
 
 // 注册工厂函数
-container.register('userService', c => {
-  const config = c.resolve('config');
+container.register("userService", (c) => {
+  const config = c.resolve("config");
   return new UserService(config);
 });
 
 // 注册瞬时服务
-container.registerTransient('userService', UserService);
+container.registerTransient("userService", UserService);
 ```
 
 ### 3. 实例化管理
 
 ```typescript
 // 单例（默认）- 所有解析返回同一实例
-container.registerSingleton('userService', UserService);
-const s1 = container.resolve('userService');
-const s2 = container.resolve('userService');
+container.registerSingleton("userService", UserService);
+const s1 = container.resolve("userService");
+const s2 = container.resolve("userService");
 console.log(s1 === s2); // true
 
 // 瞬时 - 每次解析创建新实例
-container.registerTransient('userService', UserService);
-const s1 = container.resolve('userService');
-const s2 = container.resolve('userService');
+container.registerTransient("userService", UserService);
+const s1 = container.resolve("userService");
+const s2 = container.resolve("userService");
 console.log(s1 === s2); // false
 ```
 
@@ -69,7 +69,7 @@ console.log(s1 === s2); // false
 ```typescript
 // 注册销毁回调
 container.onDestroy(() => {
-  console.log('Cleaning up...');
+  console.log("Cleaning up...");
 });
 
 // 支持异步清理
@@ -91,18 +91,18 @@ await container.destroy();
 ### 5. 分层检索
 
 ```typescript
-const root = createContainer('root');
-const child = root.createChild('child');
+const root = createContainer("root");
+const child = root.createChild("child");
 
-root.registerInstance('level', 'root');
-child.registerInstance('level', 'child');
+root.registerInstance("level", "root");
+child.registerInstance("level", "child");
 
 // 子容器优先查找自己的服务
-console.log(child.resolve('level')); // 'child'
+console.log(child.resolve("level")); // 'child'
 
 // 如果子容器没有，向上查找
-child.registerInstance('other', 'value');
-console.log(root.resolve('other')); // 抛出错误，root 中没有
+child.registerInstance("other", "value");
+console.log(root.resolve("other")); // 抛出错误，root 中没有
 ```
 
 ## 完整 API
@@ -169,23 +169,23 @@ console.log(root.resolve('other')); // 抛出错误，root 中没有
 ### 基础使用
 
 ```typescript
-import { createContainer } from '@rabjs/service';
+import { createContainer } from "@rabjs/service";
 
 // 创建容器
-const container = createContainer('app');
+const container = createContainer("app");
 
 // 注册服务
 class UserService {
   getUser(id: string) {
-    return { id, name: 'John' };
+    return { id, name: "John" };
   }
 }
 
-container.register('userService', UserService);
+container.register("userService", UserService);
 
 // 解析服务
-const userService = container.resolve<UserService>('userService');
-console.log(userService.getUser('123'));
+const userService = container.resolve<UserService>("userService");
+console.log(userService.getUser("123"));
 
 // 销毁
 await container.destroy();
@@ -205,90 +205,95 @@ class UserService {
   constructor(private db: DatabaseService) {}
   async getUser(id: string) {
     await this.db.connect();
-    return { id, name: 'John' };
+    return { id, name: "John" };
   }
 }
 
 // 注册依赖
-container.registerInstance('config', { dbUrl: 'localhost:5432' });
-container.register('database', DatabaseService);
-container.register('userService', UserService);
+container.registerInstance("config", { dbUrl: "localhost:5432" });
+container.register("database", DatabaseService);
+container.register("userService", UserService);
 
 // 自动注入
-const userService = container.resolve<UserService>('userService');
+const userService = container.resolve<UserService>("userService");
 ```
 
 ### 模块化应用
 
 ```typescript
 // 应用级容器
-const appContainer = createContainer('app');
-appContainer.registerInstance('appName', 'MyApp');
+const appContainer = createContainer("app");
+appContainer.registerInstance("appName", "MyApp");
 
 // 用户模块
-const userModule = appContainer.createChild('user-module');
-userModule.register('userService', UserService);
+const userModule = appContainer.createChild("user-module");
+userModule.register("userService", UserService);
 
 // 订单模块
-const orderModule = appContainer.createChild('order-module');
-orderModule.register('orderService', OrderService);
+const orderModule = appContainer.createChild("order-module");
+orderModule.register("orderService", OrderService);
 
 // 各模块可访问全局配置
-const appName = userModule.resolve('appName');
+const appName = userModule.resolve("appName");
 ```
 
 ### React 集成
 
 ```typescript
-import { createContext, useContext } from 'react';
-import { Container, createContainer } from '@rabjs/service';
+import { createContext, useContext } from "react";
+import { Container, createContainer } from "@rabjs/service";
 
 // 创建容器上下文
 const ContainerContext = createContext<Container | null>(null);
 
 // 提供者
 export function ContainerProvider({ children }) {
-  const container = createContainer('app');
-  container.register('userService', UserService);
+  const container = createContainer("app");
+  container.register("userService", UserService);
 
-  return <ContainerContext.Provider value={container}>{children}</ContainerContext.Provider>;
+  return (
+    <ContainerContext.Provider value={container}>
+      {children}
+    </ContainerContext.Provider>
+  );
 }
 
 // Hook
 export function useContainer(): Container {
   const container = useContext(ContainerContext);
-  if (!container) throw new Error('useContainer must be used within ContainerProvider');
+  if (!container)
+    throw new Error("useContainer must be used within ContainerProvider");
   return container;
 }
 
 // 使用
 function UserComponent() {
   const container = useContainer();
-  const userService = container.resolve<UserService>('userService');
-  return <div>{userService.getUser('123').name}</div>;
+  const userService = container.resolve<UserService>("userService");
+  return <div>{userService.getUser("123").name}</div>;
 }
 ```
 
 ### 测试
 
 ```typescript
-describe('UserService', () => {
+describe("UserService", () => {
   let container: Container;
 
   beforeEach(() => {
-    container = createContainer('test');
-    container.registerInstance('config', { apiUrl: 'http://test-api' });
-    container.register('userService', UserService);
+    container = createContainer("test");
+    container.registerInstance("config", { apiUrl: "http://test-api" });
+    container.register("userService", UserService);
   });
 
   afterEach(async () => {
     await container.destroy();
   });
 
-  test('should fetch user', async () => {
-    const userService = container.resolve<UserService>('userService');
-    const user = await userService.getUser('123');
-    expect(user.id).toBe('123');
+  test("should fetch user", async () => {
+    const userService = container.resolve<UserService>("userService");
+    const user = await userService.getUser("123");
+    expect(user.id).toBe("123");
   });
 });
 ```
@@ -296,19 +301,23 @@ describe('UserService', () => {
 ### 全局容器注册表
 
 ```typescript
-import { Container, createContainer, clearGlobalContainerRegistry } from '@rabjs/service';
+import {
+  Container,
+  createContainer,
+  clearGlobalContainerRegistry,
+} from "@rabjs/service";
 
 // 创建容器时自动注册到全局注册表
-const appContainer = createContainer('app');
-const userModule = createContainer('user-module');
+const appContainer = createContainer("app");
+const userModule = createContainer("user-module");
 
 // 通过名称快速获取容器
-const retrieved = Container.getByName('app');
+const retrieved = Container.getByName("app");
 console.log(retrieved === appContainer); // true
 
 // 检查容器名称是否已注册
-if (Container.hasName('app')) {
-  console.log('App container exists');
+if (Container.hasName("app")) {
+  console.log("App container exists");
 }
 
 // 获取所有容器名称
@@ -324,7 +333,7 @@ console.log(Container.getRegistrySize()); // 2
 
 // 销毁容器时自动从注册表中移除
 await appContainer.destroy();
-console.log(Container.hasName('app')); // false
+console.log(Container.hasName("app")); // false
 
 // 清空所有容器（通常用于测试）
 await clearGlobalContainerRegistry();
@@ -334,8 +343,8 @@ console.log(Container.getRegistrySize()); // 0
 **注意**：容器名称必须全局唯一，创建同名容器会抛出错误：
 
 ```typescript
-createContainer('app');
-createContainer('app'); // 抛出错误：Container name "app" is already registered
+createContainer("app");
+createContainer("app"); // 抛出错误：Container name "app" is already registered
 ```
 
 ## 最佳实践
@@ -343,7 +352,7 @@ createContainer('app'); // 抛出错误：Container name "app" is already regist
 1. **使用类型参数**
 
    ```typescript
-   const service = container.resolve<UserService>('userService');
+   const service = container.resolve<UserService>("userService");
    ```
 
 2. **合理选择作用域**
@@ -364,7 +373,7 @@ createContainer('app'); // 抛出错误：Container name "app" is already regist
 5. **使用有意义的名称**
 
    ```typescript
-   const container = createContainer('user-service-container');
+   const container = createContainer("user-service-container");
    ```
 
 6. **利用容器路径调试**
@@ -385,7 +394,7 @@ createContainer('app'); // 抛出错误：Container name "app" is already regist
 A: 工厂函数接收容器作为参数：
 
 ```typescript
-container.register('service', c => new Service(c.resolve('config')));
+container.register("service", (c) => new Service(c.resolve("config")));
 ```
 
 **Q: 子容器销毁会影响父容器吗？**
@@ -398,7 +407,7 @@ A: 应该避免设计循环依赖。如必要，可使用工厂函数延迟解�
 A: 支持。在工厂函数中返回 Promise：
 
 ```typescript
-container.register('service', async c => {
+container.register("service", async (c) => {
   await initialize();
   return new Service();
 });

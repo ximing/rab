@@ -1,4 +1,4 @@
-import { observable, isObservable, observe } from '../../main';
+import { observable, isObservable, observe } from "../../main";
 
 const TypedArrays = [
   Int8Array,
@@ -12,7 +12,7 @@ const TypedArrays = [
   Float64Array,
 ];
 
-describe('typed arrays', () => {
+describe("typed arrays", () => {
   for (const TypedArray of TypedArrays) {
     test(`${TypedArray.name} should observe mutations`, () => {
       let dummy: number;

@@ -2,10 +2,10 @@
  * useObserver Hook 演示页面
  * 展示如何使用 useObserver 在函数组件中追踪 observable 变化
  */
-import { useObserver } from '@rabjs/react';
-import { Button, Card, Space, Typography, Alert } from 'antd';
+import { useObserver } from "@rabjs/react";
+import { Button, Card, Space, Typography, Alert } from "antd";
 
-import { counterStore } from './CounterStore.js';
+import { counterStore } from "./CounterStore.js";
 
 const { Title, Paragraph } = Typography;
 
@@ -14,7 +14,7 @@ function CounterWithHook() {
   // useObserver 接收一个渲染函数，返回渲染结果
   return useObserver(() => (
     <Card title="使用 useObserver Hook">
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <div>
           <strong>计数:</strong> {counterStore.count}
         </div>
@@ -25,7 +25,9 @@ function CounterWithHook() {
           <Button type="primary" onClick={() => counterStore.increment()}>
             +{counterStore.step}
           </Button>
-          <Button onClick={() => counterStore.decrement()}>-{counterStore.step}</Button>
+          <Button onClick={() => counterStore.decrement()}>
+            -{counterStore.step}
+          </Button>
         </Space>
       </Space>
     </Card>
@@ -46,7 +48,11 @@ function PartialReactiveComponent() {
 
   // 只有这部分是响应式的
   const reactiveContent = useObserver(() => (
-    <Alert message="响应式内容" description={`当前计数: ${counterStore.count}`} type="success" />
+    <Alert
+      message="响应式内容"
+      description={`当前计数: ${counterStore.count}`}
+      type="success"
+    />
   ));
 
   return (
@@ -54,8 +60,8 @@ function PartialReactiveComponent() {
       {staticContent}
       {reactiveContent}
       <Paragraph type="secondary" style={{ marginTop: 16 }}>
-        这个组件展示了如何只让部分 UI 成为响应式的。 只有 useObserver 包裹的部分会在 store
-        变化时重新渲染。
+        这个组件展示了如何只让部分 UI 成为响应式的。 只有 useObserver
+        包裹的部分会在 store 变化时重新渲染。
       </Paragraph>
     </Card>
   );
@@ -66,16 +72,16 @@ export default function UseObserverDemo() {
     <div>
       <Title level={2}>useObserver Hook 演示</Title>
       <Paragraph>
-        <code>useObserver</code> 是一个 Hook，用于在函数组件中追踪 observable 的变化。 它比{' '}
-        <code>observer</code> HOC 更灵活，可以实现部分响应式渲染。
+        <code>useObserver</code> 是一个 Hook，用于在函数组件中追踪 observable
+        的变化。 它比 <code>observer</code> HOC 更灵活，可以实现部分响应式渲染。
       </Paragraph>
 
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <CounterWithHook />
         <PartialReactiveComponent />
 
         <Card title="代码示例">
-          <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 4 }}>
+          <pre style={{ background: "#f5f5f5", padding: 16, borderRadius: 4 }}>
             {`import { useObserver } from '@rabjs/react';
 
 function Counter() {

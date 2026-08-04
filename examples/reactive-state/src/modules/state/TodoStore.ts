@@ -10,24 +10,27 @@ export interface Todo {
 export function createTodoStore() {
   return {
     todos: [] as Todo[],
-    filter: 'all' as 'all' | 'active' | 'completed',
+    filter: "all" as "all" | "active" | "completed",
 
     get filteredTodos() {
       switch (this.filter) {
-        case 'active':
-          return this.todos.filter(t => !t.completed);
-        case 'completed':
-          return this.todos.filter(t => t.completed);
-        default:
+        case "active": {
+          return this.todos.filter((t) => !t.completed);
+        }
+        case "completed": {
+          return this.todos.filter((t) => t.completed);
+        }
+        default: {
           return this.todos;
+        }
       }
     },
 
     get stats() {
       return {
         total: this.todos.length,
-        active: this.todos.filter(t => !t.completed).length,
-        completed: this.todos.filter(t => t.completed).length,
+        active: this.todos.filter((t) => !t.completed).length,
+        completed: this.todos.filter((t) => t.completed).length,
       };
     },
 
@@ -40,25 +43,25 @@ export function createTodoStore() {
     },
 
     toggleTodo(id: number) {
-      const todo = this.todos.find(t => t.id === id);
+      const todo = this.todos.find((t) => t.id === id);
       if (todo) {
         todo.completed = !todo.completed;
       }
     },
 
     removeTodo(id: number) {
-      const index = this.todos.findIndex(t => t.id === id);
+      const index = this.todos.findIndex((t) => t.id === id);
       if (index !== -1) {
         this.todos.splice(index, 1);
       }
     },
 
-    setFilter(filter: 'all' | 'active' | 'completed') {
+    setFilter(filter: "all" | "active" | "completed") {
       this.filter = filter;
     },
 
     clearCompleted() {
-      this.todos = this.todos.filter(t => !t.completed);
+      this.todos = this.todos.filter((t) => !t.completed);
     },
   };
 }

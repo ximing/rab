@@ -1,5 +1,5 @@
-import { Container, ServiceIdentifier } from '../ioc';
-import { Service } from '../service';
+import { Container, ServiceIdentifier } from "../ioc";
+import { Service } from "../service";
 
 /**
  * Inject 装饰器选项
@@ -49,7 +49,7 @@ export function Inject<T extends Service = Service>(
     descriptor?: PropertyDescriptor
   ): PropertyDescriptor {
     if (!propertyKey) {
-      throw new Error('Inject decorator must be used on a property');
+      throw new Error("Inject decorator must be used on a property");
     }
 
     // 在类的原型上存储注入元数据
@@ -65,7 +65,8 @@ export function Inject<T extends Service = Service>(
     let cachedValue: T | undefined;
     let isInitialized = false;
 
-    // 返回描述符对象，兼容 TypeScript experimentalDecorators 和 Babel legacy 模式
+    // ✅ 正确做法：返回描述符对象，而不是调用 Object.defineProperty
+    // 这样既能兼容 TypeScript experimentalDecorators，也能兼容 Babel legacy 模式
     return {
       get(this: Service): T {
         // 如果已经初始化过，直接返回缓存的值
@@ -77,7 +78,9 @@ export function Inject<T extends Service = Service>(
         const container = Container.getContainerOf(this);
         if (!container) {
           throw new Error(
-            `Cannot resolve dependency for property "${String(propertyKey)}". ` +
+            `Cannot resolve dependency for property "${String(
+              propertyKey
+            )}". ` +
               `Service instance is not associated with any container. ` +
               `Make sure the service is resolved from a container.`
           );
@@ -87,7 +90,7 @@ export function Inject<T extends Service = Service>(
         try {
           // 使用类型断言，因为 identifier 可能是类、字符串或 Symbol
           cachedValue = (
-            typeof identifier === 'function'
+            typeof identifier === "function"
               ? container.resolve(identifier as new (...args: any[]) => T)
               : container.resolve<T>(identifier as string | symbol)
           ) as T;
@@ -95,8 +98,12 @@ export function Inject<T extends Service = Service>(
           return cachedValue;
         } catch (error) {
           throw new Error(
-            `Failed to inject dependency for property "${String(propertyKey)}" ` +
-              `with identifier "${String(identifier)}" from container "${container.getName()}". ` +
+            `Failed to inject dependency for property "${String(
+              propertyKey
+            )}" ` +
+              `with identifier "${String(
+                identifier
+              )}" from container "${container.getName()}". ` +
               `Error: ${error instanceof Error ? error.message : String(error)}`
           );
         }

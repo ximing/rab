@@ -3,22 +3,22 @@
  * 测试 @SyncAction 装饰器排除方法的 action 批量更新功能
  */
 
-import { Service } from '../service';
-import { SyncAction } from '../decorators';
-import { configure, resetGlobalConfig, observe } from '@rabjs/observer';
+import { Service } from "../service";
+import { SyncAction } from "../decorators";
+import { configure, resetGlobalConfig, observe } from "@rabjs/observer";
 
-describe('Service @SyncAction Decorator', () => {
+describe("Service @SyncAction Decorator", () => {
   beforeEach(() => {
     // 重置全局配置
     resetGlobalConfig();
   });
 
-  describe('@SyncAction 装饰器', () => {
-    it('应该能够使用 @SyncAction 装饰器标记方法', () => {
+  describe("@SyncAction 装饰器", () => {
+    it("应该能够使用 @SyncAction 装饰器标记方法", () => {
       class TestService extends Service {
         @SyncAction
         async fetchData() {
-          return 'data';
+          return "data";
         }
       }
 
@@ -27,11 +27,11 @@ describe('Service @SyncAction Decorator', () => {
       expect(service.$model.fetchData.loading).toBe(false);
     });
 
-    it('应该正确标记 @SyncAction 方法', () => {
+    it("应该正确标记 @SyncAction 方法", () => {
       class TestService extends Service {
         @SyncAction
         async fetchData() {
-          return 'data';
+          return "data";
         }
       }
 
@@ -40,7 +40,7 @@ describe('Service @SyncAction Decorator', () => {
       expect((prototype.fetchData as any).__isNoAction).toBe(true);
     });
 
-    it('@SyncAction 方法仍然应该管理状态，但不使用 scheduler', async () => {
+    it("@SyncAction 方法仍然应该管理状态，但不使用 scheduler", async () => {
       const batchedUpdates = jest.fn((callback: () => void) => callback());
 
       configure({
@@ -50,8 +50,8 @@ describe('Service @SyncAction Decorator', () => {
       class TestService extends Service {
         @SyncAction
         async fetchData() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return 'data';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return "data";
         }
       }
 
@@ -71,7 +71,7 @@ describe('Service @SyncAction Decorator', () => {
       expect(reactions.length).toBeGreaterThan(1);
     });
 
-    it('普通方法应该通过 scheduler 处理状态更新', async () => {
+    it("普通方法应该通过 scheduler 处理状态更新", async () => {
       const batchedUpdates = jest.fn((callback: () => void) => callback());
 
       configure({
@@ -80,8 +80,8 @@ describe('Service @SyncAction Decorator', () => {
 
       class TestService extends Service {
         async fetchData() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return 'data';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return "data";
         }
       }
 
@@ -101,17 +101,17 @@ describe('Service @SyncAction Decorator', () => {
       expect(reactions.length).toBeGreaterThan(1);
     });
 
-    it('混合使用 @SyncAction 和普通方法', async () => {
+    it("混合使用 @SyncAction 和普通方法", async () => {
       class TestService extends Service {
         @SyncAction
         async fetchDataNoAction() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return 'data';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return "data";
         }
 
         async fetchDataWithAction() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return 'data';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return "data";
         }
       }
 
@@ -142,12 +142,12 @@ describe('Service @SyncAction Decorator', () => {
       expect(service.$model.fetchDataWithAction.loading).toBe(false);
     });
 
-    it('@SyncAction 方法仍然应该管理 loading 和 error 状态', async () => {
+    it("@SyncAction 方法仍然应该管理 loading 和 error 状态", async () => {
       class TestService extends Service {
         @SyncAction
         async fetchData() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return 'data';
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return "data";
         }
       }
 
@@ -160,17 +160,17 @@ describe('Service @SyncAction Decorator', () => {
       expect(service.$model.fetchData.loading).toBe(true);
 
       const result = await promise;
-      expect(result).toBe('data');
+      expect(result).toBe("data");
       expect(service.$model.fetchData.loading).toBe(false);
       expect(service.$model.fetchData.error).toBe(null);
     });
 
-    it('@SyncAction 方法在出错时应该设置 error 状态', async () => {
+    it("@SyncAction 方法在出错时应该设置 error 状态", async () => {
       class TestService extends Service {
         @SyncAction
         async fetchData() {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          throw new Error('fetch failed');
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          throw new Error("fetch failed");
         }
       }
 
@@ -184,7 +184,7 @@ describe('Service @SyncAction Decorator', () => {
 
       expect(service.$model.fetchData.loading).toBe(false);
       expect(service.$model.fetchData.error).toBeInstanceOf(Error);
-      expect(service.$model.fetchData.error?.message).toBe('fetch failed');
+      expect(service.$model.fetchData.error?.message).toBe("fetch failed");
     });
   });
 });

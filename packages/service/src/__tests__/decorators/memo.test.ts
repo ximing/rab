@@ -2,12 +2,12 @@
  * Memo 装饰器测试
  */
 
-import { Service } from '../../service';
-import { Memo, invalidateMemo, cleanupAllMemos } from '../../decorators/memo';
+import { Service } from "../../service";
+import { Memo, invalidateMemo, cleanupAllMemos } from "../../decorators/memo";
 
-describe('@Memo 装饰器', () => {
-  describe('基础功能', () => {
-    it('应该缓存 getter 的计算结果', () => {
+describe("@Memo 装饰器", () => {
+  describe("基础功能", () => {
+    it("应该缓存 getter 的计算结果", () => {
       let computeCount = 0;
 
       class TestService extends Service {
@@ -35,7 +35,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount).toBe(1);
     });
 
-    it('应该在依赖变化时重新计算', () => {
+    it("应该在依赖变化时重新计算", () => {
       let computeCount = 0;
 
       class TestService extends Service {
@@ -66,7 +66,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount).toBe(2);
     });
 
-    it('应该支持多个依赖', () => {
+    it("应该支持多个依赖", () => {
       let computeCount = 0;
 
       class TestService extends Service {
@@ -96,13 +96,13 @@ describe('@Memo 装饰器', () => {
       expect(computeCount).toBe(3);
     });
 
-    it('应该支持复杂对象依赖', () => {
+    it("应该支持复杂对象依赖", () => {
       let computeCount = 0;
 
       class TestService extends Service {
         users = [
-          { id: 1, name: 'Alice', age: 25 },
-          { id: 2, name: 'Bob', age: 30 },
+          { id: 1, name: "Alice", age: 25 },
+          { id: 2, name: "Bob", age: 30 },
         ];
 
         @Memo()
@@ -118,7 +118,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount).toBe(1);
 
       // 修改数组
-      service.users.push({ id: 3, name: 'Charlie', age: 35 });
+      service.users.push({ id: 3, name: "Charlie", age: 35 });
       expect(service.totalAge).toBe(90);
       expect(computeCount).toBe(2);
 
@@ -129,8 +129,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('多个实例独立缓存', () => {
-    it('不同实例应该有独立的缓存', () => {
+  describe("多个实例独立缓存", () => {
+    it("不同实例应该有独立的缓存", () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -169,8 +169,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('多个 Memo getter', () => {
-    it('应该支持多个 @Memo getter', () => {
+  describe("多个 Memo getter", () => {
+    it("应该支持多个 @Memo getter", () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -213,8 +213,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('链式依赖', () => {
-    it('应该支持 getter 依赖原始响应式数据', () => {
+  describe("链式依赖", () => {
+    it("应该支持 getter 依赖原始响应式数据", () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -259,7 +259,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount2).toBe(2);
     });
 
-    it('memo getter 可以依赖另一个 memo getter，但需要注意缓存行为', () => {
+    it("memo getter 可以依赖另一个 memo getter，但需要注意缓存行为", () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -295,7 +295,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount1).toBe(2);
 
       // 然后手动失效 quadrupled 的缓存
-      invalidateMemo(service, 'quadrupled');
+      invalidateMemo(service, "quadrupled");
 
       // 现在访问 quadrupled 会得到正确的值
       expect(service.quadrupled).toBe(80);
@@ -303,8 +303,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('错误处理', () => {
-    it('应该抛出错误如果不是用于 getter', () => {
+  describe("错误处理", () => {
+    it("应该抛出错误如果不是用于 getter", () => {
       expect(() => {
         class TestService extends Service {
           // @ts-expect-error - 故意测试错误情况
@@ -312,17 +312,17 @@ describe('@Memo 装饰器', () => {
           notAGetter = 10;
         }
         new TestService();
-      }).toThrow('@Memo 装饰器只能用于 getter 方法');
+      }).toThrow("@Memo 装饰器只能用于 getter 方法");
     });
 
-    it('应该正确处理 getter 中的错误', () => {
+    it("应该正确处理 getter 中的错误", () => {
       class TestService extends Service {
         shouldThrow = true;
 
         @Memo()
         get computed() {
           if (this.shouldThrow) {
-            throw new Error('计算错误');
+            throw new Error("计算错误");
           }
           return 42;
         }
@@ -331,7 +331,7 @@ describe('@Memo 装饰器', () => {
       const service = new TestService();
 
       // 第一次访问应该抛出错误
-      expect(() => service.computed).toThrow('计算错误');
+      expect(() => service.computed).toThrow("计算错误");
 
       // 修复错误条件
       service.shouldThrow = false;
@@ -341,8 +341,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('手动失效缓存', () => {
-    it('应该支持手动失效缓存', () => {
+  describe("手动失效缓存", () => {
+    it("应该支持手动失效缓存", () => {
       let computeCount = 0;
 
       class TestService extends Service {
@@ -361,7 +361,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount).toBe(1);
 
       // 手动失效缓存
-      invalidateMemo(service, 'computed');
+      invalidateMemo(service, "computed");
 
       // 再次访问应该重新计算
       expect(service.computed).toBe(20);
@@ -369,8 +369,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('清理所有缓存', () => {
-    it('应该清理实例上所有 Memo 缓存', () => {
+  describe("清理所有缓存", () => {
+    it("应该清理实例上所有 Memo 缓存", () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -408,8 +408,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('与 observable 数组的集成', () => {
-    it('应该正确追踪 observable 数组的变化', () => {
+  describe("与 observable 数组的集成", () => {
+    it("应该正确追踪 observable 数组的变化", () => {
       let computeCount = 0;
 
       class TestService extends Service {
@@ -444,8 +444,8 @@ describe('@Memo 装饰器', () => {
     });
   });
 
-  describe('性能测试', () => {
-    it('缓存应该显著减少计算次数', () => {
+  describe("性能测试", () => {
+    it("缓存应该显著减少计算次数", () => {
       let computeCount = 0;
 
       class TestService extends Service {

@@ -47,7 +47,10 @@ export interface ThrottleOptions {
  * }
  * ```
  */
-export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>): MethodDecorator {
+export function Throttle(
+  wait: number,
+  options?: Omit<ThrottleOptions, "wait">
+): MethodDecorator {
   return function (
     target: any,
     propertyKey: string | symbol,
@@ -55,8 +58,10 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    if (typeof originalMethod !== 'function') {
-      throw new Error(`@Throttle 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`);
+    if (typeof originalMethod !== "function") {
+      throw new TypeError(
+        `@Throttle 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`
+      );
     }
 
     const leading = options?.leading ?? true;
@@ -81,6 +86,34 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       result = undefined;
     };
 
+    // 执行函数
+    const invokeFunc = () => {
+      lastInvokeTime = Date.now();
+      result = originalMethod.apply(lastThis, lastArgs);
+      return result;
+    };
+
+    // 取消定时器
+    const cancelTimer = () => {
+      if (timerId !== null) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    // 设置 trailing 定时器
+    const startTimer = () => {
+      cancelTimer();
+      if (trailing) {
+        timerId = setTimeout(() => {
+          timerId = null;
+          if (Date.now() - lastInvokeTime >= wait) {
+            invokeFunc();
+          }
+        }, wait);
+      }
+    };
+
     descriptor.value = function (this: any, ...args: any[]) {
       const now = Date.now();
       const timeSinceLastInvoke = now - lastInvokeTime;
@@ -88,34 +121,6 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
 
       lastArgs = args;
       lastThis = this;
-
-      // 执行函数
-      const invokeFunc = () => {
-        lastInvokeTime = Date.now();
-        result = originalMethod.apply(lastThis, lastArgs);
-        return result;
-      };
-
-      // 取消定时器
-      const cancelTimer = () => {
-        if (timerId !== null) {
-          clearTimeout(timerId);
-          timerId = null;
-        }
-      };
-
-      // 设置 trailing 定时器
-      const startTimer = () => {
-        cancelTimer();
-        if (trailing) {
-          timerId = setTimeout(() => {
-            timerId = null;
-            if (Date.now() - lastInvokeTime >= wait) {
-              invokeFunc();
-            }
-          }, wait);
-        }
-      };
 
       // 首次调用
       if (isFirstCall) {
@@ -174,9 +179,12 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
  * }
  * ```
  */
-export function cancelThrottle(instance: any, propertyKey: string | symbol): void {
+export function cancelThrottle(
+  instance: any,
+  propertyKey: string | symbol
+): void {
   const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === 'function') {
+  if (typeof instance[cleanupMethodName] === "function") {
     instance[cleanupMethodName]();
   }
 }
@@ -210,10 +218,10 @@ export function cleanupAllThrottles(instance: any): void {
   const proto = Object.getPrototypeOf(instance);
   const propertyNames = Object.getOwnPropertyNames(proto);
 
-  propertyNames.forEach(propertyName => {
+  for (const propertyName of propertyNames) {
     const cleanupMethodName = `__cleanup_throttle_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === 'function') {
+    if (typeof instance[cleanupMethodName] === "function") {
       instance[cleanupMethodName]();
     }
-  });
+  }
 }

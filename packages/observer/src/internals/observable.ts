@@ -1,16 +1,25 @@
-import { baseProxyHandler } from './handlers/baseProxyHandler';
+import { baseProxyHandler } from "./handlers/base-proxy-handler";
 import {
   createCollectionProxyHandlers,
   getHandlers,
   shouldInstrument,
-} from './handlers/collectionHandler';
-import { proxyToRaw, rawToOptions, rawToProxy } from './proxyRawMap';
-import { storeObservable } from './reactionTrack';
-import type { ObservableOptions, ProxyHandlers } from './types';
+} from "./handlers/collection-handler";
+import { proxyToRaw, rawToOptions, rawToProxy } from "./proxy-raw-map";
+import { storeObservable } from "./reaction-track";
+import type { ObservableOptions, ProxyHandlers } from "./types";
 
-export function observable<T extends object>(obj: T, options?: ObservableOptions): T;
-export function observable<T extends object>(obj?: T, options?: ObservableOptions): T | object;
-export function observable<T extends object>(obj: T = {} as T, options?: ObservableOptions): T {
+export function observable<T extends object>(
+  obj: T,
+  options?: ObservableOptions
+): T;
+export function observable<T extends object>(
+  obj?: T,
+  options?: ObservableOptions
+): T | object;
+export function observable<T extends object>(
+  obj: T = {} as T,
+  options?: ObservableOptions
+): T {
   // if it is already an observable or it should not be wrapped, return it
   if (proxyToRaw.has(obj) || !shouldInstrument(obj)) {
     return obj;
@@ -20,7 +29,10 @@ export function observable<T extends object>(obj: T = {} as T, options?: Observa
   return (rawToProxy.get(obj) as T) || createObservable(obj, options);
 }
 
-export function createObservable<T extends object>(obj: T, options?: ObservableOptions): T {
+export function createObservable<T extends object>(
+  obj: T,
+  options?: ObservableOptions
+): T {
   // Merge handlers, with custom handlers taking precedence
   const handlers = getHandlers(obj) || baseProxyHandler;
   const mergedHandlers: ProxyHandlers = { ...(handlers as ProxyHandlers) };
@@ -33,7 +45,10 @@ export function createObservable<T extends object>(obj: T, options?: ObservableO
   // For collection handlers, we need to wrap them in a special get handler
   // that properly delegates to the collection handlers object
   if (options?.collectionHandlers) {
-    Object.assign(mergedHandlers, createCollectionProxyHandlers(options.collectionHandlers));
+    Object.assign(
+      mergedHandlers,
+      createCollectionProxyHandlers(options.collectionHandlers)
+    );
   }
 
   const observableProxy = new Proxy(obj, mergedHandlers as ProxyHandler<T>);

@@ -1,13 +1,13 @@
-import EventEmitter from 'eventemitter3';
+import EventEmitter from "eventemitter3";
 
-import { Container, getGlobalContainer } from './ioc';
+import { Container, getGlobalContainer } from "./ioc";
 
 /**
  * 事件作用域类型
  * - 'global': 全局事件，使用全局容器的事件系统
  * - 'container': 容器级别事件，使用当前容器的事件系统
  */
-export type EventScope = 'global' | 'container';
+export type EventScope = "global" | "container";
 
 /**
  * 事件系统配置选项
@@ -51,16 +51,16 @@ export interface EventSystemOptions {
  * containerEvents.emit('data:update', { id: 1, value: 'new' });
  * ```
  */
-export class EventSystem {
+export const EventSystem = {
   /**
    * 获取全局事件发射器
    * 使用全局容器的事件系统
    *
    * @returns 全局事件发射器实例
    */
-  static getGlobalEvents(): EventEmitter {
+  getGlobalEvents(): EventEmitter {
     return getGlobalContainer().events;
-  }
+  },
 
   /**
    * 获取容器级别的事件发射器
@@ -69,9 +69,9 @@ export class EventSystem {
    * @param container 容器实例
    * @returns 容器级别的事件发射器实例
    */
-  static getContainerEvents(container: Container): EventEmitter {
+  getContainerEvents(container: Container): EventEmitter {
     return container.events;
-  }
+  },
 
   /**
    * 根据作用域获取对应的事件发射器
@@ -80,27 +80,27 @@ export class EventSystem {
    * @param container 容器实例（当 scope 为 'container' 时必需）
    * @returns 对应的事件发射器实例
    */
-  static getEmitter(scope: EventScope, container?: Container): EventEmitter {
-    if (scope === 'global') {
+  getEmitter(scope: EventScope, container?: Container): EventEmitter {
+    if (scope === "global") {
       return this.getGlobalEvents();
     }
 
     if (!container) {
       throw new Error(
         'Container is required when using "container" scope. ' +
-          'Make sure the service is resolved from a container.'
+          "Make sure the service is resolved from a container."
       );
     }
 
     return this.getContainerEvents(container);
-  }
+  },
 
   /**
    * 清理所有全局事件
    * 清理全局容器的事件监听器
    * 通常在应用关闭时调用
    */
-  static clearAllGlobalEvents(): void {
+  clearAllGlobalEvents(): void {
     getGlobalContainer().events.removeAllListeners();
-  }
-}
+  },
+};

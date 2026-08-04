@@ -12,9 +12,9 @@ Container 的 `resolve` 和 `tryResolve` 方法现在支持智能类型推导，
 ### resolve 方法
 
 ```typescript
-import { Container, createContainer } from '@rabjs/service';
+import { Container, createContainer } from "@rabjs/service";
 
-const container = createContainer('app');
+const container = createContainer("app");
 
 // ✅ 方式 1: 使用类作为标识符 - 自动类型推导
 container.register(UserService);
@@ -23,12 +23,12 @@ const userService = container.resolve(UserService);
 // 无需写成: container.resolve<UserService>(UserService)
 
 // ✅ 方式 2: 使用字符串标识符 - 需要显式泛型
-container.register('todoService', TodoService);
-const todoService = container.resolve<TodoService>('todoService');
+container.register("todoService", TodoService);
+const todoService = container.resolve<TodoService>("todoService");
 // ↑ 必须显式指定泛型，否则类型为 Service（基类）
 
 // ✅ 方式 3: 使用 Symbol 标识符 - 需要显式泛型
-const CONFIG_SERVICE = Symbol('config');
+const CONFIG_SERVICE = Symbol("config");
 container.register(CONFIG_SERVICE, ConfigService);
 const configService = container.resolve<ConfigService>(CONFIG_SERVICE);
 ```
@@ -44,7 +44,7 @@ if (maybeUser) {
 }
 
 // ✅ 使用字符串 - 需要显式泛型
-const maybeTodo = container.tryResolve<TodoService>('todoService');
+const maybeTodo = container.tryResolve<TodoService>("todoService");
 if (maybeTodo) {
   console.log(maybeTodo.getTodos());
 }
@@ -127,13 +127,13 @@ const todoService = container.resolve(TodoService);
 
 ```typescript
 // 使用字符串标识符注册
-container.register('userService', UserService);
+container.register("userService", UserService);
 
 // ✅ 显式指定泛型
-const userService = container.resolve<UserService>('userService');
+const userService = container.resolve<UserService>("userService");
 
 // ⚠️ 不指定泛型，类型为 Service（基类）
-const service = container.resolve('userService'); // 类型: Service
+const service = container.resolve("userService"); // 类型: Service
 ```
 
 ### 在 Inject 装饰器中使用
@@ -145,7 +145,7 @@ class TodoService extends Service {
   private userService!: UserService;
 
   // ✅ 使用字符串 - 需要显式类型注解
-  @Inject('configService')
+  @Inject("configService")
   private configService!: ConfigService;
 }
 ```
@@ -157,7 +157,7 @@ class TodoService extends Service {
 ```typescript
 // 旧代码仍然可以正常工作
 const userService = container.resolve<UserService>(UserService);
-const todoService = container.resolve<TodoService>('todoService');
+const todoService = container.resolve<TodoService>("todoService");
 
 // 新代码可以省略不必要的泛型
 const userService = container.resolve(UserService); // 更简洁

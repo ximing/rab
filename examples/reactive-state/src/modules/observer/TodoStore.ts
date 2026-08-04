@@ -1,7 +1,7 @@
 /**
  * TODO Store - 用于演示 observable 的基本使用
  */
-import { observable } from '@rabjs/react';
+import { observable } from "@rabjs/react";
 
 export interface Todo {
   id: number;
@@ -10,11 +10,11 @@ export interface Todo {
   createdAt: Date;
 }
 
-export type FilterType = 'all' | 'active' | 'completed';
+export type FilterType = "all" | "active" | "completed";
 
 export class TodoStore {
   todos: Todo[] = [];
-  filter: FilterType = 'all';
+  filter: FilterType = "all";
   private nextId = 1;
 
   /**
@@ -35,7 +35,7 @@ export class TodoStore {
    * 删除 TODO
    */
   removeTodo(id: number) {
-    const index = this.todos.findIndex(todo => todo.id === id);
+    const index = this.todos.findIndex((todo) => todo.id === id);
     if (index !== -1) {
       this.todos.splice(index, 1);
     }
@@ -45,7 +45,7 @@ export class TodoStore {
    * 切换 TODO 完成状态
    */
   toggleTodo(id: number) {
-    const todo = this.todos.find(todo => todo.id === id);
+    const todo = this.todos.find((todo) => todo.id === id);
     if (todo) {
       todo.completed = !todo.completed;
     }
@@ -55,7 +55,7 @@ export class TodoStore {
    * 编辑 TODO 文本
    */
   editTodo(id: number, text: string) {
-    const todo = this.todos.find(todo => todo.id === id);
+    const todo = this.todos.find((todo) => todo.id === id);
     if (todo && text.trim()) {
       todo.text = text.trim();
     }
@@ -65,17 +65,17 @@ export class TodoStore {
    * 切换所有 TODO 的完成状态
    */
   toggleAll() {
-    const allCompleted = this.todos.every(todo => todo.completed);
-    this.todos.forEach(todo => {
+    const allCompleted = this.todos.every((todo) => todo.completed);
+    for (const todo of this.todos) {
       todo.completed = !allCompleted;
-    });
+    }
   }
 
   /**
    * 清除所有已完成的 TODO
    */
   clearCompleted() {
-    this.todos = this.todos.filter(todo => !todo.completed);
+    this.todos = this.todos.filter((todo) => !todo.completed);
   }
 
   /**
@@ -90,12 +90,15 @@ export class TodoStore {
    */
   get filteredTodos(): Todo[] {
     switch (this.filter) {
-      case 'active':
-        return this.todos.filter(todo => !todo.completed);
-      case 'completed':
-        return this.todos.filter(todo => todo.completed);
-      default:
+      case "active": {
+        return this.todos.filter((todo) => !todo.completed);
+      }
+      case "completed": {
+        return this.todos.filter((todo) => todo.completed);
+      }
+      default: {
         return this.todos;
+      }
     }
   }
 
@@ -103,21 +106,21 @@ export class TodoStore {
    * 获取未完成的 TODO 数量
    */
   get activeCount(): number {
-    return this.todos.filter(todo => !todo.completed).length;
+    return this.todos.filter((todo) => !todo.completed).length;
   }
 
   /**
    * 获取已完成的 TODO 数量
    */
   get completedCount(): number {
-    return this.todos.filter(todo => todo.completed).length;
+    return this.todos.filter((todo) => todo.completed).length;
   }
 
   /**
    * 是否所有 TODO 都已完成
    */
   get allCompleted(): boolean {
-    return this.todos.length > 0 && this.todos.every(todo => todo.completed);
+    return this.todos.length > 0 && this.todos.every((todo) => todo.completed);
   }
 }
 

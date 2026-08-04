@@ -2,12 +2,15 @@
  * IOC 容器类型定义
  */
 
-import type { Service } from '../service';
+import type { Service } from "../service";
 
 /**
  * 服务标识符类型
  */
-export type ServiceIdentifier<T = any> = string | symbol | (new (...args: any[]) => T);
+export type ServiceIdentifier<T = any> =
+  | string
+  | symbol
+  | (new (...args: any[]) => T);
 
 /**
  * 服务类类型
@@ -20,8 +23,12 @@ export type ServiceClass<T = any> = new (...args: any[]) => T;
 export interface IContainer {
   resolve<T extends Service>(identifier: new (...args: any[]) => T): T;
   resolve<T extends Service = Service>(identifier: string | symbol): T;
-  tryResolve<T extends Service>(identifier: new (...args: any[]) => T): T | undefined;
-  tryResolve<T extends Service = Service>(identifier: string | symbol): T | undefined;
+  tryResolve<T extends Service>(
+    identifier: new (...args: any[]) => T
+  ): T | undefined;
+  tryResolve<T extends Service = Service>(
+    identifier: string | symbol
+  ): T | undefined;
 }
 
 /**
@@ -33,8 +40,8 @@ export type ServiceFactory<T = any> = (container: IContainer) => T;
  * 服务作用域
  */
 export enum ServiceScope {
-  Singleton = 'singleton',
-  Transient = 'transient',
+  Singleton = "singleton",
+  Transient = "transient",
 }
 
 /**

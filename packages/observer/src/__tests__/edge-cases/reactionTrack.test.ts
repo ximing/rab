@@ -3,12 +3,12 @@
  * 测试响应式追踪系统的各种边界情况和特殊场景
  */
 
-import { observable } from '../../observable';
-import { observe, unobserve } from '../../main';
+import { observable } from "../../observable";
+import { observe, unobserve } from "../../main";
 
-describe('reactionTrack', () => {
-  describe('基础追踪', () => {
-    test('应该处理 connectionStore 不存在的情况', () => {
+describe("reactionTrack", () => {
+  describe("基础追踪", () => {
+    test("应该处理 connectionStore 不存在的情况", () => {
       const obj = observable({ count: 0 });
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -20,7 +20,7 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 reactionsForTarget 不存在的情况', () => {
+    test("应该处理 reactionsForTarget 不存在的情况", () => {
       const obj = observable({ count: 0 });
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -33,12 +33,12 @@ describe('reactionTrack', () => {
     });
   });
 
-  describe('集合操作追踪', () => {
-    test('应该处理 clear 操作触发所有依赖', () => {
+  describe("集合操作追踪", () => {
+    test("应该处理 clear 操作触发所有依赖", () => {
       const map = observable(
         new Map([
-          ['key1', 1],
-          ['key2', 2],
+          ["key1", 1],
+          ["key2", 2],
         ])
       );
       const reactions: number[] = [];
@@ -51,7 +51,7 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Map 的 add 操作触发迭代依赖', () => {
+    test("应该处理 Map 的 add 操作触发迭代依赖", () => {
       const map = observable(new Map());
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -59,12 +59,12 @@ describe('reactionTrack', () => {
         reactions.push(keys.length);
       });
       expect(reactions).toEqual([0]);
-      map.set('key1', 1);
+      map.set("key1", 1);
       expect(reactions).toEqual([0, 1]);
       unobserve(reaction);
     });
 
-    test('应该处理 Set 的 add 操作触发迭代依赖', () => {
+    test("应该处理 Set 的 add 操作触发迭代依赖", () => {
       const set = observable(new Set());
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -77,20 +77,20 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 Map 的 delete 操作触发迭代依赖', () => {
-      const map = observable(new Map([['key1', 1]]));
+    test("应该处理 Map 的 delete 操作触发迭代依赖", () => {
+      const map = observable(new Map([["key1", 1]]));
       const reactions: number[] = [];
       const reaction = observe(() => {
         const keys = Array.from(map.keys());
         reactions.push(keys.length);
       });
       expect(reactions).toEqual([1]);
-      map.delete('key1');
+      map.delete("key1");
       expect(reactions).toEqual([1, 0]);
       unobserve(reaction);
     });
 
-    test('应该处理 Set 的 delete 操作触发迭代依赖', () => {
+    test("应该处理 Set 的 delete 操作触发迭代依赖", () => {
       const set = observable(new Set([1]));
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -104,8 +104,8 @@ describe('reactionTrack', () => {
     });
   });
 
-  describe('对象操作追踪', () => {
-    test('应该处理 add 操作触发迭代依赖', () => {
+  describe("对象操作追踪", () => {
+    test("应该处理 add 操作触发迭代依赖", () => {
       const obj = observable({ a: 1 } as any);
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -117,7 +117,7 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 delete 操作触发迭代依赖', () => {
+    test("应该处理 delete 操作触发迭代依赖", () => {
       const obj = observable({ a: 1, b: 2 } as any);
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -129,7 +129,7 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 iterate 操作', () => {
+    test("应该处理 iterate 操作", () => {
       const obj = observable({ a: 1, b: 2 } as any);
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -142,11 +142,11 @@ describe('reactionTrack', () => {
       unobserve(reaction);
     });
 
-    test('应该处理 has 操作', () => {
-      const obj = observable({ prop: 'value' });
+    test("应该处理 has 操作", () => {
+      const obj = observable({ prop: "value" });
       const reactions: boolean[] = [];
       const reaction = observe(() => {
-        reactions.push('prop' in obj);
+        reactions.push("prop" in obj);
       });
       expect(reactions).toEqual([true]);
       (obj as any).prop = undefined;
@@ -155,8 +155,8 @@ describe('reactionTrack', () => {
     });
   });
 
-  describe('数组操作追踪', () => {
-    test('应该处理数组的 length 变化', () => {
+  describe("数组操作追踪", () => {
+    test("应该处理数组的 length 变化", () => {
       const arr = observable([1, 2, 3]);
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -169,8 +169,8 @@ describe('reactionTrack', () => {
     });
   });
 
-  describe('多个 reactions', () => {
-    test('应该处理多个 reactions 依赖同一属性', () => {
+  describe("多个 reactions", () => {
+    test("应该处理多个 reactions 依赖同一属性", () => {
       const obj = observable({ count: 0 });
       const reactions1: number[] = [];
       const reactions2: number[] = [];
@@ -189,7 +189,7 @@ describe('reactionTrack', () => {
       unobserve(reaction2);
     });
 
-    test('应该处理 reaction 清理', () => {
+    test("应该处理 reaction 清理", () => {
       const obj = observable({ count: 0 });
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -201,7 +201,7 @@ describe('reactionTrack', () => {
       expect(reactions).toEqual([0]); // 不应该再触发
     });
 
-    test('应该处理嵌套 reactions', () => {
+    test("应该处理嵌套 reactions", () => {
       const obj = observable({ a: 0, b: 0 });
       const reactions: any[] = [];
       const reaction1 = observe(() => {
@@ -217,34 +217,34 @@ describe('reactionTrack', () => {
     });
   });
 
-  describe('复杂场景', () => {
-    test('应该处理复杂 Map 操作', () => {
+  describe("复杂场景", () => {
+    test("应该处理复杂 Map 操作", () => {
       const map = observable(new Map<string, { value: number }>());
       let totalValue = 0;
 
       observe(() => {
         totalValue = 0;
-        map.forEach(item => {
+        map.forEach((item) => {
           totalValue += item.value;
         });
       });
 
       expect(totalValue).toBe(0);
 
-      map.set('a', { value: 10 });
+      map.set("a", { value: 10 });
       expect(totalValue).toBe(10);
 
-      map.set('b', { value: 20 });
+      map.set("b", { value: 20 });
       expect(totalValue).toBe(30);
 
-      map.delete('a');
+      map.delete("a");
       expect(totalValue).toBe(20);
 
       map.clear();
       expect(totalValue).toBe(0);
     });
 
-    test('应该处理复杂 Set 操作', () => {
+    test("应该处理复杂 Set 操作", () => {
       const set = observable(new Set<{ id: number; value: string }>());
       let itemCount = 0;
 
@@ -254,8 +254,8 @@ describe('reactionTrack', () => {
 
       expect(itemCount).toBe(0);
 
-      const item1 = { id: 1, value: 'a' };
-      const item2 = { id: 2, value: 'b' };
+      const item1 = { id: 1, value: "a" };
+      const item2 = { id: 2, value: "b" };
 
       set.add(item1);
       expect(itemCount).toBe(1);
@@ -270,10 +270,10 @@ describe('reactionTrack', () => {
       expect(itemCount).toBe(0);
     });
 
-    test('应该处理嵌套对象的响应式', () => {
+    test("应该处理嵌套对象的响应式", () => {
       const state = observable({
-        user: { name: 'John', age: 30 },
-        settings: { theme: 'dark' },
+        user: { name: "John", age: 30 },
+        settings: { theme: "dark" },
       });
 
       const results: string[] = [];
@@ -282,16 +282,16 @@ describe('reactionTrack', () => {
         results.push(`${state.user.name}-${state.settings.theme}`);
       });
 
-      expect(results).toEqual(['John-dark']);
+      expect(results).toEqual(["John-dark"]);
 
-      state.user.name = 'Jane';
-      expect(results).toEqual(['John-dark', 'Jane-dark']);
+      state.user.name = "Jane";
+      expect(results).toEqual(["John-dark", "Jane-dark"]);
 
-      state.settings.theme = 'light';
-      expect(results).toEqual(['John-dark', 'Jane-dark', 'Jane-light']);
+      state.settings.theme = "light";
+      expect(results).toEqual(["John-dark", "Jane-dark", "Jane-light"]);
     });
 
-    test('应该处理多个 reactions 在同一属性', () => {
+    test("应该处理多个 reactions 在同一属性", () => {
       const state = observable({ count: 0 });
       const results: number[] = [];
 

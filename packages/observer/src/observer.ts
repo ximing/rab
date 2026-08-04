@@ -1,9 +1,9 @@
-import { getGlobalConfig } from './configure';
-import { runAsReaction } from './internals/reactionRunner';
-import { releaseReaction } from './internals/reactionTrack';
-import type { Reaction, ReactionScheduler, Operation } from './internals/types';
+import { getGlobalConfig } from "./configure";
+import { runAsReaction } from "./internals/reaction-runner";
+import { releaseReaction } from "./internals/reaction-track";
+import type { Reaction, ReactionScheduler, Operation } from "./internals/types";
 
-const IS_REACTION = Symbol('is reaction');
+const IS_REACTION = Symbol("is reaction");
 
 // Options for observe function
 export interface ObserveOptions {
@@ -17,7 +17,10 @@ interface ReactionFunction extends Reaction {
   [IS_REACTION]?: boolean;
 }
 
-export function observe<T extends Function>(fn: T, options: ObserveOptions = {}): Reaction {
+export function observe<T extends Function>(
+  fn: T,
+  options: ObserveOptions = {}
+): Reaction {
   // wrap the passed function in a reaction, if it is not already one
   let reaction: Reaction;
 
@@ -27,7 +30,12 @@ export function observe<T extends Function>(fn: T, options: ObserveOptions = {})
     // Create a named function that can reference itself
     const reactionFn = function reaction(this: unknown): unknown {
       // At runtime, 'reaction' will refer to the function itself
-      return runAsReaction(reactionFn as unknown as Reaction, fn, this, arguments);
+      return runAsReaction(
+        reactionFn as unknown as Reaction,
+        fn,
+        this,
+        arguments
+      );
     };
     reaction = reactionFn as unknown as Reaction;
   }
@@ -62,7 +70,7 @@ export function unobserve(reaction: Reaction): void {
     releaseReaction(reaction);
   }
   // unschedule the reaction, if it is scheduled
-  if (typeof reaction.scheduler === 'object' && reaction.scheduler !== null) {
+  if (typeof reaction.scheduler === "object" && reaction.scheduler !== null) {
     reaction.scheduler.delete(reaction);
   }
 }

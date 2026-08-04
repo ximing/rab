@@ -3,12 +3,12 @@
  * 目标: 覆盖 reactionRunner.ts 中未覆盖的代码路径
  */
 
-import { observable } from '../../observable';
-import { observe, unobserve } from '../../observer';
+import { observable } from "../../observable";
+import { observe, unobserve } from "../../observer";
 
-describe('reactionRunner - 边界情况覆盖', () => {
-  describe('unobserved reaction', () => {
-    test('unobserved 的 reaction 应该直接执行不建立依赖', () => {
+describe("reactionRunner - 边界情况覆盖", () => {
+  describe("unobserved reaction", () => {
+    test("unobserved 的 reaction 应该直接执行不建立依赖", () => {
       const obj = observable({ count: 0 });
       let callCount = 0;
 
@@ -35,7 +35,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       expect(callCount).toBe(2);
     });
 
-    test('unobserve 后手动调用 reaction 应该能访问最新值', () => {
+    test("unobserve 后手动调用 reaction 应该能访问最新值", () => {
       const obj = observable({ count: 0 });
       let observedValue = 0;
 
@@ -57,8 +57,8 @@ describe('reactionRunner - 边界情况覆盖', () => {
     });
   });
 
-  describe('递归 reaction 防护', () => {
-    test('reaction 不应该递归调用自己', () => {
+  describe("递归 reaction 防护", () => {
+    test("reaction 不应该递归调用自己", () => {
       const obj = observable({ count: 0 });
       let callCount = 0;
 
@@ -78,7 +78,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       expect(obj.count).toBe(1);
     });
 
-    test('嵌套的 reaction 应该正常工作', () => {
+    test("嵌套的 reaction 应该正常工作", () => {
       const obj = observable({ a: 0, b: 0 });
       let outerCount = 0;
       let innerCount = 0;
@@ -110,8 +110,8 @@ describe('reactionRunner - 边界情况覆盖', () => {
     });
   });
 
-  describe('debugger 功能', () => {
-    test('reaction 的 debugger 应该被调用', () => {
+  describe("debugger 功能", () => {
+    test("reaction 的 debugger 应该被调用", () => {
       const obj = observable({ count: 0 });
       const debugOperations: any[] = [];
 
@@ -120,7 +120,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
           obj.count;
         },
         {
-          debugger: operation => {
+          debugger: (operation) => {
             debugOperations.push(operation);
           },
         }
@@ -128,16 +128,16 @@ describe('reactionRunner - 边界情况覆盖', () => {
 
       // 初始执行应该记录 get 操作
       expect(debugOperations.length).toBeGreaterThan(0);
-      expect(debugOperations[0].type).toBe('get');
+      expect(debugOperations[0].type).toBe("get");
 
       // 修改属性应该记录 set 操作
       obj.count++;
       expect(debugOperations.length).toBeGreaterThan(1);
-      const setOperation = debugOperations.find(op => op.type === 'set');
+      const setOperation = debugOperations.find((op) => op.type === "set");
       expect(setOperation).toBeDefined();
     });
 
-    test('debugger 不应该导致无限递归', () => {
+    test("debugger 不应该导致无限递归", () => {
       const obj = observable({ count: 0 });
       let debugCount = 0;
 
@@ -165,8 +165,8 @@ describe('reactionRunner - 边界情况覆盖', () => {
     });
   });
 
-  describe('scheduler 功能', () => {
-    test('函数类型的 scheduler 应该被调用', () => {
+  describe("scheduler 功能", () => {
+    test("函数类型的 scheduler 应该被调用", () => {
       const obj = observable({ count: 0 });
       const scheduledReactions: any[] = [];
 
@@ -175,7 +175,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
           obj.count;
         },
         {
-          scheduler: reaction => {
+          scheduler: (reaction: () => void) => {
             scheduledReactions.push(reaction);
           },
         }
@@ -192,7 +192,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       scheduledReactions[0]();
     });
 
-    test('对象类型的 scheduler (Set) 应该收集 reactions', () => {
+    test("对象类型的 scheduler (Set) 应该收集 reactions", () => {
       const obj = observable({ count: 0 });
       const scheduler = new Set();
 
@@ -216,7 +216,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       expect(scheduler.size).toBe(1);
     });
 
-    test('对象类型的 scheduler (自定义对象) 应该调用 add 方法', () => {
+    test("对象类型的 scheduler (自定义对象) 应该调用 add 方法", () => {
       const obj = observable({ count: 0 });
       const addedReactions: any[] = [];
       const scheduler = {
@@ -244,7 +244,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       expect(addedReactions.length).toBe(1);
     });
 
-    test('无 scheduler 应该同步执行 reaction', () => {
+    test("无 scheduler 应该同步执行 reaction", () => {
       const obj = observable({ count: 0 });
       let reactionCount = 0;
 
@@ -261,8 +261,8 @@ describe('reactionRunner - 边界情况覆盖', () => {
     });
   });
 
-  describe('栈大小优化', () => {
-    test('空栈时不应该检查 reaction 是否在栈中', () => {
+  describe("栈大小优化", () => {
+    test("空栈时不应该检查 reaction 是否在栈中", () => {
       const obj = observable({ count: 0 });
       let callCount = 0;
 
@@ -278,7 +278,7 @@ describe('reactionRunner - 边界情况覆盖', () => {
       expect(callCount).toBe(2);
     });
 
-    test('栈不为空时应该检查 reaction 是否在栈中', () => {
+    test("栈不为空时应该检查 reaction 是否在栈中", () => {
       const obj = observable({ count: 0, trigger: 0 });
       let innerCallCount = 0;
 
@@ -300,8 +300,8 @@ describe('reactionRunner - 边界情况覆盖', () => {
     });
   });
 
-  describe('reaction 清理', () => {
-    test('reaction 重新执行时应该清理旧的依赖', () => {
+  describe("reaction 清理", () => {
+    test("reaction 重新执行时应该清理旧的依赖", () => {
       const obj = observable({ flag: true, a: 0, b: 0 });
       let callCount = 0;
 

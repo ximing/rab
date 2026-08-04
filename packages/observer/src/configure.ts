@@ -1,4 +1,4 @@
-import type { ReactionScheduler } from './internals/types';
+import type { ReactionScheduler } from "./internals/types";
 
 /**
  * 全局配置选项

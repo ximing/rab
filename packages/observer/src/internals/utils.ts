@@ -1,9 +1,9 @@
-import { proxyToRaw } from './proxyRawMap';
+import { proxyToRaw } from "./proxy-raw-map";
 
 export const hasOwnProperty = Object.prototype.hasOwnProperty;
 // Type guard to check if value is an object
 export function isObject(value: unknown): value is object {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 export function isObservable(obj: unknown): boolean {

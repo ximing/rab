@@ -50,7 +50,10 @@ export interface DebounceOptions {
  * }
  * ```
  */
-export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>): MethodDecorator {
+export function Debounce(
+  wait: number,
+  options?: Omit<DebounceOptions, "wait">
+): MethodDecorator {
   return function (
     target: any,
     propertyKey: string | symbol,
@@ -58,8 +61,10 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    if (typeof originalMethod !== 'function') {
-      throw new Error(`@Debounce 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`);
+    if (typeof originalMethod !== "function") {
+      throw new TypeError(
+        `@Debounce 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`
+      );
     }
 
     const leading = options?.leading ?? false;
@@ -87,6 +92,32 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       result = undefined;
     };
 
+    // 取消定时器
+    const cancelTimer = () => {
+      if (timerId !== null) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    // 执行函数
+    const invokeFunc = () => {
+      lastInvokeTime = Date.now();
+      result = originalMethod.apply(lastThis, lastArgs);
+      return result;
+    };
+
+    // 设置延迟执行
+    const startTimer = () => {
+      cancelTimer();
+      timerId = setTimeout(() => {
+        timerId = null;
+        if (trailing) {
+          invokeFunc();
+        }
+      }, wait);
+    };
+
     descriptor.value = function (this: any, ...args: any[]) {
       const now = Date.now();
       const timeSinceLastCall = now - lastCallTime;
@@ -101,32 +132,6 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
         lastInvokeTime === 0 || // 首次调用
         timeSinceLastCall >= wait || // 距离上次调用超过 wait 时间
         (maxWait !== undefined && timeSinceLastInvoke >= maxWait); // 超过最大等待时间
-
-      // 执行函数
-      const invokeFunc = () => {
-        lastInvokeTime = Date.now();
-        result = originalMethod.apply(lastThis, lastArgs);
-        return result;
-      };
-
-      // 取消定时器
-      const cancelTimer = () => {
-        if (timerId !== null) {
-          clearTimeout(timerId);
-          timerId = null;
-        }
-      };
-
-      // 设置延迟执行
-      const startTimer = () => {
-        cancelTimer();
-        timerId = setTimeout(() => {
-          timerId = null;
-          if (trailing) {
-            invokeFunc();
-          }
-        }, wait);
-      };
 
       // 首次调用且 leading 为 true
       if (shouldInvoke && leading && lastInvokeTime === 0) {
@@ -183,9 +188,12 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
  * }
  * ```
  */
-export function cancelDebounce(instance: any, propertyKey: string | symbol): void {
+export function cancelDebounce(
+  instance: any,
+  propertyKey: string | symbol
+): void {
   const cleanupMethodName = `__cleanup_debounce_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === 'function') {
+  if (typeof instance[cleanupMethodName] === "function") {
     instance[cleanupMethodName]();
   }
 }
@@ -219,10 +227,10 @@ export function cleanupAllDebounces(instance: any): void {
   const proto = Object.getPrototypeOf(instance);
   const propertyNames = Object.getOwnPropertyNames(proto);
 
-  propertyNames.forEach(propertyName => {
+  for (const propertyName of propertyNames) {
     const cleanupMethodName = `__cleanup_debounce_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === 'function') {
+    if (typeof instance[cleanupMethodName] === "function") {
       instance[cleanupMethodName]();
     }
-  });
+  }
 }

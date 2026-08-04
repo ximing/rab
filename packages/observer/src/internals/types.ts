@@ -1,4 +1,11 @@
-export type OperationType = 'get' | 'has' | 'iterate' | 'add' | 'set' | 'delete' | 'clear';
+export type OperationType =
+  | "get"
+  | "has"
+  | "iterate"
+  | "add"
+  | "set"
+  | "delete"
+  | "clear";
 
 export interface Operation {
   target: object;
@@ -94,7 +101,12 @@ export interface ProxyHandlers {
    * @param receiver - Proxy 或继承 Proxy 的对象
    * @returns 是否设置成功
    */
-  set(target: object, key: PropertyKey, value: unknown, receiver: unknown): boolean;
+  set(
+    target: object,
+    key: PropertyKey,
+    value: unknown,
+    receiver: unknown
+  ): boolean;
 
   /**
    * 拦截属性删除操作,触发相关 reactions
@@ -111,7 +123,11 @@ export interface ProxyHandlers {
    * @param newTarget - new 命令作用的构造函数
    * @returns 响应式的实例对象
    */
-  construct(target: object, args: ArrayLike<unknown>, newTarget: unknown): object;
+  construct(
+    target: object,
+    args: ArrayLike<unknown>,
+    newTarget: unknown
+  ): object;
 }
 
 export interface CollectionHandlers {
@@ -123,7 +139,11 @@ export interface CollectionHandlers {
   clear(this: Collection): void;
   forEach(
     this: Collection,
-    callback: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void,
+    callback: (
+      value: unknown,
+      key: unknown,
+      map: Map<unknown, unknown>
+    ) => void,
     thisArg?: unknown
   ): void;
   keys(this: Collection): IterableIterator<unknown>;

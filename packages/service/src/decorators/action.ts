@@ -20,6 +20,7 @@ export function Action(
   // 标记该方法为 Action
   if (descriptor && descriptor.value) {
     descriptor.value.__isAction = true;
+    // ✅ 正确做法：返回修改后的描述符，兼容 TypeScript 和 Babel legacy 模式
     return descriptor;
   }
 }

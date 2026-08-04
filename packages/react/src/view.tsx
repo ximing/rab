@@ -4,17 +4,11 @@
  * 函数组件：使用 observer 实现（基于 Hooks + useSyncExternalStore）
  * 类组件：使用 observe + forceUpdate 实现
  */
-import { observe, unobserve, type Reaction } from '@rabjs/observer';
-import { Component, ComponentType, ComponentClass } from 'react';
+import { observe, unobserve, type Reaction } from "@rabjs/observer";
+import { ComponentType, ComponentClass } from "react";
 
-import { observer, IS_REACTIVE_COMPONENT } from './observer';
-
-/**
- * 判断是否为类组件
- */
-function isClassComponent(Comp: any): boolean {
-  return !!(Comp.prototype && Comp.prototype.isReactComponent);
-}
+import { observer } from "./observer";
+import { IS_REACTIVE_COMPONENT, isClassComponent } from "./utils/react-helper";
 
 /**
  * view HOC - 将组件转换为响应式组件
@@ -34,11 +28,16 @@ function isClassComponent(Comp: any): boolean {
  * const ReactiveClassComp = view(ClassComp);
  */
 // 函数重载：支持函数组件和类组件
-export function view<P = any>(Comp: ComponentType<P> & { prototype?: any }): ComponentType<P>;
-export function view<P = any, S = any>(Comp: ComponentClass<P, S>): ComponentClass<P, S>;
-export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P> {
+export function view<P = any>(
+  Comp: ComponentType<P> & { prototype?: any }
+): ComponentType<P>;
+export function view<P = any, S = any>(
+  Comp: ComponentClass<P, S>
+): ComponentClass<P, S>;
+export function view<P = any, S = any>(
+  Comp: ComponentType<P>
+): ComponentType<P> {
   const isClassComp = isClassComponent(Comp);
-
   // 函数组件：直接使用 observer（observer 已经支持 forwardRef）
   if (!isClassComp) {
     return observer(Comp as any) as ComponentType<P>;
@@ -119,7 +118,9 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       }
 
       // 检查每个 prop 是否变化
-      return nextKeys.some(key => (props as any)[key] !== (nextProps as any)[key]);
+      return nextKeys.some(
+        (key) => (props as any)[key] !== (nextProps as any)[key]
+      );
     }
 
     /**
@@ -174,12 +175,12 @@ const hoistBlackList: Record<string, boolean> = {
 };
 
 function copyStaticProperties(base: any, target: any): void {
-  Object.keys(base).forEach(key => {
+  for (const key of Object.keys(base)) {
     if (!hoistBlackList[key]) {
       const descriptor = Object.getOwnPropertyDescriptor(base, key);
       if (descriptor) {
         Object.defineProperty(target, key, descriptor);
       }
     }
-  });
+  }
 }

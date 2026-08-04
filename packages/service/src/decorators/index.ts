@@ -12,16 +12,16 @@
  * - @Once: 一次性事件监听装饰器，绑定一次性事件监听器
  */
 
-export { Action } from './action';
-export { SyncAction } from './syncAction';
-export { Inject, getInjectMetadata, isInjected } from './inject';
-export type { InjectOptions } from './inject';
-export { Debounce, cancelDebounce, cleanupAllDebounces } from './debounce';
-export type { DebounceOptions } from './debounce';
-export { Throttle, cancelThrottle, cleanupAllThrottles } from './throttle';
-export type { ThrottleOptions } from './throttle';
-export { Memo, invalidateMemo, cleanupAllMemos } from './memo';
-export type { MemoOptions } from './memo';
+export { Action } from "./action";
+export { SyncAction } from "./sync-action";
+export { Inject, getInjectMetadata, isInjected } from "./inject";
+export type { InjectOptions } from "./inject";
+export { Debounce, cancelDebounce, cleanupAllDebounces } from "./debounce";
+export type { DebounceOptions } from "./debounce";
+export { Throttle, cancelThrottle, cleanupAllThrottles } from "./throttle";
+export type { ThrottleOptions } from "./throttle";
+export { Memo, invalidateMemo, cleanupAllMemos } from "./memo";
+export type { MemoOptions } from "./memo";
 export {
   On,
   getEventListenerMetadata,
@@ -29,7 +29,7 @@ export {
   setupEventListeners,
   cleanupEventListeners,
   cleanupAllEventListeners,
-} from './on';
-export type { OnOptions } from './on';
-export { Once } from './once';
-export type { OnceOptions } from './once';
+} from "./on";
+export type { OnOptions } from "./on";
+export { Once } from "./once";
+export type { OnceOptions } from "./once";

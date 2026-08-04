@@ -2,15 +2,15 @@
  * useContainerEvents Hook 测试
  */
 
-import React, { useEffect, useState } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Service } from '@rabjs/service';
-import { bindServices } from '../bind';
-import { useContainerEvents } from '../useContainerEvents';
-import { useService } from '../useService';
+import React, { useEffect, useState } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Service } from "@rabjs/service";
+import { bindServices } from "../bind";
+import { useContainerEvents } from "../use-container-events";
+import { useService } from "../use-service";
 
-describe('useContainerEvents', () => {
-  it('应该能够获取容器的事件发射器', () => {
+describe("useContainerEvents", () => {
+  it("应该能够获取容器的事件发射器", () => {
     let events: any = null;
 
     function TestComponent() {
@@ -23,12 +23,12 @@ describe('useContainerEvents', () => {
     render(<Wrapped />);
 
     expect(events).toBeDefined();
-    expect(typeof events.on).toBe('function');
-    expect(typeof events.emit).toBe('function');
-    expect(typeof events.off).toBe('function');
+    expect(typeof events.on).toBe("function");
+    expect(typeof events.emit).toBe("function");
+    expect(typeof events.off).toBe("function");
   });
 
-  it('应该能够监听和发送容器级别的事件', async () => {
+  it("应该能够监听和发送容器级别的事件", async () => {
     const messages: string[] = [];
 
     function TestComponent() {
@@ -39,15 +39,15 @@ describe('useContainerEvents', () => {
           messages.push(message);
         };
 
-        events.on('test:message', handler);
+        events.on("test:message", handler);
 
         return () => {
-          events.off('test:message', handler);
+          events.off("test:message", handler);
         };
       }, [events]);
 
       const handleClick = () => {
-        events.emit('test:message', 'Hello World');
+        events.emit("test:message", "Hello World");
       };
 
       return <button onClick={handleClick}>Send Message</button>;
@@ -57,15 +57,15 @@ describe('useContainerEvents', () => {
 
     render(<Wrapped />);
 
-    const button = screen.getByText('Send Message');
+    const button = screen.getByText("Send Message");
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(messages).toEqual(['Hello World']);
+      expect(messages).toEqual(["Hello World"]);
     });
   });
 
-  it('应该支持多个组件监听同一事件', async () => {
+  it("应该支持多个组件监听同一事件", async () => {
     const receivedMessages: Record<string, string[]> = {
       component1: [],
       component2: [],
@@ -79,10 +79,10 @@ describe('useContainerEvents', () => {
           receivedMessages.component1.push(message);
         };
 
-        events.on('shared:event', handler);
+        events.on("shared:event", handler);
 
         return () => {
-          events.off('shared:event', handler);
+          events.off("shared:event", handler);
         };
       }, [events]);
 
@@ -97,15 +97,15 @@ describe('useContainerEvents', () => {
           receivedMessages.component2.push(message);
         };
 
-        events.on('shared:event', handler);
+        events.on("shared:event", handler);
 
         return () => {
-          events.off('shared:event', handler);
+          events.off("shared:event", handler);
         };
       }, [events]);
 
       const handleClick = () => {
-        events.emit('shared:event', 'Broadcast Message');
+        events.emit("shared:event", "Broadcast Message");
       };
 
       return <button onClick={handleClick}>Broadcast</button>;
@@ -124,16 +124,16 @@ describe('useContainerEvents', () => {
 
     render(<Wrapped />);
 
-    const button = screen.getByText('Broadcast');
+    const button = screen.getByText("Broadcast");
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(receivedMessages.component1).toEqual(['Broadcast Message']);
-      expect(receivedMessages.component2).toEqual(['Broadcast Message']);
+      expect(receivedMessages.component1).toEqual(["Broadcast Message"]);
+      expect(receivedMessages.component2).toEqual(["Broadcast Message"]);
     });
   });
 
-  it('应该支持 Service 和组件之间的事件通信', async () => {
+  it("应该支持 Service 和组件之间的事件通信", async () => {
     const serviceMessages: string[] = [];
     const componentMessages: string[] = [];
 
@@ -142,13 +142,13 @@ describe('useContainerEvents', () => {
         super(container);
 
         // Service 监听事件
-        container.events.on('component:message', (message: string) => {
+        container.events.on("component:message", (message: string) => {
           serviceMessages.push(message);
         });
       }
 
       sendToComponent(message: string) {
-        this._container.events.emit('service:message', message);
+        this._container.events.emit("service:message", message);
       }
     }
 
@@ -161,19 +161,19 @@ describe('useContainerEvents', () => {
           componentMessages.push(message);
         };
 
-        events.on('service:message', handler);
+        events.on("service:message", handler);
 
         return () => {
-          events.off('service:message', handler);
+          events.off("service:message", handler);
         };
       }, [events]);
 
       const sendToService = () => {
-        events.emit('component:message', 'Hello from Component');
+        events.emit("component:message", "Hello from Component");
       };
 
       const requestFromService = () => {
-        service.sendToComponent('Hello from Service');
+        service.sendToComponent("Hello from Service");
       };
 
       return (
@@ -189,23 +189,23 @@ describe('useContainerEvents', () => {
     render(<Wrapped />);
 
     // 组件发送消息给 Service
-    const sendButton = screen.getByText('Send to Service');
+    const sendButton = screen.getByText("Send to Service");
     fireEvent.click(sendButton);
 
     await waitFor(() => {
-      expect(serviceMessages).toEqual(['Hello from Component']);
+      expect(serviceMessages).toEqual(["Hello from Component"]);
     });
 
     // Service 发送消息给组件
-    const requestButton = screen.getByText('Request from Service');
+    const requestButton = screen.getByText("Request from Service");
     fireEvent.click(requestButton);
 
     await waitFor(() => {
-      expect(componentMessages).toEqual(['Hello from Service']);
+      expect(componentMessages).toEqual(["Hello from Service"]);
     });
   });
 
-  it('应该在不同容器中隔离事件', async () => {
+  it("应该在不同容器中隔离事件", async () => {
     const container1Messages: string[] = [];
     const container2Messages: string[] = [];
 
@@ -214,29 +214,35 @@ describe('useContainerEvents', () => {
 
       useEffect(() => {
         const handler = (message: string) => {
-          if (containerId === 'container1') {
+          if (containerId === "container1") {
             container1Messages.push(message);
           } else {
             container2Messages.push(message);
           }
         };
 
-        events.on('test:event', handler);
+        events.on("test:event", handler);
 
         return () => {
-          events.off('test:event', handler);
+          events.off("test:event", handler);
         };
       }, [events, containerId]);
 
       const handleClick = () => {
-        events.emit('test:event', `Message from ${containerId}`);
+        events.emit("test:event", `Message from ${containerId}`);
       };
 
       return <button onClick={handleClick}>{containerId}</button>;
     }
 
-    const Wrapped1 = bindServices(() => <TestComponent containerId="container1" />, []);
-    const Wrapped2 = bindServices(() => <TestComponent containerId="container2" />, []);
+    const Wrapped1 = bindServices(
+      () => <TestComponent containerId="container1" />,
+      []
+    );
+    const Wrapped2 = bindServices(
+      () => <TestComponent containerId="container2" />,
+      []
+    );
 
     const { container } = render(
       <>
@@ -245,20 +251,20 @@ describe('useContainerEvents', () => {
       </>
     );
 
-    const button1 = screen.getByText('container1');
-    const button2 = screen.getByText('container2');
+    const button1 = screen.getByText("container1");
+    const button2 = screen.getByText("container2");
 
     fireEvent.click(button1);
     fireEvent.click(button2);
 
     await waitFor(() => {
       // 每个容器只接收自己的事件
-      expect(container1Messages).toEqual(['Message from container1']);
-      expect(container2Messages).toEqual(['Message from container2']);
+      expect(container1Messages).toEqual(["Message from container1"]);
+      expect(container2Messages).toEqual(["Message from container2"]);
     });
   });
 
-  it('应该在组件卸载时自动清理事件监听器', async () => {
+  it("应该在组件卸载时自动清理事件监听器", async () => {
     let listenerCount = 0;
     let capturedEvents: any = null;
 
@@ -271,10 +277,10 @@ describe('useContainerEvents', () => {
           listenerCount++;
         };
 
-        events.on('test:event', handler);
+        events.on("test:event", handler);
 
         return () => {
-          events.off('test:event', handler);
+          events.off("test:event", handler);
         };
       }, [events]);
 
@@ -291,7 +297,7 @@ describe('useContainerEvents', () => {
     });
 
     // 发送事件
-    capturedEvents.emit('test:event');
+    capturedEvents.emit("test:event");
 
     await waitFor(() => {
       expect(listenerCount).toBe(1);
@@ -301,10 +307,10 @@ describe('useContainerEvents', () => {
     unmount();
 
     // 再次发送事件，监听器应该已被清理
-    capturedEvents.emit('test:event');
+    capturedEvents.emit("test:event");
 
     // 等待一小段时间确保没有新的事件被处理
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // 监听器已清理，计数不应增加
     expect(listenerCount).toBe(1);

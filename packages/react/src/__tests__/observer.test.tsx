@@ -1,13 +1,13 @@
 /**
  * observer HOC 测试
  */
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { observer } from '../observer';
-import { useLocalObservable } from '../useLocalObservable';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { observer } from "../observer";
+import { useLocalObservable } from "../use-local-observable";
 
-describe('observer HOC', () => {
-  it('应该追踪 observable 的变化', () => {
+describe("observer HOC", () => {
+  it("应该追踪 observable 的变化", () => {
     const TestComponent = observer(() => {
       const state = useLocalObservable(() => ({
         count: 0,
@@ -17,10 +17,10 @@ describe('observer HOC', () => {
     });
 
     render(<TestComponent />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
-  it('应该支持 forwardRef', () => {
+  it("应该支持 forwardRef", () => {
     const TestComponent = observer(
       React.forwardRef((props: any, ref: React.Ref<HTMLDivElement>) => {
         const state = useLocalObservable(() => ({
@@ -36,7 +36,7 @@ describe('observer HOC', () => {
     expect(ref.current).toBeInTheDocument();
   });
 
-  it('应该在严格模式下工作', () => {
+  it("应该在严格模式下工作", () => {
     const TestComponent = observer(() => {
       const state = useLocalObservable(() => ({
         count: 0,
@@ -50,10 +50,10 @@ describe('observer HOC', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
-  it('应该抛出错误当在已经被 memo 包装的组件上使用', () => {
+  it("应该抛出错误当在已经被 memo 包装的组件上使用", () => {
     const Component = React.memo(() => <div>test</div>);
 
     expect(() => {
@@ -61,10 +61,10 @@ describe('observer HOC', () => {
     }).toThrow();
   });
 
-  it('应该继承组件的 displayName', () => {
+  it("应该继承组件的 displayName", () => {
     const TestComponent = observer(() => <div>test</div>);
-    TestComponent.displayName = 'CustomName';
+    TestComponent.displayName = "CustomName";
 
-    expect(TestComponent.displayName).toBe('CustomName');
+    expect(TestComponent.displayName).toBe("CustomName");
   });
 });

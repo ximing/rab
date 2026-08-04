@@ -1,7 +1,7 @@
 /**
  * 计数器 Store - 用于演示 observer 和 useObserver
  */
-import { observable } from '@rabjs/react';
+import { observable } from "@rabjs/react";
 
 export class CounterStore {
   count = 0;

@@ -1,13 +1,13 @@
 /**
  * useObserver Hook 测试
  */
-import React, { act } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useObserver } from '../useObserver';
-import { observable } from '@rabjs/observer';
+import React, { act } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { useObserver } from "../use-observer";
+import { observable } from "@rabjs/observer";
 
-describe('useObserver Hook', () => {
-  it('应该追踪 observable 的变化', async () => {
+describe("useObserver Hook", () => {
+  it("应该追踪 observable 的变化", async () => {
     const state = observable({ count: 0 });
 
     function TestComponent() {
@@ -16,17 +16,17 @@ describe('useObserver Hook', () => {
     }
 
     const { rerender } = render(<TestComponent />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
 
     act(() => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
     });
   });
 
-  it('应该支持在严格模式下的多次渲染', async () => {
+  it("应该支持在严格模式下的多次渲染", async () => {
     const state = observable({ count: 0 });
     const renderCount = { value: 0 };
 
@@ -41,14 +41,14 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
 
     // 在严格模式下，状态变化应该正确触发重新渲染
     act(() => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
     });
 
     // 再次更新状态
@@ -56,7 +56,7 @@ describe('useObserver Hook', () => {
       state.count = 2;
     });
     await waitFor(() => {
-      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument();
     });
 
     // 强制重新渲染组件
@@ -65,12 +65,12 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it('应该在严格模式下正确处理多个 observable 对象', async () => {
-    const state1 = observable({ value: 'a' });
-    const state2 = observable({ value: 'b' });
+  it("应该在严格模式下正确处理多个 observable 对象", async () => {
+    const state1 = observable({ value: "a" });
+    const state2 = observable({ value: "b" });
 
     function TestComponent() {
       const val1 = useObserver(() => state1.value);
@@ -88,30 +88,30 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('a')).toBeInTheDocument();
-    expect(screen.getByText('b')).toBeInTheDocument();
+    expect(screen.getByText("a")).toBeInTheDocument();
+    expect(screen.getByText("b")).toBeInTheDocument();
 
     // 更新第一个 observable
     act(() => {
-      state1.value = 'a1';
+      state1.value = "a1";
     });
     await waitFor(() => {
-      expect(screen.getByText('a1')).toBeInTheDocument();
+      expect(screen.getByText("a1")).toBeInTheDocument();
     });
 
     // 更新第二个 observable
     act(() => {
-      state2.value = 'b1';
+      state2.value = "b1";
     });
     await waitFor(() => {
-      expect(screen.getByText('b1')).toBeInTheDocument();
+      expect(screen.getByText("b1")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理嵌套对象', async () => {
+  it("应该在严格模式下正确处理嵌套对象", async () => {
     const state = observable({
       user: {
-        name: 'John',
+        name: "John",
         profile: {
           age: 30,
         },
@@ -134,26 +134,26 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('John')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText("John")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
 
     // 更新嵌套属性
     act(() => {
-      state.user.name = 'Jane';
+      state.user.name = "Jane";
     });
     await waitFor(() => {
-      expect(screen.getByText('Jane')).toBeInTheDocument();
+      expect(screen.getByText("Jane")).toBeInTheDocument();
     });
 
     act(() => {
       state.user.profile.age = 31;
     });
     await waitFor(() => {
-      expect(screen.getByText('31')).toBeInTheDocument();
+      expect(screen.getByText("31")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理条件渲染', async () => {
+  it("应该在严格模式下正确处理条件渲染", async () => {
     const state = observable({ show: true, count: 0 });
 
     function TestComponent() {
@@ -162,7 +162,7 @@ describe('useObserver Hook', () => {
       return (
         <div>
           {show && <span>{count}</span>}
-          <span>show: {show ? 'yes' : 'no'}</span>
+          <span>show: {show ? "yes" : "no"}</span>
         </div>
       );
     }
@@ -172,16 +172,16 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('show: yes')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("show: yes")).toBeInTheDocument();
 
     // 隐藏元素
     act(() => {
       state.show = false;
     });
     await waitFor(() => {
-      expect(screen.queryByText('0')).not.toBeInTheDocument();
-      expect(screen.getByText('show: no')).toBeInTheDocument();
+      expect(screen.queryByText("0")).not.toBeInTheDocument();
+      expect(screen.getByText("show: no")).toBeInTheDocument();
     });
 
     // 再次显示
@@ -190,13 +190,13 @@ describe('useObserver Hook', () => {
       state.count = 5;
     });
     await waitFor(() => {
-      expect(screen.getByText('5')).toBeInTheDocument();
-      expect(screen.getByText('show: yes')).toBeInTheDocument();
+      expect(screen.getByText("5")).toBeInTheDocument();
+      expect(screen.getByText("show: yes")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理列表渲染', async () => {
-    const state = observable({ items: ['a', 'b', 'c'] });
+  it("应该在严格模式下正确处理列表渲染", async () => {
+    const state = observable({ items: ["a", "b", "c"] });
 
     function TestComponent() {
       // 在 useObserver 中访问整个数组，以便追踪数组的变化
@@ -218,28 +218,28 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('a')).toBeInTheDocument();
-    expect(screen.getByText('b')).toBeInTheDocument();
-    expect(screen.getByText('c')).toBeInTheDocument();
+    expect(screen.getByText("a")).toBeInTheDocument();
+    expect(screen.getByText("b")).toBeInTheDocument();
+    expect(screen.getByText("c")).toBeInTheDocument();
 
     // 修改列表元素
     act(() => {
-      state.items[0] = 'a-modified';
+      state.items[0] = "a-modified";
     });
     await waitFor(() => {
-      expect(screen.getByText('a-modified')).toBeInTheDocument();
+      expect(screen.getByText("a-modified")).toBeInTheDocument();
     });
 
     // 修改列表元素
     act(() => {
-      state.items[1] = 'b-modified';
+      state.items[1] = "b-modified";
     });
     await waitFor(() => {
-      expect(screen.getByText('b-modified')).toBeInTheDocument();
+      expect(screen.getByText("b-modified")).toBeInTheDocument();
     });
   });
 
-  it('应该在并发模式下工作', async () => {
+  it("应该在并发模式下工作", async () => {
     const state = observable({ count: 0 });
 
     function TestComponent() {
@@ -252,10 +252,10 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.Suspense>
     );
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
-  it('应该正确处理异常', async () => {
+  it("应该正确处理异常", async () => {
     const state = observable({ count: 0 });
     const errorBoundary = { error: null as Error | null };
 
@@ -263,7 +263,7 @@ describe('useObserver Hook', () => {
       try {
         return useObserver(() => {
           if (state.count > 0) {
-            throw new Error('Count is too high');
+            throw new Error("Count is too high");
           }
           return <div>{state.count}</div>;
         });
@@ -274,28 +274,28 @@ describe('useObserver Hook', () => {
     }
 
     render(<TestComponent />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
 
     await act(async () => {
       state.count = 1;
     });
 
     // 异常会被捕获并显示
-    expect(screen.getByText('Error: Count is too high')).toBeInTheDocument();
+    expect(screen.getByText("Error: Count is too high")).toBeInTheDocument();
   });
 
-  it('应该支持自定义组件名称用于调试', () => {
+  it("应该支持自定义组件名称用于调试", () => {
     const state = observable({ count: 0 });
 
     function TestComponent() {
-      return useObserver(() => <div>{state.count}</div>, 'MyCustomComponent');
+      return useObserver(() => <div>{state.count}</div>, "MyCustomComponent");
     }
 
     render(<TestComponent />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
-  it('应该在严格模式下正确处理多个 useObserver 调用', async () => {
+  it("应该在严格模式下正确处理多个 useObserver 调用", async () => {
     const state = observable({ a: 1, b: 2, c: 3 });
 
     function TestComponent() {
@@ -318,10 +318,10 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('a: 1')).toBeInTheDocument();
-    expect(screen.getByText('b: 2')).toBeInTheDocument();
-    expect(screen.getByText('c: 3')).toBeInTheDocument();
-    expect(screen.getByText('sum: 6')).toBeInTheDocument();
+    expect(screen.getByText("a: 1")).toBeInTheDocument();
+    expect(screen.getByText("b: 2")).toBeInTheDocument();
+    expect(screen.getByText("c: 3")).toBeInTheDocument();
+    expect(screen.getByText("sum: 6")).toBeInTheDocument();
 
     // 更新所有值
     act(() => {
@@ -330,14 +330,14 @@ describe('useObserver Hook', () => {
       state.c = 30;
     });
     await waitFor(() => {
-      expect(screen.getByText('a: 10')).toBeInTheDocument();
-      expect(screen.getByText('b: 20')).toBeInTheDocument();
-      expect(screen.getByText('c: 30')).toBeInTheDocument();
-      expect(screen.getByText('sum: 60')).toBeInTheDocument();
+      expect(screen.getByText("a: 10")).toBeInTheDocument();
+      expect(screen.getByText("b: 20")).toBeInTheDocument();
+      expect(screen.getByText("c: 30")).toBeInTheDocument();
+      expect(screen.getByText("sum: 60")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理快速连续的状态更新', async () => {
+  it("应该在严格模式下正确处理快速连续的状态更新", async () => {
     const state = observable({ count: 0 });
 
     function TestComponent() {
@@ -350,7 +350,7 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
 
     // 快速连续更新
     act(() => {
@@ -361,12 +361,12 @@ describe('useObserver Hook', () => {
       state.count = 5;
     });
     await waitFor(() => {
-      expect(screen.getByText('5')).toBeInTheDocument();
+      expect(screen.getByText("5")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理对象替换', async () => {
-    const state = observable({ user: { name: 'John', age: 30 } });
+  it("应该在严格模式下正确处理对象替换", async () => {
+    const state = observable({ user: { name: "John", age: 30 } });
 
     function TestComponent() {
       const user = useObserver(() => state.user);
@@ -383,20 +383,20 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('John')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText("John")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
 
     // 替换整个对象
     act(() => {
-      state.user = { name: 'Jane', age: 25 };
+      state.user = { name: "Jane", age: 25 };
     });
     await waitFor(() => {
-      expect(screen.getByText('Jane')).toBeInTheDocument();
-      expect(screen.getByText('25')).toBeInTheDocument();
+      expect(screen.getByText("Jane")).toBeInTheDocument();
+      expect(screen.getByText("25")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理计算属性', async () => {
+  it("应该在严格模式下正确处理计算属性", async () => {
     const state = observable({ width: 100, height: 200 });
 
     function TestComponent() {
@@ -415,8 +415,8 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('area: 20000')).toBeInTheDocument();
-    expect(screen.getByText('perimeter: 600')).toBeInTheDocument();
+    expect(screen.getByText("area: 20000")).toBeInTheDocument();
+    expect(screen.getByText("perimeter: 600")).toBeInTheDocument();
 
     // 更新尺寸
     act(() => {
@@ -424,12 +424,12 @@ describe('useObserver Hook', () => {
       state.height = 100;
     });
     await waitFor(() => {
-      expect(screen.getByText('area: 5000')).toBeInTheDocument();
-      expect(screen.getByText('perimeter: 300')).toBeInTheDocument();
+      expect(screen.getByText("area: 5000")).toBeInTheDocument();
+      expect(screen.getByText("perimeter: 300")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理布尔值切换', async () => {
+  it("应该在严格模式下正确处理布尔值切换", async () => {
     const state = observable({ isActive: false, isVisible: true });
 
     function TestComponent() {
@@ -437,8 +437,8 @@ describe('useObserver Hook', () => {
       const isVisible = useObserver(() => state.isVisible);
       return (
         <div>
-          <span>active: {isActive ? 'yes' : 'no'}</span>
-          <span>visible: {isVisible ? 'yes' : 'no'}</span>
+          <span>active: {isActive ? "yes" : "no"}</span>
+          <span>visible: {isVisible ? "yes" : "no"}</span>
         </div>
       );
     }
@@ -448,8 +448,8 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('active: no')).toBeInTheDocument();
-    expect(screen.getByText('visible: yes')).toBeInTheDocument();
+    expect(screen.getByText("active: no")).toBeInTheDocument();
+    expect(screen.getByText("visible: yes")).toBeInTheDocument();
 
     // 切换布尔值
     act(() => {
@@ -457,8 +457,8 @@ describe('useObserver Hook', () => {
       state.isVisible = false;
     });
     await waitFor(() => {
-      expect(screen.getByText('active: yes')).toBeInTheDocument();
-      expect(screen.getByText('visible: no')).toBeInTheDocument();
+      expect(screen.getByText("active: yes")).toBeInTheDocument();
+      expect(screen.getByText("visible: no")).toBeInTheDocument();
     });
 
     // 再次切换
@@ -467,16 +467,18 @@ describe('useObserver Hook', () => {
       state.isVisible = true;
     });
     await waitFor(() => {
-      expect(screen.getByText('active: no')).toBeInTheDocument();
-      expect(screen.getByText('visible: yes')).toBeInTheDocument();
+      expect(screen.getByText("active: no")).toBeInTheDocument();
+      expect(screen.getByText("visible: yes")).toBeInTheDocument();
     });
   });
 
-  it('应该在严格模式下正确处理字符串拼接', async () => {
-    const state = observable({ firstName: 'John', lastName: 'Doe' });
+  it("应该在严格模式下正确处理字符串拼接", async () => {
+    const state = observable({ firstName: "John", lastName: "Doe" });
 
     function TestComponent() {
-      const fullName = useObserver(() => `${state.firstName} ${state.lastName}`);
+      const fullName = useObserver(
+        () => `${state.firstName} ${state.lastName}`
+      );
       return <div>{fullName}</div>;
     }
 
@@ -485,22 +487,22 @@ describe('useObserver Hook', () => {
         <TestComponent />
       </React.StrictMode>
     );
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
 
     // 更新名字
     act(() => {
-      state.firstName = 'Jane';
+      state.firstName = "Jane";
     });
     await waitFor(() => {
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+      expect(screen.getByText("Jane Doe")).toBeInTheDocument();
     });
 
     // 更新姓氏
     act(() => {
-      state.lastName = 'Smith';
+      state.lastName = "Smith";
     });
     await waitFor(() => {
-      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+      expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     });
   });
 });

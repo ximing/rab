@@ -11,12 +11,23 @@ import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
-} from '@ant-design/icons';
-import { observer } from '@rabjs/react';
-import { Badge, Button, Card, Checkbox, Input, List, Radio, Space, Tag, Typography } from 'antd';
-import { useState } from 'react';
+} from "@ant-design/icons";
+import { observer } from "@rabjs/react";
+import {
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Input,
+  List,
+  Radio,
+  Space,
+  Tag,
+  Typography,
+} from "antd";
+import { useState } from "react";
 
-import { todoStore, type FilterType, type Todo } from './TodoStore.js';
+import { todoStore, type FilterType, type Todo } from "./TodoStore.js";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -25,29 +36,34 @@ const { Title, Paragraph, Text } = Typography;
  * 使用 observer 包装,当 todoStore 变化时自动更新
  */
 const TodoInput = observer(() => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
 
   const handleAdd = () => {
     todoStore.addTodo(inputValue);
-    setInputValue('');
+    setInputValue("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleAdd();
     }
   };
 
   return (
-    <Space.Compact style={{ width: '100%' }}>
+    <Space.Compact style={{ width: "100%" }}>
       <Input
         placeholder="输入待办事项..."
         value={inputValue}
-        onChange={e => setInputValue(e.target.value)}
+        onChange={(e) => setInputValue(e.target.value)}
         onKeyPress={handleKeyPress}
         size="large"
       />
-      <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} size="large">
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={handleAdd}
+        size="large"
+      >
         添加
       </Button>
     </Space.Compact>
@@ -78,9 +94,9 @@ const TodoItem = observer(({ todo }: { todo: Todo }) => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSave();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancel();
     }
   };
@@ -88,9 +104,9 @@ const TodoItem = observer(({ todo }: { todo: Todo }) => {
   return (
     <List.Item
       style={{
-        padding: '12px 16px',
-        background: todo.completed ? '#f5f5f5' : 'white',
-        transition: 'all 0.3s',
+        padding: "12px 16px",
+        background: todo.completed ? "#f5f5f5" : "white",
+        transition: "all 0.3s",
       }}
       actions={
         isEditing
@@ -104,7 +120,12 @@ const TodoItem = observer(({ todo }: { todo: Todo }) => {
               >
                 保存
               </Button>,
-              <Button key="cancel" size="small" icon={<CloseOutlined />} onClick={handleCancel}>
+              <Button
+                key="cancel"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={handleCancel}
+              >
                 取消
               </Button>,
             ]
@@ -127,12 +148,15 @@ const TodoItem = observer(({ todo }: { todo: Todo }) => {
             ]
       }
     >
-      <Space style={{ width: '100%' }}>
-        <Checkbox checked={todo.completed} onChange={() => todoStore.toggleTodo(todo.id)} />
+      <Space style={{ width: "100%" }}>
+        <Checkbox
+          checked={todo.completed}
+          onChange={() => todoStore.toggleTodo(todo.id)}
+        />
         {isEditing ? (
           <Input
             value={editValue}
-            onChange={e => setEditValue(e.target.value)}
+            onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyPress}
             autoFocus
             style={{ flex: 1 }}
@@ -142,7 +166,7 @@ const TodoItem = observer(({ todo }: { todo: Todo }) => {
             delete={todo.completed}
             style={{
               flex: 1,
-              color: todo.completed ? '#999' : 'inherit',
+              color: todo.completed ? "#999" : "inherit",
             }}
           >
             {todo.text}
@@ -163,10 +187,12 @@ const TodoList = observer(() => {
   if (filteredTodos.length === 0) {
     return (
       <Card>
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-          {todoStore.filter === 'all'
-            ? '暂无待办事项,点击上方添加按钮创建'
-            : `暂无${todoStore.filter === 'active' ? '未完成' : '已完成'}的待办事项`}
+        <div style={{ textAlign: "center", padding: "40px 0", color: "#999" }}>
+          {todoStore.filter === "all"
+            ? "暂无待办事项,点击上方添加按钮创建"
+            : `暂无${
+                todoStore.filter === "active" ? "未完成" : "已完成"
+              }的待办事项`}
         </div>
       </Card>
     );
@@ -176,7 +202,7 @@ const TodoList = observer(() => {
     <Card>
       <List
         dataSource={filteredTodos}
-        renderItem={todo => <TodoItem key={todo.id} todo={todo} />}
+        renderItem={(todo) => <TodoItem key={todo.id} todo={todo} />}
       />
     </Card>
   );
@@ -195,7 +221,7 @@ const TodoFooter = observer(() => {
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space direction="vertical" style={{ width: "100%" }} size="middle">
         {/* 统计信息 */}
         <Space size="large">
           <Badge count={activeCount} showZero color="blue">
@@ -214,7 +240,7 @@ const TodoFooter = observer(() => {
           <Text>显示:</Text>
           <Radio.Group
             value={filter}
-            onChange={e => todoStore.setFilter(e.target.value as FilterType)}
+            onChange={(e) => todoStore.setFilter(e.target.value as FilterType)}
             buttonStyle="solid"
           >
             <Radio.Button value="all">全部</Radio.Button>
@@ -227,7 +253,7 @@ const TodoFooter = observer(() => {
         <Space>
           {todos.length > 0 && (
             <Button onClick={() => todoStore.toggleAll()}>
-              {todoStore.allCompleted ? '取消全部完成' : '全部完成'}
+              {todoStore.allCompleted ? "取消全部完成" : "全部完成"}
             </Button>
           )}
           {completedCount > 0 && (
@@ -250,7 +276,8 @@ export default function TodoListDemo() {
       <Title level={2}>TodoList Demo - Observable & Observer</Title>
 
       <Paragraph>
-        这个示例展示了如何使用 <code>observable</code> 和 <code>observer</code> 创建响应式应用:
+        这个示例展示了如何使用 <code>observable</code> 和 <code>observer</code>{" "}
+        创建响应式应用:
       </Paragraph>
 
       <Paragraph>
@@ -260,24 +287,32 @@ export default function TodoListDemo() {
             当对象属性变化时会自动通知观察者
           </li>
           <li>
-            <strong>observer</strong>: 将 React 组件转换为响应式组件, 自动追踪组件中访问的
-            observable 数据,并在数据变化时重新渲染
+            <strong>observer</strong>: 将 React 组件转换为响应式组件,
+            自动追踪组件中访问的 observable 数据,并在数据变化时重新渲染
           </li>
           <li>
-            <strong>计算属性</strong>: 使用 getter 定义计算属性(如 filteredTodos、activeCount),
+            <strong>计算属性</strong>: 使用 getter 定义计算属性(如
+            filteredTodos、activeCount),
             这些属性会自动缓存并在依赖变化时重新计算
           </li>
         </ul>
       </Paragraph>
 
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space direction="vertical" style={{ width: "100%" }} size="large">
         <TodoInput />
         <TodoList />
         <TodoFooter />
       </Space>
 
       <Card title="核心代码示例" style={{ marginTop: 24 }}>
-        <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 4, overflow: 'auto' }}>
+        <pre
+          style={{
+            background: "#f5f5f5",
+            padding: 16,
+            borderRadius: 4,
+            overflow: "auto",
+          }}
+        >
           {`// 1. 创建 Store 类
 class TodoStore {
   todos: Todo[] = [];
@@ -330,17 +365,20 @@ const TodoList = observer(() => {
         <Paragraph>
           <ol>
             <li>
-              <strong>依赖追踪</strong>: 当 observer 组件渲染时,会自动追踪组件中访问的所有
-              observable 属性
+              <strong>依赖追踪</strong>: 当 observer
+              组件渲染时,会自动追踪组件中访问的所有 observable 属性
             </li>
             <li>
-              <strong>变更检测</strong>: 当 observable 对象的属性被修改时,会通知所有依赖该属性的组件
+              <strong>变更检测</strong>: 当 observable
+              对象的属性被修改时,会通知所有依赖该属性的组件
             </li>
             <li>
-              <strong>精确更新</strong>: 只有真正依赖变化数据的组件才会重新渲染,避免不必要的渲染
+              <strong>精确更新</strong>:
+              只有真正依赖变化数据的组件才会重新渲染,避免不必要的渲染
             </li>
             <li>
-              <strong>计算缓存</strong>: getter 定义的计算属性会自动缓存,只在依赖变化时重新计算
+              <strong>计算缓存</strong>: getter
+              定义的计算属性会自动缓存,只在依赖变化时重新计算
             </li>
           </ol>
         </Paragraph>

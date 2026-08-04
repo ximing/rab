@@ -12,12 +12,24 @@
  * 5. bindServices 为组件提供服务容器
  */
 
-import { UserAddOutlined, DeleteOutlined } from '@ant-design/icons';
-import { bindServices, useService, observer } from '@rabjs/react';
-import { Card, Button, Space, List, Tag, Empty, Spin, Alert, Divider, Row, Col } from 'antd';
+import { UserAddOutlined, DeleteOutlined } from "@ant-design/icons";
+import { bindServices, useService, observer } from "@rabjs/react";
+import {
+  Card,
+  Button,
+  Space,
+  List,
+  Tag,
+  Empty,
+  Spin,
+  Alert,
+  Divider,
+  Row,
+  Col,
+} from "antd";
 
-import type { User } from './UserService';
-import { UserService } from './UserService';
+import type { User } from "./UserService";
+import { UserService } from "./UserService";
 
 /**
  * 用户列表组件 - 使用 observer HOC 包装以自动追踪响应式更新
@@ -43,7 +55,11 @@ const UserList = observer(() => {
             <List.Item
               key={user.id}
               actions={[
-                <Button type="text" size="small" onClick={() => userService.setCurrentUser(user)}>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={() => userService.setCurrentUser(user)}
+                >
                   选择
                 </Button>,
                 <Button
@@ -88,7 +104,7 @@ const CurrentUserDisplay = observer(() => {
 
   return (
     <Card title="当前用户" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         <div>
           <strong>ID:</strong> {user.id}
         </div>
@@ -119,22 +135,22 @@ const UserOperations = observer(() => {
 
   return (
     <Card title="用户操作" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         <div>
           <strong>用户总数:</strong> {userService.users.length}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <input
             type="text"
             placeholder="输入新用户名"
             value={userService.newUserName}
-            onChange={e => userService.setNewUserName(e.target.value)}
-            onKeyPress={e => e.key === 'Enter' && userService.addNewUser()}
+            onChange={(e) => userService.setNewUserName(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && userService.addNewUser()}
             style={{
               flex: 1,
-              padding: '8px 12px',
-              border: '1px solid #d9d9d9',
-              borderRadius: '4px',
+              padding: "8px 12px",
+              border: "1px solid #d9d9d9",
+              borderRadius: "4px",
             }}
           />
           <Button
@@ -160,12 +176,12 @@ const ServiceInfo = observer(() => {
 
   return (
     <Card title="服务信息" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         <div>
           <strong>服务类型:</strong> <Tag>UserService</Tag>
         </div>
         <div>
-          <strong>当前用户:</strong>{' '}
+          <strong>当前用户:</strong>{" "}
           {userService.currentUser ? (
             <Tag color="blue">{userService.currentUser.name}</Tag>
           ) : (
@@ -173,7 +189,7 @@ const ServiceInfo = observer(() => {
           )}
         </div>
         <div>
-          <strong>加载状态:</strong>{' '}
+          <strong>加载状态:</strong>{" "}
           {userService.loading ? (
             <Tag color="processing">加载中</Tag>
           ) : (
@@ -181,7 +197,7 @@ const ServiceInfo = observer(() => {
           )}
         </div>
         <div>
-          <strong>错误信息:</strong>{' '}
+          <strong>错误信息:</strong>{" "}
           {userService.error ? (
             <Tag color="error">{userService.error}</Tag>
           ) : (
@@ -215,13 +231,13 @@ const UseServiceDemoContent = () => {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <UserList />
             <UserOperations />
           </Space>
         </Col>
         <Col xs={24} sm={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <CurrentUserDisplay />
             <ServiceInfo />
           </Space>
@@ -233,7 +249,8 @@ const UseServiceDemoContent = () => {
       <Card title="关键概念" size="small">
         <ul>
           <li>
-            <strong>bindServices:</strong> 为组件创建独立的服务容器，注册指定的服务
+            <strong>bindServices:</strong>{" "}
+            为组件创建独立的服务容器，注册指定的服务
           </li>
           <li>
             <strong>useService:</strong> 在 Provider 作用域内获取服务实例
@@ -252,7 +269,8 @@ const UseServiceDemoContent = () => {
             <strong>作用域链:</strong> 子 Provider 可以访问父 Provider 中的服务
           </li>
           <li>
-            <strong>Service 基类:</strong> 所有属性自动 observable，所有方法默认都是 Action
+            <strong>Service 基类:</strong> 所有属性自动
+            observable，所有方法默认都是 Action
           </li>
         </ul>
       </Card>
@@ -262,10 +280,12 @@ const UseServiceDemoContent = () => {
       <Card title="最佳实践" size="small">
         <ul>
           <li>
-            <strong>使用 observer 包装组件:</strong> 确保组件能够自动追踪 observable 变化
+            <strong>使用 observer 包装组件:</strong> 确保组件能够自动追踪
+            observable 变化
           </li>
           <li>
-            <strong>在服务中定义业务逻辑:</strong> 将状态和方法都定义在 Service 中
+            <strong>在服务中定义业务逻辑:</strong> 将状态和方法都定义在 Service
+            中
           </li>
           <li>
             <strong>使用 useService 获取服务:</strong> 而不是直接创建服务实例

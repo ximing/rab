@@ -2,16 +2,16 @@
  * view HOC 测试
  * 测试函数组件和类组件的响应式行为
  */
-import * as React from 'react';
-import { Component } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { observable } from '@rabjs/observer';
-import { view } from '../view';
+import * as React from "react";
+import { Component } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import { observable } from "@rabjs/observer";
+import { view } from "../view";
 
-describe('view', () => {
-  describe('函数组件', () => {
-    it('应该追踪 observable 变化并重新渲染', async () => {
+describe("view", () => {
+  describe("函数组件", () => {
+    it("应该追踪 observable 变化并重新渲染", async () => {
       const store = observable({ count: 0 });
 
       const Counter = view(() => {
@@ -25,19 +25,19 @@ describe('view', () => {
 
       render(<Counter />);
 
-      expect(screen.getByTestId('count')).toHaveTextContent('0');
+      expect(screen.getByTestId("count")).toHaveTextContent("0");
 
-      fireEvent.click(screen.getByText('Increment'));
+      fireEvent.click(screen.getByText("Increment"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('count')).toHaveTextContent('1');
+        expect(screen.getByTestId("count")).toHaveTextContent("1");
       });
     });
 
-    it('应该支持 props', async () => {
+    it("应该支持 props", async () => {
       const store = observable({ count: 0 });
 
-      const Counter = view<{ prefix: string }>(props => {
+      const Counter = view<{ prefix: string }>((props) => {
         return (
           <div>
             <span data-testid="count">
@@ -50,22 +50,22 @@ describe('view', () => {
 
       const { rerender } = render(<Counter prefix="Count" />);
 
-      expect(screen.getByTestId('count')).toHaveTextContent('Count: 0');
+      expect(screen.getByTestId("count")).toHaveTextContent("Count: 0");
 
-      fireEvent.click(screen.getByText('Increment'));
+      fireEvent.click(screen.getByText("Increment"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('count')).toHaveTextContent('Count: 1');
+        expect(screen.getByTestId("count")).toHaveTextContent("Count: 1");
       });
 
       // 测试 props 变化
       rerender(<Counter prefix="Total" />);
 
-      expect(screen.getByTestId('count')).toHaveTextContent('Total: 1');
+      expect(screen.getByTestId("count")).toHaveTextContent("Total: 1");
     });
 
-    it('应该只在访问的属性变化时重新渲染', async () => {
-      const store = observable({ count: 0, name: 'test' });
+    it("应该只在访问的属性变化时重新渲染", async () => {
+      const store = observable({ count: 0, name: "test" });
       let renderCount = 0;
 
       const Counter = view(() => {
@@ -78,9 +78,9 @@ describe('view', () => {
       const initialRenderCount = renderCount;
 
       // 修改未访问的属性，不应该触发重新渲染
-      store.name = 'updated';
+      store.name = "updated";
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(renderCount).toBe(initialRenderCount);
 
@@ -93,8 +93,8 @@ describe('view', () => {
     });
   });
 
-  describe('类组件', () => {
-    it('应该追踪 observable 变化并重新渲染', async () => {
+  describe("类组件", () => {
+    it("应该追踪 observable 变化并重新渲染", async () => {
       const store = observable({ count: 0 });
 
       class Counter extends Component {
@@ -112,16 +112,16 @@ describe('view', () => {
 
       render(<ReactiveCounter />);
 
-      expect(screen.getByTestId('count')).toHaveTextContent('0');
+      expect(screen.getByTestId("count")).toHaveTextContent("0");
 
-      fireEvent.click(screen.getByText('Increment'));
+      fireEvent.click(screen.getByText("Increment"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('count')).toHaveTextContent('1');
+        expect(screen.getByTestId("count")).toHaveTextContent("1");
       });
     });
 
-    it('应该支持 props 和 state', async () => {
+    it("应该支持 props 和 state", async () => {
       const store = observable({ count: 0 });
 
       interface Props {
@@ -147,8 +147,12 @@ describe('view', () => {
               <span data-testid="observable-count">
                 {this.props.prefix}: {store.count}
               </span>
-              <span data-testid="local-count">Local: {this.state.localCount}</span>
-              <button onClick={() => store.count++}>Increment Observable</button>
+              <span data-testid="local-count">
+                Local: {this.state.localCount}
+              </span>
+              <button onClick={() => store.count++}>
+                Increment Observable
+              </button>
               <button onClick={this.incrementLocal}>Increment Local</button>
             </div>
           );
@@ -159,31 +163,37 @@ describe('view', () => {
 
       const { rerender } = render(<ReactiveCounter prefix="Count" />);
 
-      expect(screen.getByTestId('observable-count')).toHaveTextContent('Count: 0');
-      expect(screen.getByTestId('local-count')).toHaveTextContent('Local: 0');
+      expect(screen.getByTestId("observable-count")).toHaveTextContent(
+        "Count: 0"
+      );
+      expect(screen.getByTestId("local-count")).toHaveTextContent("Local: 0");
 
       // 测试 observable 变化
-      fireEvent.click(screen.getByText('Increment Observable'));
+      fireEvent.click(screen.getByText("Increment Observable"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('observable-count')).toHaveTextContent('Count: 1');
+        expect(screen.getByTestId("observable-count")).toHaveTextContent(
+          "Count: 1"
+        );
       });
 
       // 测试 state 变化
-      fireEvent.click(screen.getByText('Increment Local'));
+      fireEvent.click(screen.getByText("Increment Local"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('local-count')).toHaveTextContent('Local: 1');
+        expect(screen.getByTestId("local-count")).toHaveTextContent("Local: 1");
       });
 
       // 测试 props 变化
       rerender(<ReactiveCounter prefix="Total" />);
 
-      expect(screen.getByTestId('observable-count')).toHaveTextContent('Total: 1');
+      expect(screen.getByTestId("observable-count")).toHaveTextContent(
+        "Total: 1"
+      );
     });
 
-    it('应该只在访问的属性变化时重新渲染', async () => {
-      const store = observable({ count: 0, name: 'test' });
+    it("应该只在访问的属性变化时重新渲染", async () => {
+      const store = observable({ count: 0, name: "test" });
       let renderCount = 0;
 
       class Counter extends Component {
@@ -200,9 +210,9 @@ describe('view', () => {
       const initialRenderCount = renderCount;
 
       // 修改未访问的属性，不应该触发重新渲染
-      store.name = 'updated';
+      store.name = "updated";
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(renderCount).toBe(initialRenderCount);
 
@@ -214,21 +224,21 @@ describe('view', () => {
       });
     });
 
-    it('应该正确处理生命周期方法', async () => {
+    it("应该正确处理生命周期方法", async () => {
       const store = observable({ count: 0 });
       const lifecycleCalls: string[] = [];
 
       class Counter extends Component {
         componentDidMount() {
-          lifecycleCalls.push('didMount');
+          lifecycleCalls.push("didMount");
         }
 
         componentDidUpdate() {
-          lifecycleCalls.push('didUpdate');
+          lifecycleCalls.push("didUpdate");
         }
 
         componentWillUnmount() {
-          lifecycleCalls.push('willUnmount');
+          lifecycleCalls.push("willUnmount");
         }
 
         render() {
@@ -245,22 +255,22 @@ describe('view', () => {
 
       const { unmount } = render(<ReactiveCounter />);
 
-      expect(lifecycleCalls).toContain('didMount');
+      expect(lifecycleCalls).toContain("didMount");
 
-      fireEvent.click(screen.getByText('Increment'));
+      fireEvent.click(screen.getByText("Increment"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('count')).toHaveTextContent('1');
+        expect(screen.getByTestId("count")).toHaveTextContent("1");
       });
 
-      expect(lifecycleCalls).toContain('didUpdate');
+      expect(lifecycleCalls).toContain("didUpdate");
 
       unmount();
 
-      expect(lifecycleCalls).toContain('willUnmount');
+      expect(lifecycleCalls).toContain("willUnmount");
     });
 
-    it('应该支持自定义 shouldComponentUpdate', async () => {
+    it("应该支持自定义 shouldComponentUpdate", async () => {
       const store = observable({ count: 0 });
       let shouldUpdateCalls = 0;
 
@@ -289,7 +299,7 @@ describe('view', () => {
 
       const { rerender } = render(<ReactiveCounter value={1} />);
 
-      expect(screen.getByTestId('value')).toHaveTextContent('1');
+      expect(screen.getByTestId("value")).toHaveTextContent("1");
 
       // props 不变，不应该更新
       rerender(<ReactiveCounter value={1} />);
@@ -300,11 +310,11 @@ describe('view', () => {
       rerender(<ReactiveCounter value={2} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('value')).toHaveTextContent('2');
+        expect(screen.getByTestId("value")).toHaveTextContent("2");
       });
     });
 
-    it('应该在组件卸载时清理 reaction', async () => {
+    it("应该在组件卸载时清理 reaction", async () => {
       const store = observable({ count: 0 });
       let renderCount = 0;
 
@@ -326,15 +336,15 @@ describe('view', () => {
       // 卸载后修改 observable，不应该触发渲染
       store.count++;
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(renderCount).toBe(initialRenderCount);
     });
 
-    it('应该继承静态属性', () => {
+    it("应该继承静态属性", () => {
       class Counter extends Component {
-        static displayName = 'MyCounter';
-        static customStatic = 'test';
+        static displayName = "MyCounter";
+        static customStatic = "test";
 
         render() {
           return <div>Counter</div>;
@@ -343,13 +353,13 @@ describe('view', () => {
 
       const ReactiveCounter = view(Counter);
 
-      expect(ReactiveCounter.displayName).toBe('MyCounter');
-      expect((ReactiveCounter as any).customStatic).toBe('test');
+      expect(ReactiveCounter.displayName).toBe("MyCounter");
+      expect((ReactiveCounter as any).customStatic).toBe("test");
     });
   });
 
-  describe('ref 转发', () => {
-    it('函数组件应该支持 ref 转发', () => {
+  describe("ref 转发", () => {
+    it("函数组件应该支持 ref 转发", () => {
       const store = observable({ count: 0 });
 
       const Counter = view(
@@ -362,10 +372,10 @@ describe('view', () => {
       render(<Counter ref={ref} />);
 
       expect(ref.current).toBeInTheDocument();
-      expect(ref.current?.textContent).toBe('0');
+      expect(ref.current?.textContent).toBe("0");
     });
 
-    it('类组件应该支持 ref 转发', () => {
+    it("类组件应该支持 ref 转发", () => {
       const store = observable({ count: 0 });
 
       class Counter extends Component {
@@ -383,8 +393,8 @@ describe('view', () => {
     });
   });
 
-  describe('混合场景', () => {
-    it('函数组件和类组件应该共享同一个 observable', async () => {
+  describe("混合场景", () => {
+    it("函数组件和类组件应该共享同一个 observable", async () => {
       const store = observable({ count: 0 });
 
       const FuncCounter = view(() => {
@@ -407,14 +417,14 @@ describe('view', () => {
         </>
       );
 
-      expect(screen.getByTestId('func-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('class-count')).toHaveTextContent('0');
+      expect(screen.getByTestId("func-count")).toHaveTextContent("0");
+      expect(screen.getByTestId("class-count")).toHaveTextContent("0");
 
-      fireEvent.click(screen.getByText('Increment'));
+      fireEvent.click(screen.getByText("Increment"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('func-count')).toHaveTextContent('1');
-        expect(screen.getByTestId('class-count')).toHaveTextContent('1');
+        expect(screen.getByTestId("func-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("class-count")).toHaveTextContent("1");
       });
     });
   });
