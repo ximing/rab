@@ -24,7 +24,15 @@ interface MockModelContext extends ModelContextApi {
   tools: Map<string, WebMcpToolDefinition>;
 }
 
-function installMockModelContext(): MockModelContext {
+/**
+ * 用 mock 顶替 navigator.modelContext。
+ *
+ * 注意：支持 WebMCP 的浏览器里 modelContext 是 Navigator.prototype 上
+ * 只有 getter 的原生属性，直接赋值会抛 TypeError，必须通过
+ * defineProperty 在实例上遮蔽它；卸载时 delete 即可还原原生 getter。
+ * 属性不可配置（无法遮蔽）时返回 null，demo 降级为提示。
+ */
+function installMockModelContext(): MockModelContext | null {
   const tools = new Map<string, WebMcpToolDefinition>();
   const mock: MockModelContext = {
     tools,
@@ -37,8 +45,19 @@ function installMockModelContext(): MockModelContext {
       };
     },
   };
-  navigator.modelContext = mock;
-  return mock;
+  try {
+    Object.defineProperty(navigator, "modelContext", {
+      configurable: true,
+      get: () => mock,
+    });
+    return mock;
+  } catch {
+    return null;
+  }
+}
+
+function uninstallMockModelContext() {
+  delete (navigator as { modelContext?: unknown }).modelContext;
 }
 
 /** 应用状态视图：observer 追踪 todos，Agent 的修改同样会驱动这里重渲染 */
@@ -56,8 +75,11 @@ export default function WebMcpDemo() {
   const mockRef = useRef<MockModelContext | null>(null);
 
   useEffect(() => {
-    const previous = navigator.modelContext;
     const mock = installMockModelContext();
+    if (!mock) {
+      setToolResult("当前浏览器的 navigator.modelContext 无法被 mock 遮蔽，live demo 不可用");
+      return;
+    }
     mockRef.current = mock;
 
     const bridge = new McpBridge();
@@ -69,7 +91,7 @@ export default function WebMcpDemo() {
     return () => {
       disposed = true;
       bridge.unmount();
-      navigator.modelContext = previous;
+      uninstallMockModelContext();
     };
   }, []);
 
