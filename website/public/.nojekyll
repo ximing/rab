@@ -1,0 +1,1 @@
+# 避免 GitHub Pages 的 Jekyll 处理（vite build 会把 public/ 原样拷到 dist/）

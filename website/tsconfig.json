@@ -1,8 +1,57 @@
 {
-  // This file is not used in compilation. It is here just for a nice editor experience.
-  "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
-    "baseUrl": "."
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // @rabjs 包使用 legacy 装饰器（@Action / @Inject 等），demo 代码同样会使用。
+    // esbuild 与 tsc 都会读取这里的配置，务必保持开启。
+    "experimentalDecorators": true,
+    // 关闭 define 语义，保证 @Inject 等属性装饰器定义的 getter 不被 class field 覆盖
+    "useDefineForClassFields": false,
+
+    // 与 configs/tsconfig/base.json 保持一致的宽松度，
+    // 因为 paths 会把 packages/*/src 源码纳入类型检查
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": false,
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    "types": ["vite/client", "node"],
+
+    // 直接指向 monorepo 源码，与 vite.config.ts 的 alias 保持一致，
+    // 使站点不依赖各包的 lib/ 构建产物
+    "baseUrl": ".",
+    "paths": {
+      // packages/react/node_modules 里有自己的 @types/react@18（其 devDep）。
+      // 强制全站（含 packages/*/src 与 jsx-runtime）只解析到网站这一份
+      // @types/react@18，否则同一类型的两份拷贝会互相报「不可赋值」。
+      // 注意：packages/react 源码是按 React 18 类型编写的，网站因此也固定用
+      // @types/react@18（运行时仍是 react@19，peer 范围允许）。
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      "@rabjs/service": ["../packages/service/src/main.ts"],
+      "@rabjs/observer": ["../packages/observer/src/main.ts"],
+      "@rabjs/react": ["../packages/react/src/main.ts"],
+      "@rabjs/devtools": ["../packages/devtools/src/main.ts"],
+      "@rabjs/web-mcp": ["../packages/web-mcp/src/main.ts"],
+      "@rabjs/shared": ["../packages/shared/src/main.ts"]
+    }
   },
-  "exclude": [".docusaurus", "build"]
+  // 显式纳入 @rabjs/devtools 的 Window 全局声明（__RS_ROOT_CONTAINER__），
+  // 否则 paths 只加载 main.ts 会漏掉这个 d.ts，导致 devtools 源码自身类型检查失败
+  "include": ["src", "vite.config.ts", "../packages/devtools/src/types/window.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
