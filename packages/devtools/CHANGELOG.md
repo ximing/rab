@@ -1,4 +1,4 @@
-# @rabjs/web-mcp
+# @rabjs/devtools
 
 ## 9.2.0
 
@@ -15,18 +15,3 @@
 - Updated dependencies
   - @rabjs/service@9.2.0
   - @rabjs/shared@9.2.0
-
-## 9.1.0
-
-### Minor Changes
-
-- feat: sync updates from upstream
-
-  - react: add useReaction hook
-  - react: fix bindServices ViewComp created outside render, restore options param
-  - service: fix Inject decorator to return descriptor for TS/Babel compatibility
-
-### Patch Changes
-
-- Updated dependencies
-  - @rabjs/service@9.1.0
