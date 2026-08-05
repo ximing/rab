@@ -1,412 +1,166 @@
-# RAB - 响应式状态管理库
+# RAB — AI-First Reactive State Architecture
 
-<div align="center">
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-blue)
-![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.19.0-green)
-![pnpm](https://img.shields.io/badge/pnpm-10.22.0-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
+> A reactive state architecture where humans and AI agents operate on the same observable state surface.
 
-**现代化、高性能的响应式状态管理解决方案**
+![RAB AI First architecture](docs/assets/ai-first-state.svg)
 
-观察者模式 | 服务容器 | React 集成 | TypeScript 优先
+## Why RAB
 
-</div>
+Most state-management approaches give the UI, tests, developer tools, and automation separate ways to understand an application. RAB makes the reactive Service state the shared contract instead. A person clicking a button, a test making an assertion, and an agent calling a tool all work against the same named Service instances and their observable state.
 
-## 🚀 项目简介
+This reduces duplicated client, server, and UI mirrors; makes operations inspectable; and gives coding agents stable names and boundaries to reason about. AI First is therefore a state contract, not an AI-specific UI feature.
 
-RAB 是一个专业的 monorepo 项目，为现代前端应用提供高质量的响应式状态管理解决方案。核心产品包括**观察者库**、**服务容器**和**React 集成方案**，为前端应用开发提供坚实的基础。
+## Architecture
 
-### ✨ 核心特性
+RAB is composed of small layers with one shared state surface:
 
-- 🎯 **响应式观察者** - 高效的观察者模式实现，支持细粒度追踪
-- 🔌 **服务容器** - 灵活的服务管理容器，支持装饰器和依赖注入
-- ⚛️ **React 集成** - 与 React 深度集成的状态管理方案
-- 📦 **Monorepo 管理** - 基于 pnpm + Turborepo 的高效包管理
-- 🎯 **TypeScript 优先** - 完整的类型安全和开发体验
-- 🧪 **高质量测试** - Jest 测试框架，完整的测试覆盖
-- 📚 **完整文档** - 详细的 API 文档和使用指南
+- `@rabjs/observer` tracks property dependencies and runs reactions when those dependencies change.
+- `@rabjs/service` provides observable `Service` instances, containers, lifecycle management, Actions, and method models such as loading and error state.
+- `@rabjs/react` connects Services to React through `observer`, `useService`, and scoped service containers.
+- DevTools and Web MCP expose that same container and state surface to inspection, assertions, and agent operations.
 
-## 📦 项目结构
+The result is one reactive system rather than a UI state model beside an automation state model.
 
-```
-rab/
-├── packages/                      # 📦 核心包
-│   ├── observer/                  # 观察者库 (@rabjs/observer)
-│   ├── service/                   # 服务容器 (@rabjs/service)
-│   └── react/                     # React 集成 (@rabjs/react)
-├── examples/                      # 📚 示例项目
-│   └── reactive-state/            # 响应式状态示例应用
-├── configs/                       # ⚙️ 共享配置
-│   ├── eslint-config-custom/      # ESLint 规则
-│   └── tsconfig/                  # TypeScript 配置
-├── website/                       # 📖 文档网站
-└── scripts/                       # 🔧 构建和发布脚本
-```
+## Quick Start
 
-## 🚀 快速开始
-
-### 环境要求
-
-- **Node.js**: >= 20.19.0
-- **pnpm**: 10.22.0
-- **Git**: 任意版本
-
-### 安装依赖
+Use RAB in a React application:
 
 ```bash
-# 克隆仓库
-git clone <repository-url>
-cd rab
+pnpm add @rabjs/react @rabjs/service
+```
 
-# 安装依赖
+`@rabjs/react` re-exports the observer and service APIs, so applications can generally import from that single package. For a guided walkthrough, see the [Quick Start documentation](https://ximing.github.io/rab/#/quick-start).
+
+To work on this repository:
+
+```bash
+git clone https://github.com/ximing/rab.git
+cd rab
 pnpm install
 ```
 
-### 开发模式
+## Core Packages
 
-```bash
-# 启动所有包的开发模式
-pnpm dev
+| Package | Responsibility |
+| --- | --- |
+| [`@rabjs/observer`](./packages/observer) | Fine-grained observable dependency tracking and reactions. |
+| [`@rabjs/service`](./packages/service) | Observable Services, dependency containers, lifecycle, actions, and method models. |
+| [`@rabjs/react`](./packages/react) | React bindings for reactive rendering and Service resolution. |
+| [`@rabjs/devtools`](./packages/devtools) | Inspection and assertion access to the live container tree. |
+| [`@rabjs/web-mcp`](./packages/web-mcp) | A WebMCP bridge that exposes active Services as tools for browser agents. |
 
-# 仅开发示例应用
-cd examples/reactive-state && pnpm dev
+## The AI-First Workflow
+
+Human and agent operations enter through the same state contract. The UI is one observer of the update, not a separate source of truth:
+
+```text
+Human click / Agent tool call
+        ↓
+Service action or explicit state mutation
+        ↓
+Observable dependency tracking
+        ↓
+React UI, DevTools, and assertions observe the same update
 ```
 
-### 构建项目
+For example, an agent can discover an active Service, call one of its methods, read its resulting state, and assert the outcome. React observes the very same mutation and rerenders only the components whose dependencies changed. This keeps automation inspectable and avoids synchronizing an additional agent-facing state representation.
 
-```bash
-# 构建所有包
-pnpm build
+## Service Example
 
-# 清理构建产物
-pnpm clean
-```
+This is the minimal React Service pattern:
 
-## 📚 核心库介绍
+```tsx
+import { Service, bindServices, observer, useService } from "@rabjs/react";
 
-### 1. @rabjs/observer - 观察者库
+class CounterService extends Service {
+  count = 0;
 
-高效的观察者模式实现，提供细粒度的响应式追踪和自动更新机制。
-
-**主要特性**:
-
-- 细粒度响应式追踪
-- 自动依赖收集
-- 高性能更新机制
-- 完整的 TypeScript 支持
-- 内存泄漏防护
-
-**使用示例**:
-
-```typescript
-import { observable, observer } from '@rabjs/observer';
-
-const state = observable({ count: 0 });
-const dispose = observer(() => {
-  console.log('Count:', state.count);
-});
-
-state.count = 5; // 自动触发观察者
-dispose(); // 清理观察者
-```
-
-### 2. @rabjs/service - 服务容器
-
-灵活的服务管理容器，支持装饰器、依赖注入和生命周期管理。
-
-**主要特性**:
-
-- 装饰器支持（@Injectable、@Inject 等）
-- 类型安全的依赖注入
-- 生命周期管理
-- 事件系统集成
-- 循环依赖检测
-
-**使用示例**:
-
-```typescript
-import { Injectable, Inject, Container } from '@rabjs/service';
-
-@Injectable()
-class UserService {
-  getUser(id: number) {
-    return { id, name: 'User' };
+  increment() {
+    this.count += 1;
   }
 }
-
-@Injectable()
-class UserController {
-  constructor(@Inject(UserService) private userService: UserService) {}
-
-  getUser(id: number) {
-    return this.userService.getUser(id);
-  }
-}
-
-const container = new Container();
-container.register(UserService);
-container.register(UserController);
-const controller = container.get(UserController);
-```
-
-### 3. @rabjs/react - React 集成
-
-与 React 深度集成的状态管理方案，提供 Hooks 和组件级别的状态管理。
-
-**主要特性**:
-
-- React Hooks 支持（useObserver、useLocalObservable 等）
-- 自动组件更新
-- 性能优化
-- 服务容器集成
-- 开发者工具支持
-
-**使用示例**:
-
-```typescript
-import { useLocalObservable, observer } from '@rabjs/react';
 
 const Counter = observer(() => {
-  const state = useLocalObservable(() => ({
-    count: 0,
-    increment() {
-      this.count++;
-    }
-  }));
-
-  return (
-    <div>
-      <p>Count: {state.count}</p>
-      <button onClick={() => state.increment()}>Increment</button>
-    </div>
-  );
+  const counter = useService(CounterService);
+  return <button onClick={() => counter.increment()}>{counter.count}</button>;
 });
+
+export default bindServices(Counter, [CounterService]);
 ```
 
-## 🧪 测试和质量保证
+Service properties are observable by default, and Service methods are Actions by default. No registration decorator is required for this pattern. `observer` records what the component reads, while `useService` resolves the instance for the current scope. `bindServices` creates a scoped container with lazy singleton resolution, so each bound component tree owns the Services it registers and nested trees can resolve parent Services when needed.
 
-### 测试要求
+## Observer Example
 
-- **覆盖率**: 最低 80% (分支、函数、行、语句)
-- **测试框架**: Jest + ts-jest
-- **测试超时**: 30 秒
-- **CI/CD**: 自动化测试和发布
+Use `@rabjs/observer` directly when reactive state is not tied to React:
 
-### 运行测试
+```ts
+import { observable, observe, unobserve } from "@rabjs/observer";
+
+const state = observable({ count: 0 });
+
+const reaction = observe(() => {
+  console.log(`count: ${state.count}`);
+});
+
+state.count += 1; // Runs the reaction because it read state.count.
+unobserve(reaction);
+```
+
+Reactions track the properties they read. Changes to those properties rerun the reaction; unrelated changes do not. Read the [Observer guide](https://ximing.github.io/rab/#/guides/observer) for the standalone API and scheduling options.
+
+## Web MCP and DevTools
+
+[`@rabjs/devtools`](./packages/devtools) exposes the live container tree for browser-console inspection and state assertions. It is useful for developers, E2E checks, and CDP-based agent debugging without replacing the runtime state with a snapshot.
+
+[`@rabjs/web-mcp`](./packages/web-mcp) bridges active Service instances to WebMCP tools. A browser agent can discover Services, read state, invoke methods, make permitted state updates, and run assertions; those operations flow through the same observable layer that React renders. See the [DevTools guide](https://ximing.github.io/rab/#/guides/devtools), [AI overview](https://ximing.github.io/rab/#/ai), and [Web MCP guide](https://ximing.github.io/rab/#/ai/web-mcp).
+
+## Repository Structure
+
+```text
+rab/
+├── packages/
+│   ├── observer/       # @rabjs/observer
+│   ├── service/        # @rabjs/service
+│   ├── react/          # @rabjs/react
+│   ├── devtools/       # @rabjs/devtools
+│   └── web-mcp/        # @rabjs/web-mcp
+├── examples/           # Runnable examples
+├── website/            # Documentation site
+├── docs/               # Project documentation and assets
+└── configs/            # Shared TypeScript and ESLint configuration
+```
+
+## Development
+
+RAB is a pnpm workspace powered by Turborepo. Use these repository commands:
 
 ```bash
-# 运行所有测试
-pnpm test
-
-# 使用 Turbo 并行测试
+pnpm install
+pnpm build
 pnpm test:turbo
-
-# 监听模式
-cd packages/observer && npm run test:watch
-
-# 覆盖率报告
-cd packages/observer && npm run test:coverage
+pnpm --filter @rabjs/website build
 ```
 
-## 🔄 版本管理和发布
+The last command builds the documentation site independently. During development, `pnpm dev` starts workspace development tasks.
 
-本项目使用 [Changesets](https://github.com/changesets/changesets) 进行版本管理：
+## Documentation
 
-### 发布流程
+The published documentation is available at [ximing.github.io/rab](https://ximing.github.io/rab/).
 
-```bash
-# 1. 创建变更集
-pnpm changeset
+- [Quick Start](https://ximing.github.io/rab/#/quick-start)
+- [Service containers](https://ximing.github.io/rab/#/guides/service)
+- [Observer](https://ximing.github.io/rab/#/guides/observer)
+- [Live demos](https://ximing.github.io/rab/#/guides/demos)
+- [DevTools](https://ximing.github.io/rab/#/guides/devtools)
+- [AI and Web MCP](https://ximing.github.io/rab/#/ai/web-mcp)
 
-# 2. 版本升级
-pnpm version-packages
+## Contributing
 
-# 3. 发布检查
-pnpm publish:check
+Please open an issue or discussion before proposing a large API or architecture change. For a code contribution, create a focused branch, keep Services and their public methods clearly named, add or update tests for behavior changes, and run the relevant build and test commands before opening a pull request. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages and update the documentation when public behavior changes.
 
-# 4. 发布到 mnpm
-pnpm publish:mnmp
+## License
 
-# 5. 提交代码
-git push origin <branch>
-```
-
-### 发布配置
-
-- **Access**: public
-- **License**: MIT
-
-## 🛠️ 开发工具和命令
-
-### 根级命令
-
-```bash
-# 开发
-pnpm dev                    # 启动所有包的开发模式
-
-# 构建
-pnpm build                  # 构建所有包
-pnpm clean                  # 清理构建产物
-pnpm clean:node-modules     # 删除所有 node_modules
-
-# 代码质量
-pnpm lint                   # 代码检查
-pnpm lint:turbo             # 使用 Turbo 并行检查
-pnpm lint:fix               # 自动修复
-pnpm lint:error             # 仅显示错误
-pnpm lint:error:fix         # 修复错误
-pnpm format                 # 代码格式化
-
-# 测试
-pnpm test                   # 运行测试
-pnpm test:turbo             # 使用 Turbo 并行测试
-
-# 版本管理
-pnpm changeset              # 创建变更集
-pnpm version-packages       # 版本升级
-pnpm publish:check          # 发布检查
-pnpm publish:mnmp           # 发布到 mnpm
-```
-
-### 单个包开发
-
-```bash
-# 进入特定包目录进行开发
-cd packages/observer && npm run dev        # 开发模式
-cd packages/observer && npm run build      # 构建
-cd packages/observer && npm run test       # 测试
-cd packages/observer && npm run test:watch # 监听模式
-```
-
-## 📋 代码规范
-
-### TypeScript 配置
-
-- **严格模式**: 启用所有严格检查
-  - `strict: true`
-  - `noImplicitAny: true`
-  - `strictNullChecks: true`
-  - `noImplicitReturns: true`
-  - `noUncheckedIndexedAccess: true`
-
-### 代码风格
-
-- **Linter**: ESLint 9.17.0
-- **Formatter**: Prettier 2.8.8
-- **提交规范**: Conventional Commits
-- **Git Hooks**: Husky 9.1.7 + lint-staged 16.2.6
-
-### 开发规范
-
-1. **类型安全**: 优先使用 TypeScript，避免 `any` 类型
-2. **测试覆盖**: 新功能必须包含测试，保持 80% 覆盖率
-3. **代码风格**: 遵循 ESLint 和 Prettier 配置
-4. **提交规范**: 使用 [Conventional Commits](https://conventionalcommits.org/)
-5. **文档更新**: 重要变更需要更新相关文档
-
-## 🤝 贡献指南
-
-### 提交流程
-
-```bash
-# 1. 创建功能分支
-git checkout -b feature/new-feature
-
-# 2. 开发和测试
-pnpm dev
-pnpm test
-
-# 3. 代码检查和格式化
-pnpm lint:fix
-pnpm format
-
-# 4. 提交代码
-git add .
-git commit -m "feat: add new feature"
-
-# 5. 创建变更集
-pnpm changeset
-
-# 6. 提交 PR
-git push origin feature/new-feature
-```
-
-## 📊 包依赖关系
-
-```
-@rabjs/observer (观察者库)
-    ↓
-@rabjs/service (服务容器)
-    ↓
-@rabjs/react (React 集成)
-```
-
-## 🔧 关键配置文件
-
-### 根级配置
-
-- `package.json` - Monorepo 脚本和依赖
-- `turbo.json` - Turborepo 任务配置
-- `pnpm-workspace.yaml` - 工作区定义
-- `tsconfig.json` - 根 TypeScript 配置
-- `eslint.config.js` - ESLint 规则
-
-### 包级配置
-
-- `package.json` - 包信息和脚本
-- `tsconfig.json` - 包特定的 TypeScript 配置
-- `jest.config.js` - 测试配置
-- `build.config.ts` - 构建配置
-
-## 📈 性能和优化
-
-### 构建性能
-
-- **并行构建**: Turborepo 自动并行化依赖构建
-- **增量构建**: 智能缓存和依赖分析
-- **按需加载**: 包按需加载和初始化
-- **优化输出**: 支持 CJS、ESM 和 TypeScript 类型
-
-### 开发体验
-
-- **快速启动**: 秒级开发服务器启动
-- **监听模式**: 自动重新构建
-- **错误隔离**: 包错误不影响其他包
-- **类型提示**: 完整的 TypeScript 智能提示
-
-## 🛡️ 生产状态
-
-### ✅ 生产就绪
-
-- ✅ @rabjs/observer - 观察者库
-- ✅ @rabjs/service - 服务容器
-- ✅ @rabjs/react - React 集成方案
-
-### 📚 文档
-
-- 📖 各包目录下的 README.md
-- 📋 API 文档和使用示例
-- 🔍 源代码注释和类型定义
-- 📚 完整的文档网站（website 目录）
-
-## 📄 许可证
-
-MIT License - 详见 [LICENSE](./LICENSE) 文件
-
-## 🙋‍♂️ 支持和反馈
-
-- **Issues**: 提交问题和建议
-- **讨论**: 参与项目讨论
-- **文档**: 查看各包的 README 和文档
-- **示例**: 查看 examples/reactive-state 目录
-
----
-
-<div align="center">
-
-**RAB - 现代化的响应式状态管理库** ❤️
-
-[📚 文档](./website) | [🔧 开发指南](#开发工具和命令) | [🚀 快速开始](#快速开始) | [🤝 贡献](#贡献指南)
-
-</div>
+RAB is released under the [MIT License](https://opensource.org/license/mit/).
