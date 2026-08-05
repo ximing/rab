@@ -7,19 +7,17 @@ export { CounterService } from "./CounterService";
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。
  * 内容约定：改动 CounterService / CounterDemo 时同步更新这里的字符串。
  */
-export const counterDemoCode = `import { Action, Service } from "@rabjs/react";
+export const counterDemoCode = `import { Service } from "@rabjs/react";
 import { bindServices, observer, useService } from "@rabjs/react";
 
-// 1. 定义 Service：属性自动 observable，方法自动 Action
+// 1. 定义 Service：属性自动 observable，方法自动 Action（无需装饰器）
 class CounterService extends Service {
   count = 0;
 
-  @Action
   increment() {
     this.count += 1;
   }
 
-  @Action
   decrement() {
     this.count -= 1;
   }
