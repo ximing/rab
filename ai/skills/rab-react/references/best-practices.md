@@ -13,8 +13,10 @@ class UserApiService extends Service {
 }
 
 class UserService extends Service {
-  @Inject(UserApiService)
-  api!: UserApiService;
+  // ✅ 依赖其他 Service：getter + this.resolve
+  get api() {
+    return this.resolve(UserApiService);
+  }
 
   users: User[] = [];
 
@@ -130,8 +132,9 @@ class AnalyticsService extends Service {
 
 // ❌ 不好：紧耦合
 class AuthService extends Service {
-  @Inject(AnalyticsService)
-  analytics!: AnalyticsService;
+  get analytics() {
+    return this.resolve(AnalyticsService);
+  }
 
   login() {
     // ...

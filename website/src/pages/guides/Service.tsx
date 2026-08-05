@@ -1,6 +1,6 @@
 import { CodeBlock } from "../../components/CodeBlock";
 import { DemoCard } from "../../components/DemoCard";
-import InjectDemo, { injectDemoCode } from "../../demos/inject";
+import CollabDemo, { collabDemoCode } from "../../demos/collab";
 
 const serviceBaseCode = `import { Service } from "@rabjs/react";
 
@@ -77,7 +77,7 @@ export default function Service() {
       <CodeBlock language="ts" title="UserService.ts">{serviceBaseCode}</CodeBlock>
       <p>
         基类还自带事件方法（<code>on / once / off / emit</code>）和{" "}
-        <code>resolve()</code>（从所属容器手动解析依赖），以及{" "}
+        <code>resolve()</code>（从所属容器解析依赖服务），以及{" "}
         <code>destroy()</code>（清理事件监听、Debounce/Throttle 定时器、Memo 缓存）。
       </p>
 
@@ -88,20 +88,30 @@ export default function Service() {
       </p>
       <CodeBlock language="ts">{syncActionCode}</CodeBlock>
 
-      <h2>@Inject 依赖注入</h2>
+      <h2>服务间依赖：getter + this.resolve</h2>
       <p>
-        服务之间的依赖用 <code>@Inject</code> 声明在属性上：第一次访问时才从所属容器
-        resolve（懒解析），之后缓存。标识符可以是类、字符串或 Symbol。
-        下面的例子里 <code>ClickService</code> 完全没有 import 容器，却用上了{" "}
-        <code>LoggerService</code>：
+        一个 Service 要用另一个 Service，推荐写成 getter +
+        <code>this.resolve()</code>：<code>resolve</code> 从当前实例所属的容器解析依赖，
+        容器内 singleton 缓存保证每次拿到同一个实例。依赖关系是显式的普通代码，
+        类型也由返回值直接推导：
+      </p>
+      <p>
+        注意：<code>resolve</code> 只能解析到同一容器树里的服务——被依赖的 Service
+        必须和当前 Service 注册在同一个 <code>bindServices</code> 列表里，
+        或注册在上层容器 / 全局容器中（子容器解析不到时会沿父链向上委托）。
       </p>
       <DemoCard
-        title="@Inject 属性注入"
-        description="ClickService 依赖 LoggerService，bindServices 把两者注册进同一个容器"
-        code={injectDemoCode}
+        title="getter + this.resolve 解析依赖"
+        description="GreetingService 依赖 SettingsService，bindServices 把两者注册进同一个容器"
+        code={collabDemoCode}
       >
-        <InjectDemo />
+        <CollabDemo />
       </DemoCard>
+      <p>
+        <code>@Inject</code> 属性装饰器仍然可用（首次访问时懒解析并缓存，
+        标识符支持类 / 字符串 / Symbol），但 getter 模式更显式、类型推导更直接，
+        新代码建议用 getter 写法。
+      </p>
 
       <h2>Container 与 bindServices</h2>
       <p>

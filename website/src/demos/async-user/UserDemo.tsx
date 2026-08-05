@@ -2,7 +2,7 @@ import { bindServices, observer, useService } from "@rabjs/react";
 import { UserService } from "./UserService";
 
 /**
- * 异步加载 live demo —— @Action 语义下的 async 方法 + $model loading/error。
+ * 异步加载 live demo —— async 方法（默认就是 Action 语义）+ $model loading/error。
  * 注意 loadUser 抛出异常时 error 会进入 $model.loadUser.error，
  * 这里用 .catch(() => {}) 吞掉未处理的 rejection（error 已在 UI 中展示）。
  */

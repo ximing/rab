@@ -2,7 +2,7 @@ import { bindServices, observer, useService } from "@rabjs/react";
 import { GreetingService, SettingsService } from "./CollabServices";
 
 /**
- * 服务协作 live demo —— GreetingService @Inject SettingsService。
+ * 服务协作 live demo —— GreetingService 通过 getter + this.resolve 解析 SettingsService。
  * 切换语言时只改 SettingsService.lang，GreetingService.greeting
  * 作为跨服务的 computed 自动跟着变。
  */

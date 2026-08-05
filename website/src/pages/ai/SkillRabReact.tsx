@@ -76,8 +76,7 @@ export default function SkillRabReact() {
         </li>
         <li>
           <strong>Service 之间的关系</strong>：getter + <code>resolve()</code>{" "}
-          取依赖、作用域链规则（只能访问父级与全局）、<code>@Inject</code>{" "}
-          装饰器注入。
+          取依赖（推荐写法）、作用域链规则（只能访问父级与全局）。
         </li>
       </ol>
       <p>

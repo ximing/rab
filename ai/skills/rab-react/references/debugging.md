@@ -176,19 +176,25 @@ const Counter = () => {
 };
 ```
 
-### 陷阱 4：忘记注册依赖的服务
+### 陷阱 4：依赖的 Service 未注册进同一棵容器树
+
+`this.resolve` 从当前实例所属的容器开始、沿容器树向上解析，被依赖的 Service 必须已注册在同一棵容器树里（当前容器、父级容器或全局容器）：
 
 ```typescript
-// ❌ 错误：LoggerService 未注册
+// ❌ 错误：LoggerService 未注册，resolve 会抛错
 class UserService extends Service {
-  @Inject(LoggerService)
-  logger!: LoggerService;
+  get logger() {
+    return this.resolve(LoggerService);
+  }
 }
 
 bindServices(Component, [UserService]); // 缺少 LoggerService
 
-// ✅ 正确：注册所有依赖
+// ✅ 正确：把依赖注册进同一个容器
 bindServices(Component, [LoggerService, UserService]);
+
+// ✅ 或者：应用启动时全局注册，任何容器都能向上解析到
+register(LoggerService);
 ```
 
 ## 性能调试

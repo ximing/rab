@@ -80,7 +80,7 @@
     {
       "id": 4,
       "prompt": "我的 UserService 需要使用 LoggerService 来记录日志，LoggerService 是全局注册的。UserService 是页面级的。请告诉我如何在 UserService 中访问 LoggerService？",
-      "expected_output": "应该在 UserService 中使用 getter + resolve() 方式获取 LoggerService。说明 resolve 可以访问全局注册的服务和父级容器的服务。",
+      "expected_output": "应该在 UserService 中使用 getter + resolve() 方式获取 LoggerService（get loggerService() { return this.resolve(LoggerService) }）。说明 resolve 从当前实例所属容器沿容器树向上解析，可以访问全局注册的服务和父级容器的服务。不应推荐 @Action 或 @Inject 装饰器写法。",
       "files": [],
       "assertions": [
         {
@@ -89,11 +89,11 @@
         },
         {
           "name": "说明 resolve 的作用域规则",
-          "description": "解释 resolve 可以访问全局和父级容器的服务"
+          "description": "解释 resolve 从当前容器沿容器树向上解析，可以访问全局和父级容器的服务"
         },
         {
-          "name": "提到可选的 @Inject 装饰器",
-          "description": "提及可以使用 @Inject 装饰器作为替代方案"
+          "name": "不推荐 @Inject 装饰器",
+          "description": "不把 @Inject 作为推荐方案；如果提及，应说明它是仍可用但不推荐的遗留写法"
         }
       ]
     },

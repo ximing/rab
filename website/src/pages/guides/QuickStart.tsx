@@ -135,7 +135,7 @@ export default function QuickStart() {
           <Link to="/guides/demos">在线 Demo</Link>：todo、异步加载、服务协作等更多可运行示例
         </li>
         <li>
-          <Link to="/guides/service">Service 服务容器</Link>：@Inject、Container、生命周期
+          <Link to="/guides/service">Service 服务容器</Link>：服务间依赖（this.resolve）、Container、生命周期
         </li>
         <li>
           <Link to="/guides/observer">Observer 观察者</Link>：脱离 React 的响应式 API

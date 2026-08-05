@@ -124,7 +124,7 @@ export class NotificationService extends Service {
   }
 
   // 监听全局事件
-  @On("app:message", "global")
+  @On("app:message", { scope: "global" })
   handleGlobalMessage(data: { text: string }) {
     this.notifications.push(data.text);
   }
@@ -235,8 +235,9 @@ class AnalyticsService extends Service {
 
 // ❌ 不好：紧耦合
 class AuthService extends Service {
-  @Inject(AnalyticsService)
-  analytics!: AnalyticsService;
+  get analytics() {
+    return this.resolve(AnalyticsService);
+  }
 
   login() {
     // ...

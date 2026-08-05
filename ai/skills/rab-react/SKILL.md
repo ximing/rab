@@ -92,7 +92,8 @@ const Component = observer(() => {
 
 - Service 类继承自 `Service` 基类
 - 所有属性自动是响应式的（observable）
-- 所有方法自动批量更新（action）
+- 所有方法默认就是 action（批量更新），**不需要也不应该再写 `@Action` 装饰器**
+- 只有需要**关闭**批量更新时才用 `@SyncAction` 标记方法
 - 异步方法自动追踪 `loading` 和 `error` 状态（通过 `$model.methodName`）
 
 ### 3. `useService` + `bindServices`：连接组件和 Service
@@ -221,7 +222,7 @@ export class LoggerService extends Service {
 register(LoggerService);
 
 export class ApiService extends Service {
-  // ✅ 方式 1：使用 getter + resolve（推荐）
+  // ✅ 推荐写法：getter + this.resolve
   get loggerService() {
     return this.resolve(LoggerService);
   }
@@ -238,7 +239,7 @@ register(ApiService);
 export class UserService extends Service {
   users: any[] = [];
 
-  // ✅ 方式 1：使用 getter + resolve（推荐）
+  // ✅ 推荐写法：getter + this.resolve
   get loggerService() {
     return this.resolve(LoggerService);
   }
@@ -254,15 +255,14 @@ export class UserService extends Service {
   }
 }
 
-// 注册时必须包含所有依赖
-export default bindServices(UserPage, [
-  UserService, // 主 Service
-]);
+// 依赖（LoggerService、ApiService）已在全局注册，
+// UserService 的容器会沿容器树向上解析到全局容器，因此这里只需注册 UserService
+export default bindServices(UserPage, [UserService]);
 ```
 
 **重要限制**：
 
-- `resolve()` 只能解析**当前组件及其所有父组件树上通过 `bindServices` 注册的 Service**
+- `this.resolve()` 从**当前实例所属的容器**开始解析，沿容器树向上查找，因此被依赖的 Service 必须注册在**同一棵容器树**里（当前容器、任一父级容器或全局容器）
 - `resolve()` 可以解析：
   - ✅ 当前容器注册的 Service
   - ✅ 父组件容器注册的 Service
@@ -315,13 +315,15 @@ export class ComponentService extends Service {
 export default bindServices(ComponentContent, [ComponentService]);
 ```
 
-**依赖注入的替代方式（使用装饰器）**：
+**遗留写法（不推荐）：`@Inject` 装饰器**
+
+`@Inject` 属性装饰器仍然可用（源码保留），但不再是推荐用法。新代码请统一使用上面的 getter + `this.resolve` 模式：
 
 ```typescript
 import { Service, Inject } from "@rabjs/react";
 
 export class UserService extends Service {
-  // 使用 @Inject 装饰器自动注入
+  // ⚠️ 遗留写法：仍可用，但不推荐。请改用 getter + this.resolve
   @Inject(LoggerService)
   private logger!: LoggerService;
 
@@ -333,10 +335,9 @@ export class UserService extends Service {
     this.users = await this.api.fetchUsers();
   }
 }
-
-// 注册时仍需包含所有依赖，除了全局注册好的
-export default bindServices(UserPage, [UserService]);
 ```
+
+`@Inject` 的解析规则与 `this.resolve` 相同：被注入的 Service 必须已注册在当前实例所属的容器树中（当前容器、父级容器或全局容器），否则解析失败。
 
 ## 🔍 快速诊断
 
@@ -642,7 +643,7 @@ export class UserInfoService extends Service {
 - **[异步操作和状态追踪](references/async-operations.md)** - `$model`、loading、error 状态详解
 - **[计算属性和缓存](references/computed-properties.md)** - getter、`@Memo` 装饰器
 - **[事件系统](references/event-system.md)** - 容器级事件、全局事件、`emit`/`on`/`off`
-- **[装饰器](references/decorators.md)** - `@Inject`、`@Debounce`、`@Throttle`、`@On` 等
+- **[装饰器](references/decorators.md)** - 默认 Action 语义、`@SyncAction`、`@Debounce`、`@Throttle`、`@Memo`、`@On`，以及遗留的 `@Action`/`@Inject`
 - **[Hooks API](references/hooks-api.md)** - `useObserver`、`useLocalObservable`、`useReaction` 等
 - **[领域架构](references/domain-architecture.md)** - 多级嵌套、作用域链、跨领域通信
 - **[Observable API](references/observable-api.md)** - `observable`、`raw`、`observe`、`unobserve`

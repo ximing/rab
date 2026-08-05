@@ -43,7 +43,7 @@ export default function Demos() {
 
       <DemoCard
         title="服务协作"
-        description="GreetingService 通过 @Inject 读取 SettingsService，跨服务的 computed 自动更新"
+        description="GreetingService 通过 getter + this.resolve 读取 SettingsService，跨服务的 computed 自动更新"
         code={collabDemoCode}
       >
         <CollabDemo />
