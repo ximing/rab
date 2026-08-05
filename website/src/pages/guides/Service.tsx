@@ -1,6 +1,9 @@
 import { CodeBlock } from "../../components/CodeBlock";
 import { DemoCard } from "../../components/DemoCard";
 import CollabDemo, { collabDemoCode } from "../../demos/collab";
+import ServiceScopeDemo, {
+  serviceScopeDemoCode,
+} from "../../demos/service-scope";
 
 const serviceBaseCode = `import { Service } from "@rabjs/react";
 
@@ -123,6 +126,13 @@ export default function Service() {
         应用根部想要一个统一入口时，可以用 <code>RSRoot</code>——它就是{" "}
         <code>bindServices(children, [])</code>，一个空注册表的顶层容器。
       </p>
+      <DemoCard
+        title="嵌套 Service 与全局 Service"
+        description="观察父子容器解析、同级实例隔离，以及全局容器注册与解析"
+        code={serviceScopeDemoCode}
+      >
+        <ServiceScopeDemo />
+      </DemoCard>
 
       <h2>实例化时机与生命周期</h2>
       <ul>
