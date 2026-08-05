@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CodeBlock } from "../components/CodeBlock";
 import { DemoCard } from "../components/DemoCard";
+import { SignalDemo } from "../components/SignalDemo";
 import CounterDemo, { counterDemoCode } from "../demos/counter";
 
 const installCode = `pnpm add @rabjs/service @rabjs/react
@@ -9,14 +10,26 @@ pnpm add @rabjs/devtools @rabjs/web-mcp`;
 
 export default function Home() {
   return (
-    <div className="hero">
-      <h1>RAB</h1>
-      <p className="tagline">
-        响应式状态管理方案：<code>@rabjs/service</code> 服务容器 +{" "}
-        <code>@rabjs/observer</code> 观察者 + <code>@rabjs/react</code> React
-        集成 + <code>@rabjs/devtools</code> 调试 + <code>@rabjs/web-mcp</code>{" "}
-        AI 桥接。让状态以「服务」为单位组织，让人和 AI 都能读写它。
-      </p>
+    <div className="hero -mt-4">
+      <div className="hero-stage">
+        <div className="hero-grid" />
+        <div className="relative">
+          <p className="eyebrow">
+            <span className="tick" />
+            Reactive State · For Humans &amp; Agents
+          </p>
+          <h1 className="hero-title">
+            RAB<span className="pulse-dot" />
+          </h1>
+          <p className="tagline">
+            状态以「服务」为单位组织：<code>@rabjs/service</code> 服务容器 +{" "}
+            <code>@rabjs/observer</code> 观察者 + <code>@rabjs/react</code>{" "}
+            集成。同一份响应式状态，人点按钮能改，AI 调工具也能改。
+          </p>
+
+          <SignalDemo />
+        </div>
+      </div>
 
       <h2>安装</h2>
       <CodeBlock language="bash">{installCode}</CodeBlock>
@@ -36,7 +49,15 @@ export default function Home() {
 
       <h2>从哪里开始</h2>
       <div className="entry-cards">
-        <Link className="entry-card" to="/quick-start">
+        <Link
+          className="entry-card"
+          style={{ "--card-accent": "var(--human)" } as React.CSSProperties}
+          to="/quick-start"
+        >
+          <p className="eyebrow mb-2">
+            <span className="tick human" />
+            人写代码
+          </p>
           <h3>传统用法 →</h3>
           <p>
             快速开始、在线 Demo、Service 容器 / Observer / DevTools 使用指南，
@@ -44,6 +65,10 @@ export default function Home() {
           </p>
         </Link>
         <Link className="entry-card" to="/ai">
+          <p className="eyebrow mb-2">
+            <span className="tick" />
+            AI 读写状态
+          </p>
           <h3>AI 用法 →</h3>
           <p>
             面向 AI 编程的玩法：rab-react / rab-cdp-debug Skill 与

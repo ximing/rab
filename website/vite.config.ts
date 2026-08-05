@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -10,7 +11,7 @@ const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 // - 路由使用 HashRouter（见 src/App.tsx），刷新深层页面不会 404
 export default defineConfig({
   base: "/rab/",
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     // @rabjs/react 的 peer react 会被 pnpm 自动安装一份 react@18 到
     // packages/react/node_modules，与网站的 react@19 并存。

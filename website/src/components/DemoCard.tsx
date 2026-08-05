@@ -21,8 +21,7 @@ import { CodeBlock } from "./CodeBlock";
  * 约定：
  * - live demo 组件统一放在 src/demos/ 下（每个 demo 一个目录），页面只负责引用；
  * - `code` 是与 live 组件对应的源码字符串，保持同步（内容编写时手动维护）；
- * - 需要多文件展示时，可在 children 下方追加多个 <CodeBlock>，见 DemoCard 的 codeSlot 用法：
- *   也可以不传 code，把 <CodeBlock> 直接放在组件里组合。
+ * - 右上角 LIVE 徽标表示该区是真实运行的组件，不是截图。
  */
 export interface DemoCardProps {
   title: string;
@@ -37,8 +36,11 @@ export function DemoCard({ title, description, code, children }: DemoCardProps) 
   return (
     <section className="demo-card">
       <div className="demo-card-header">
-        <h3>{title}</h3>
-        {description ? <p>{description}</p> : null}
+        <div>
+          <h3>{title}</h3>
+          {description ? <p>{description}</p> : null}
+        </div>
+        <span className="live-badge">LIVE</span>
       </div>
       <div className="demo-card-live">{children}</div>
       {code ? <CodeBlock language="tsx">{code}</CodeBlock> : null}

@@ -23,6 +23,8 @@ import WebMcp from "./pages/ai/WebMcp";
  *   方便首页和外链直接引用）。
  * - 传统用法板块其余页面都在 /guides/* 下；AI 用法板块在 /ai/* 下。
  * - 新增页面步骤：在 src/pages/ 对应目录建组件 -> 在下方 navItems 与 <Routes> 各加一条。
+ *
+ * 视觉语义：传统用法（人写代码）= --human 琥珀；AI 用法（agent 读写状态）= --agent 青。
  */
 
 const guideNav = [
@@ -40,16 +42,42 @@ const aiNav = [
   { to: "/ai/web-mcp", label: "@rabjs/web-mcp" },
 ];
 
-function NavGroup({ title, items }: { title: string; items: { to: string; label: string }[] }) {
+interface NavItem {
+  to: string;
+  label: string;
+}
+
+function NavGroup({
+  title,
+  items,
+  accent,
+}: {
+  title: string;
+  items: NavItem[];
+  accent: "agent" | "human";
+}) {
+  const tick = accent === "agent" ? "bg-agent" : "bg-human";
+  const activeText = accent === "agent" ? "text-agent" : "text-human";
+  const activeBg = accent === "agent" ? "bg-agent/10" : "bg-human/10";
   return (
-    <div className="nav-group">
-      <p className="nav-group-title">{title}</p>
+    <div className="mb-7">
+      <p className="eyebrow mb-2 px-3 flex items-center">
+        <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${tick}`} />
+        {title}
+      </p>
       {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           end={item.to === "/ai"}
-          className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+          className={({ isActive }) =>
+            [
+              "block px-3 py-1.5 rounded-lg text-[13.5px] transition-colors no-underline",
+              isActive
+                ? `${activeBg} ${activeText} font-medium`
+                : "text-fg/85 hover:bg-card hover:no-underline",
+            ].join(" ")
+          }
         >
           {item.label}
         </NavLink>
@@ -61,15 +89,24 @@ function NavGroup({ title, items }: { title: string; items: { to: string; label:
 export default function App() {
   return (
     <HashRouter>
-      <div className="layout">
-        <aside className="sidebar">
-          <NavLink to="/" className="brand">
-            RAB
+      <div className="flex min-h-screen">
+        <aside className="w-[248px] shrink-0 border-r border-line bg-panel px-4 py-6 sticky top-0 h-screen overflow-y-auto max-md:hidden">
+          <NavLink
+            to="/"
+            className="flex items-center gap-2.5 px-3 mb-8 text-fg hover:no-underline"
+          >
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-agent animate-[signal-pulse_2.2s_ease-in-out_infinite]" />
+            <span className="text-[19px] font-bold tracking-tight font-display">
+              RAB
+            </span>
+            <span className="font-mono text-[10px] text-dim border border-line rounded px-1.5 py-px mt-0.5">
+              v9
+            </span>
           </NavLink>
-          <NavGroup title="传统用法" items={guideNav} />
-          <NavGroup title="AI 用法" items={aiNav} />
+          <NavGroup title="传统用法" items={guideNav} accent="human" />
+          <NavGroup title="AI 用法" items={aiNav} accent="agent" />
         </aside>
-        <main className="content">
+        <main className="flex-1 min-w-0 px-6 md:px-12 pt-10 pb-24 max-w-[960px] prose-rab">
           <Routes>
             <Route path="/" element={<Home />} />
 
