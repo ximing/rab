@@ -146,6 +146,16 @@ pnpm --filter @rabjs/website build
 
 最后一条命令会独立构建文档站点。开发期间，`pnpm dev` 会启动工作区开发任务。
 
+## 生产构建体积
+
+文档站的生产环境 JavaScript bundle 会由 Vite 进行 minify 压缩。执行生产构建（`pnpm --filter @rabjs/website build`）当前得到：
+
+| 资源 | minify 后大小 | gzip 后大小 |
+| --- | ---: | ---: |
+| `website/dist/assets/index-*.js` | 439,514 bytes（439.51 kB） | 138,943 bytes（138.94 kB） |
+
+gzip 大小采用 Vite 生产构建输出中的统计值。
+
 ## 文档
 
 已发布的文档位于 [ximing.github.io/rab](https://ximing.github.io/rab/)。

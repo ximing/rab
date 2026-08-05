@@ -146,6 +146,16 @@ pnpm --filter @rabjs/website build
 
 The last command builds the documentation site independently. During development, `pnpm dev` starts workspace development tasks.
 
+## Production Bundle Size
+
+The documentation site's production JavaScript bundle is minified by Vite. A production build (`pnpm --filter @rabjs/website build`) currently produces:
+
+| Asset | Minified size | Gzip size |
+| --- | ---: | ---: |
+| `website/dist/assets/index-*.js` | 439,514 bytes (439.51 kB) | 138,943 bytes (138.94 kB) |
+
+The reported gzip size uses Vite's production build output.
+
 ## Documentation
 
 The published documentation is available at [ximing.github.io/rab](https://ximing.github.io/rab/).
