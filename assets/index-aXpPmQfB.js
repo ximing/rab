@@ -547,12 +547,13 @@ window.__RS_ROOT_CONTAINER__
   .expect("CounterService#0")
   .toBe("count", 1)
   .check();`;function c1(){return o.jsxs("div",{children:[o.jsx("h1",{children:"DevTools 调试"}),o.jsxs("p",{children:[o.jsx("code",{children:"@rabjs/devtools"})," 把容器树的访问入口挂到"," ",o.jsx("code",{children:"window.__RS_ROOT_CONTAINER__"}),"，让你（或 AI、E2E 脚本）在 React 组件树之外直接查看和操作 Service 实例。"]}),o.jsx("h2",{children:"接入"}),o.jsx(te,{language:"bash",children:r1}),o.jsxs("p",{children:["只需要一行初始化。它与框架无关，SSR 环境会自动跳过；以全局容器为根， 所有 ",o.jsx("code",{children:"bindServices"})," 创建的子容器都在它的遍历范围内："]}),o.jsx(te,{language:"ts",title:"main.ts",children:s1}),o.jsx("h2",{children:"能做什么"}),o.jsx(te,{language:"ts",children:u1}),o.jsxs("p",{children:[o.jsx("code",{children:"listServices()"})," 返回的是真实的内存对象，控制台里改属性、调方法， 页面上的 ",o.jsx("code",{children:"observer"})," 组件会照常响应——这也是它和「状态快照」类工具的区别。"]}),o.jsx("h2",{children:"在本页直接试"}),o.jsxs("p",{children:["这个站点本身已经接好了 ",o.jsx("code",{children:"setupWindowRootContainer()"}),"。先去"," ",o.jsx(Ke,{to:"/guides/demos",children:"在线 Demo"})," 点几下让 Service 实例化， 再回来点下面的按钮（当然，也可以直接按 F12 在控制台里玩）："]}),o.jsx(Yt,{title:"列出容器树中的 Service",description:"window.__RS_ROOT_CONTAINER__.listServices() 的实时结果",code:i1,children:o.jsx(l1,{})}),o.jsx("h2",{children:"和 AI 调试的联动"}),o.jsxs("p",{children:["这个 window 入口同时是 AI 调试的桥梁：rab-cdp-debug Skill 通过 CDP 协议在 真实浏览器里执行同样的调用，让 AI 直接读状态、调方法、跑断言。详见"," ",o.jsx(Ke,{to:"/ai/skill-cdp-debug",children:"rab-cdp-debug Skill"}),"。"]})]})}const o1=`/plugin marketplace add ximing/rab
-/plugin install rab@rab`,f1=`# Codex 插件市场（CLI 输入 /plugins，App 在 Plugins 侧边栏）搜索 rab 安装
-# 上架前可手动安装：
-cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug ~/.codex/skills/`,d1=`# Cursor Agent 对话框中执行：
+/plugin install rab@rab`,f1=`# rab 仓库自身就是一个 Codex 插件市场，无需官方上架
+codex plugin marketplace add ximing/rab
+codex plugin add rab@rab`,d1=`# Cursor Agent 对话框中执行：
 /add-plugin rab
 # 或手动安装到项目：
-cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug your-project/.cursor/skills/`,p1="grok plugin install rab@xai-official --trust",h1=`/plugins install https://github.com/ximing/rab
+cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug your-project/.cursor/skills/`,p1=`grok plugin install rab@xai-official --trust
+# xAI 官方市场收录审核中：xai-org/plugin-marketplace#265`,h1=`/plugins install https://github.com/ximing/rab
 # 安装后新开会话（/new）使插件生效`,g1=`// opencode.json（全局或项目级）
 {
   "plugin": ["rab@git+https://github.com/ximing/rab.git"]
