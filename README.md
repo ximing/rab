@@ -140,7 +140,14 @@ Or manually: `cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug ~/
 
 ### Codex App / Codex CLI
 
-The plugin manifest lives at [`.codex-plugin/plugin.json`](.codex-plugin/plugin.json). Once listed in the [official Codex plugin marketplace](https://github.com/openai/plugins), search for `rab` in the plugin panel (`/plugins` in the CLI; the Plugins sidebar in the app) and install. Before listing lands, copy the skill directories into `~/.codex/skills/`.
+This repository doubles as a Codex plugin marketplace (see [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json)), so no official listing is needed:
+
+```bash
+codex plugin marketplace add ximing/rab
+codex plugin add rab@rab
+```
+
+In the Codex app or TUI you can also open `/plugins` and search for `rab` after adding the marketplace.
 
 ### Cursor
 
@@ -148,7 +155,7 @@ The plugin manifest lives at [`.cursor-plugin/plugin.json`](.cursor-plugin/plugi
 
 ### Grok Build CLI
 
-Install from xAI's official plugin marketplace (listing follows the same manifest set):
+Install from xAI's official plugin marketplace (listing in review at [xai-org/plugin-marketplace#265](https://github.com/xai-org/plugin-marketplace/pull/265)):
 
 ```bash
 grok plugin install rab@xai-official --trust

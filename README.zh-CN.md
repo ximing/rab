@@ -140,7 +140,14 @@ RAB 在 [`skills/`](./skills) 下提供一组 [Agent Skills](https://code.claude
 
 ### Codex App / Codex CLI
 
-插件清单在 [`.codex-plugin/plugin.json`](.codex-plugin/plugin.json)。在 [官方 Codex 插件市场](https://github.com/openai/plugins) 上架后，在插件面板（CLI 中 `/plugins`；App 侧边栏 Plugins）搜索 `rab` 安装即可。上架前可先把 skill 目录拷贝到 `~/.codex/skills/`。
+本仓库自身就是一个 Codex 插件市场（见 [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json)），无需官方上架：
+
+```bash
+codex plugin marketplace add ximing/rab
+codex plugin add rab@rab
+```
+
+在 Codex App 或 TUI 中，添加市场后也可以打开 `/plugins` 搜索 `rab` 安装。
 
 ### Cursor
 
@@ -148,7 +155,7 @@ RAB 在 [`skills/`](./skills) 下提供一组 [Agent Skills](https://code.claude
 
 ### Grok Build CLI
 
-从 xAI 官方插件市场安装（清单复用同一套文件）：
+从 xAI 官方插件市场安装（收录审核中：[xai-org/plugin-marketplace#265](https://github.com/xai-org/plugin-marketplace/pull/265)）：
 
 ```bash
 grok plugin install rab@xai-official --trust
