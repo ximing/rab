@@ -27,11 +27,24 @@ const wellKnownSymbols = new Set(
     .filter((value) => typeof value === "symbol")
 );
 
+/*
+ * 原型链上的敏感属性: 读取时不做依赖注册/包装, 写入时直接拒绝。
+ * 背景: get trap 读 '__proto__' 会返回 Object.prototype (或 Array.prototype),
+ * 若被 observableChild 包装, 对它的写入就会进入响应式系统并落在全局原型上,
+ * 构成原型污染路径; 'constructor'/'prototype' 同理不应被包装成 observable。
+ * 注意: 若这些名字是用户自定义的"自有属性"(own property), 不受此限制。
+ * */
+const PROTOTYPE_SENSITIVE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 // 拦截属性读取操作,建立依赖关系并返回响应式的值。
 function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   // 调用 Reflect.get(target, key, receiver) 获取原始值
   const result = Reflect.get(target, key, receiver);
   if (typeof key === "symbol" && wellKnownSymbols.has(key)) {
+    return result;
+  }
+  // '__proto__' 直接返回原始原型: 不注册依赖 (不可能有对应通知), 也不包装
+  if (key === "__proto__") {
     return result;
   }
   // 如果当前有 reaction 在运行,建立 (target.key -> reaction) 的依赖
@@ -62,6 +75,11 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   ) {
     return result;
   }
+  // 'constructor'/'prototype' 来自原型链(非自有属性)时保持原生语义, 不包装
+  // (否则 state.constructor 会拿到 Object 构造函数的 observable 包装)
+  if (!descriptor && PROTOTYPE_SENSITIVE_KEYS.has(key as string)) {
+    return result;
+  }
 
   // 如果返回值是对象,自动包装为 observable 实现深度响应式
   return observableChild(result, target);
@@ -87,6 +105,17 @@ function set(
   value: unknown,
   receiver: unknown
 ): boolean {
+  // 拒绝对 '__proto__' 的赋值:
+  // 不拦截时, Reflect.set 会调用 Object.prototype 的 __proto__ setter,
+  // 静默改掉 raw 对象的原型且不触发任何 reaction;
+  // 更危险的是 JSON 注入 + 深合并场景 (JSON.parse 把 "__proto__" 解析为自有属性,
+  // Object.assign 之类通过 [[Set]] 传播), 会把用户可控数据的原型替换为攻击者对象。
+  // 这里选择 fail-fast 抛错而不是静默忽略, 让问题在开发期暴露。
+  if (key === "__proto__") {
+    throw new TypeError(
+      "Cannot set '__proto__' on an observable object. Use Object.create() before wrapping, or set a regular property instead."
+    );
+  }
   // const state1 = observable({ count: 0 })
   // const state2 = observable({ data: null })
   // state2.data = state1  // 如果不解包,会存储 Proxy 对象

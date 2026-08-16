@@ -30,6 +30,10 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   if (typeof key === "symbol" && wellKnownSymbols.has(key)) {
     return result;
   }
+  // '__proto__' 直接返回原始原型 (原因见 base-proxy-handler 同名处理)
+  if (key === "__proto__") {
+    return result;
+  }
   // 如果当前有 reaction 在运行，建立 (target.key -> reaction) 的依赖
   registerRunningReactionForOperation({ target, key, receiver, type: "get" });
 
@@ -68,6 +72,12 @@ function set(
   value: unknown,
   receiver: unknown
 ): boolean {
+  // 拒绝对 '__proto__' 的赋值 (原因见 base-proxy-handler 同名处理)
+  if (key === "__proto__") {
+    throw new TypeError(
+      "Cannot set '__proto__' on an observable object. Use Object.create() before wrapping, or set a regular property instead."
+    );
+  }
   // 解包 observable 对象，存储原始值
   if (isObject(value)) {
     value = proxyToRaw.get(value) || value;
