@@ -1,0 +1,36 @@
+{
+  "name": "rab",
+  "version": "9.0.0",
+  "description": "RAB skills for coding agents: rab-react (@rabjs/react conventions), rab-cdp-debug (CDP debugging of live rab apps), rab-rn-debug (React Native debug bridge).",
+  "author": {
+    "name": "ximing",
+    "url": "https://github.com/ximing"
+  },
+  "homepage": "https://github.com/ximing/rab",
+  "repository": "https://github.com/ximing/rab",
+  "license": "MIT",
+  "keywords": [
+    "rab",
+    "rabjs",
+    "react",
+    "react-native",
+    "state-management",
+    "debugging",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "interface": {
+    "displayName": "RAB",
+    "shortDescription": "Skills for the RAB reactive state architecture",
+    "longDescription": "Use RAB skills to write @rabjs/react code with the right conventions, debug live rab applications over CDP, and drive the React Native debug bridge.",
+    "developerName": "ximing",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/ximing/rab"
+  }
+}

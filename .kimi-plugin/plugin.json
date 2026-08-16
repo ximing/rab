@@ -1,0 +1,34 @@
+{
+  "name": "rab",
+  "version": "9.0.0",
+  "description": "RAB skills for coding agents: rab-react (@rabjs/react conventions), rab-cdp-debug (CDP debugging of live rab apps), rab-rn-debug (React Native debug bridge).",
+  "author": {
+    "name": "ximing",
+    "homepage": "https://github.com/ximing"
+  },
+  "homepage": "https://github.com/ximing/rab",
+  "license": "MIT",
+  "keywords": [
+    "rab",
+    "rabjs",
+    "react",
+    "react-native",
+    "state-management",
+    "debugging",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "skillInstructions": "RAB skills tool mapping for Kimi Code:\n\n- When a RAB skill refers to fetching a URL or fetching documentation, use Kimi Code's `FetchURL` tool; when it asks to search the web, use `WebSearch`.\n- When a RAB skill asks to run shell commands (starting the rab-rn-debug server, curl against its HTTP API, running the app), use `Bash`.\n- When a RAB skill asks to read or edit project files, use `Read`, `Write`, `Edit`, `Grep`, and `Glob` by their actual exposed names.\n- rab-cdp-debug relies on Chrome DevTools MCP tools (such as `evaluate_script`); configure that MCP server in Kimi Code before using the skill.\n- Invoke RAB skills with Kimi Code's native `Skill` tool.",
+  "interface": {
+    "displayName": "RAB",
+    "shortDescription": "Skills for the RAB reactive state architecture",
+    "longDescription": "Use RAB skills to write @rabjs/react code with the right conventions, debug live rab applications over CDP, and drive the React Native debug bridge.",
+    "developerName": "ximing",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/ximing/rab"
+  }
+}

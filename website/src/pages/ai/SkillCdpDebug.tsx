@@ -1,9 +1,10 @@
 import { CodeBlock } from "../../components/CodeBlock";
 
-const installCode = `# skill 源文件在 rab 仓库的 ai/skills/rab-cdp-debug/ 下
-cp -r rab/ai/skills/rab-cdp-debug ~/.claude/skills/        # 全局
+const installCode = `# 安装方式见「AI 用法总览」（支持 Claude Code / Codex / Cursor /
+# Grok / Kimi / OpenCode / Pi），通用兜底：
+cp -r rab/skills/rab-cdp-debug ~/.claude/skills/        # 全局
 # 或
-cp -r rab/ai/skills/rab-cdp-debug your-project/.claude/skills/  # 项目级`;
+cp -r rab/skills/rab-cdp-debug your-project/.claude/skills/  # 项目级`;
 
 const setupCode = `pnpm add @rabjs/devtools
 
@@ -82,15 +83,15 @@ Claude（触发 rab-cdp-debug skill 后）：
 /**
  * rab-cdp-debug Skill（路由 /ai/skill-cdp-debug）
  *
- * 内容以仓库 ai/skills/rab-cdp-debug/SKILL.md 为准。
+ * 内容以仓库 skills/rab-cdp-debug/SKILL.md 为准。
  */
 export default function SkillCdpDebug() {
   return (
     <div>
       <h1>rab-cdp-debug Skill</h1>
       <p>
-        <code>rab-cdp-debug</code> 是一个 Claude Code skill，源文件在仓库{" "}
-        <code>ai/skills/rab-cdp-debug/</code> 下。它教 AI 助手通过 Chrome
+        <code>rab-cdp-debug</code> 是一个跨编程工具的 Agent skill，源文件在仓库{" "}
+        <code>skills/rab-cdp-debug/</code> 下。它教 AI 助手通过 Chrome
         DevTools MCP 的 <code>evaluate_script</code> 工具，利用{" "}
         <code>@rabjs/devtools</code> 挂载的{" "}
         <code>window.__RS_ROOT_CONTAINER__</code> 句柄，对运行中的 rab

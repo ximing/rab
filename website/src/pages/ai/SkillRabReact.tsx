@@ -1,13 +1,14 @@
 import { CodeBlock } from "../../components/CodeBlock";
 
-const installCode = `# skill 源文件在 rab 仓库的 ai/skills/rab-react/ 下
+const installCode = `# 各编程工具的安装方式见「AI 用法总览」（Claude Code / Codex /
+# Cursor / Grok / Kimi / OpenCode / Pi），通用兜底：
 git clone git@github.com:ximing/rab.git
 
 # 方式一：全局安装（所有项目生效）
-cp -r rab/ai/skills/rab-react ~/.claude/skills/
+cp -r rab/skills/rab-react ~/.claude/skills/
 
 # 方式二：项目级安装（只对当前项目生效，可随仓库分发给团队）
-cp -r rab/ai/skills/rab-react your-project/.claude/skills/`;
+cp -r rab/skills/rab-react your-project/.claude/skills/`;
 
 const frontmatterCode = `---
 name: rab-react
@@ -32,17 +33,17 @@ Claude（触发 rab-react skill 后）：
 /**
  * rab-react Skill（路由 /ai/skill-rab-react）
  *
- * 内容以仓库 ai/skills/rab-react/SKILL.md 及 references/ 为准。
+ * 内容以仓库 skills/rab-react/SKILL.md 及 references/ 为准。
  */
 export default function SkillRabReact() {
   return (
     <div>
       <h1>rab-react Skill</h1>
       <p>
-        <code>rab-react</code> 是一个 Claude Code skill，源文件在仓库{" "}
-        <code>ai/skills/rab-react/</code> 下。它把 <code>@rabjs/react</code>{" "}
-        的核心用法、生命周期规则和常见错误整理成 AI 友好的参考文档，让 Claude
-        在写 RAB 代码时按正确约定生成，而不是凭空编造 API。
+        <code>rab-react</code> 是一个跨编程工具的 Agent skill，源文件在仓库{" "}
+        <code>skills/rab-react/</code> 下。它把 <code>@rabjs/react</code>{" "}
+        的核心用法、生命周期规则和常见错误整理成 AI 友好的参考文档，让 AI
+        助手在写 RAB 代码时按正确约定生成，而不是凭空编造 API。
       </p>
 
       <h2>安装</h2>

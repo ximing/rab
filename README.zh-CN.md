@@ -117,6 +117,69 @@ unobserve(reaction);
 
 [`@rabjs/web-mcp`](./packages/web-mcp) 将活动 Service 实例桥接为 WebMCP 工具。浏览器代理可以发现 Services、读取状态、调用方法、进行允许的状态更新并运行断言；这些操作经由与 React 渲染相同的可观察层流动。参阅 [DevTools 指南](https://ximing.github.io/rab/#/guides/devtools)、[AI 概览](https://ximing.github.io/rab/#/ai)和 [Web MCP 指南](https://ximing.github.io/rab/#/ai/web-mcp)。
 
+## 编程 Agent Skills
+
+RAB 在 [`skills/`](./skills) 下提供一组 [Agent Skills](https://code.claude.com/docs/en/claude-code/skills)，教编程 Agent 按 RAB 的正确约定写代码，并调试运行中的应用：
+
+| Skill | 作用 |
+| --- | --- |
+| [`rab-react`](./skills/rab-react) | 按 `@rabjs/react` 的约定写代码（`observer`、`useService`、`bindServices`、Service 生命周期等）。 |
+| [`rab-cdp-debug`](./skills/rab-cdp-debug) | 通过 Chrome DevTools MCP 检查、调用、断言运行中 rab 应用的 Service 实例。 |
+| [`rab-rn-debug`](./skills/rab-rn-debug) | 通过 `@rabjs/rn-debug-server` 桥接调试真机上的 React Native 应用。 |
+
+这些 skill 是纯 `SKILL.md` 文档，零运行时依赖，同一份文件可在各个编程工具中通用。各工具安装方式不同——如果同时使用多个工具，请分别为每个工具安装。
+
+### Claude Code
+
+```bash
+/plugin marketplace add ximing/rab
+/plugin install rab@rab
+```
+
+或手动安装：`cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug ~/.claude/skills/`
+
+### Codex App / Codex CLI
+
+插件清单在 [`.codex-plugin/plugin.json`](.codex-plugin/plugin.json)。在 [官方 Codex 插件市场](https://github.com/openai/plugins) 上架后，在插件面板（CLI 中 `/plugins`；App 侧边栏 Plugins）搜索 `rab` 安装即可。上架前可先把 skill 目录拷贝到 `~/.codex/skills/`。
+
+### Cursor
+
+插件清单在 [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json)。在 Cursor Agent 对话框中执行 `/add-plugin rab`，或在插件市场搜索 `rab`。也可以手动把 skill 目录拷贝到项目的 `.cursor/skills/` 下。
+
+### Grok Build CLI
+
+从 xAI 官方插件市场安装（清单复用同一套文件）：
+
+```bash
+grok plugin install rab@xai-official --trust
+```
+
+### Kimi Code
+
+```text
+/plugins install https://github.com/ximing/rab
+```
+
+安装后新开会话（`/new`）使插件生效。
+
+### OpenCode
+
+在 `opencode.json`（全局或项目级）中加入插件，它会通过 OpenCode 插件系统注册 `skills/` 目录：
+
+```json
+{
+  "plugin": ["rab@git+https://github.com/ximing/rab.git"]
+}
+```
+
+### Pi
+
+```bash
+pi install git:github.com/ximing/rab
+```
+
+[`package.json`](package.json) 中的包清单为 Pi 的原生 skill 发现声明了 `skills/` 目录。
+
 ## 仓库结构
 
 ```text
@@ -128,6 +191,7 @@ rab/
 │   ├── devtools/       # @rabjs/devtools
 │   └── web-mcp/        # @rabjs/web-mcp
 ├── examples/           # Runnable examples
+├── skills/             # 编程 Agent skills（rab-react、rab-cdp-debug、rab-rn-debug）
 ├── website/            # Documentation site
 ├── docs/               # Project documentation and assets
 └── configs/            # Shared TypeScript and ESLint configuration
@@ -152,7 +216,7 @@ pnpm --filter @rabjs/website build
 
 | 资源 | minify 后大小 | gzip 后大小 |
 | --- | ---: | ---: |
-| `website/dist/assets/index-*.js` | 439,514 bytes（439.51 kB） | 138,943 bytes（138.94 kB） |
+| `website/dist/assets/index-*.js` | 448,651 bytes（448.65 kB） | 140,928 bytes（140.93 kB） |
 
 gzip 大小采用 Vite 生产构建输出中的统计值。
 

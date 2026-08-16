@@ -71,8 +71,8 @@ export default function Home() {
           </p>
           <h3>AI 用法 →</h3>
           <p>
-            面向 AI 编程的玩法：rab-react / rab-cdp-debug Skill 与
-            @rabjs/web-mcp，让 AI 直接读写应用状态。
+            面向 AI 编程的玩法：rab-react / rab-cdp-debug / rab-rn-debug
+            Skill 与 @rabjs/web-mcp，让 AI 直接读写应用状态。
           </p>
         </Link>
       </div>

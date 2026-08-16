@@ -11,6 +11,7 @@ import Devtools from "./pages/guides/Devtools";
 import AiOverview from "./pages/ai/AiOverview";
 import SkillRabReact from "./pages/ai/SkillRabReact";
 import SkillCdpDebug from "./pages/ai/SkillCdpDebug";
+import SkillRnDebug from "./pages/ai/SkillRnDebug";
 import WebMcp from "./pages/ai/WebMcp";
 
 /**
@@ -39,6 +40,7 @@ const aiNav = [
   { to: "/ai", label: "AI 用法总览" },
   { to: "/ai/skill-rab-react", label: "rab-react Skill" },
   { to: "/ai/skill-cdp-debug", label: "rab-cdp-debug Skill" },
+  { to: "/ai/skill-rn-debug", label: "rab-rn-debug Skill" },
   { to: "/ai/web-mcp", label: "@rabjs/web-mcp" },
 ];
 
@@ -121,6 +123,7 @@ export default function App() {
             <Route path="/ai" element={<AiOverview />} />
             <Route path="/ai/skill-rab-react" element={<SkillRabReact />} />
             <Route path="/ai/skill-cdp-debug" element={<SkillCdpDebug />} />
+            <Route path="/ai/skill-rn-debug" element={<SkillRnDebug />} />
             <Route path="/ai/web-mcp" element={<WebMcp />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
