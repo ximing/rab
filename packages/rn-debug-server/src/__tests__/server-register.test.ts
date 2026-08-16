@@ -39,6 +39,50 @@ describe('debug server /device + /api/devices', () => {
     expect(((await res2.json()) as unknown[]).length).toBe(0);
   });
 
+  it('同 deviceId 重连后旧 socket 迟到 close 不把新连接踢下线', async () => {
+    server = await createDebugServer({ port: 9229 });
+    const register = (ws: WebSocket, deviceId: string) =>
+      ws.send(
+        JSON.stringify({
+          kind: 'register',
+          deviceId,
+          info: { appName: 'App', platform: 'ios', osVersion: '17.5', sdkVersion: '0.1.0' },
+        })
+      );
+    const open = (ws: WebSocket) =>
+      new Promise<void>((resolve, reject) => {
+        ws.on('open', resolve);
+        ws.on('error', reject);
+      });
+
+    const oldWs = new WebSocket('ws://127.0.0.1:9229/device');
+    await open(oldWs);
+    register(oldWs, 'dev-race');
+    await new Promise((r) => setTimeout(r, 150));
+
+    // 同 deviceId 重连：新连接注册，覆盖 registry 条目
+    const newWs = new WebSocket('ws://127.0.0.1:9229/device');
+    await open(newWs);
+    register(newWs, 'dev-race');
+    await new Promise((r) => setTimeout(r, 150));
+    const entryAfterReconnect = server.registry.get('dev-race')!;
+    expect(entryAfterReconnect.ws.readyState).toBe(WebSocket.OPEN);
+
+    // 旧连接关闭：守卫应阻止移除新设备的条目
+    oldWs.close();
+    await new Promise((r) => setTimeout(r, 250));
+
+    const entry = server.registry.get('dev-race');
+    expect(entry).toBeDefined();
+    expect(entry!.ws).toBe(entryAfterReconnect.ws);
+    expect(entry!.ws.readyState).toBe(WebSocket.OPEN);
+    const res = await fetch('http://127.0.0.1:9229/api/devices');
+    expect(((await res.json()) as unknown[]).length).toBe(1);
+
+    newWs.close();
+    await new Promise((r) => setTimeout(r, 150));
+  });
+
   it('ping 更新 lastSeen', async () => {
     server = await createDebugServer({ port: 9229 });
     const ws = new WebSocket('ws://127.0.0.1:9229/device');

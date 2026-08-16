@@ -153,6 +153,8 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
 
     ws.on('close', () => {
       if (registeredId) {
+        // 守卫：同 deviceId 重连后，旧 socket 迟到的 close 不得把新连接踢下线
+        if (registry.get(registeredId)?.ws !== ws) return;
         const info = registry.get(registeredId);
         dispatcher.handleDisconnect(registeredId);
         registry.remove(registeredId);
