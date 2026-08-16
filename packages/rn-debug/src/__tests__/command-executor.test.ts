@@ -76,6 +76,41 @@ describe('CommandExecutor', () => {
     expect(sent[0].status).toBe('ok'); // 循环引用被切断后可序列化
   });
 
+  it('send 抛错不毒化队列：下一条指令仍执行并回传', async () => {
+    const sent: ResultMessage[] = [];
+    let throwOnce = true;
+    const send = (msg: ResultMessage) => {
+      if (throwOnce) {
+        throwOnce = false;
+        throw new Error('WebSocket is not open');
+      }
+      sent.push(msg);
+    };
+    const executor = createCommandExecutor({ handlers: { echo: async (p) => p } });
+
+    const p1 = executor.execute(cmd('1', 'echo', { a: 1 }), send);
+    const p2 = executor.execute(cmd('2', 'echo', { b: 2 }), send);
+    await Promise.all([p1, p2]);
+
+    // 第一条的 result 回传失败被吞掉；第二条正常送达
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ id: '2', status: 'ok', result: { b: 2 } });
+  });
+
+  it('未知 type 分支 send 抛错同样不毒化队列', async () => {
+    const sent: ResultMessage[] = [];
+    const executor = createCommandExecutor({ handlers: { echo: async (p) => p } });
+
+    const p1 = executor.execute(cmd('1', 'nope'), () => {
+      throw new Error('WebSocket is not open');
+    });
+    const p2 = executor.execute(cmd('2', 'echo', { ok: true }), (m) => sent.push(m));
+    await Promise.all([p1, p2]);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ id: '2', status: 'ok', result: { ok: true } });
+  });
+
   it('register 重复 type 抛错', () => {
     const executor = createCommandExecutor();
     executor.register('x', () => 1);
