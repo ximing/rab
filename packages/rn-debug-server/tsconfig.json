@@ -19,5 +19,5 @@
     "types": ["@types/node", "@types/jest"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "lib", "build", "dist"]
+  "exclude": ["node_modules", "lib", "build", "dist", "src/__tests__"]
 }

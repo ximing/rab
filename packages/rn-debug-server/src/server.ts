@@ -1,9 +1,8 @@
 import { createServer as createHttpServer, type Server as HttpServer } from 'http';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
 import { createCommandDispatcher, type CommandDispatcher } from './command-dispatcher';
+import { DEBUG_PAGE_HTML } from './debug-page-content';
 import { createDeviceRegistry } from './device-registry';
 import { createEventsBus } from './events-bus';
 import type { EventsBus } from './events-bus';
@@ -37,9 +36,8 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     const url = req.url ?? '';
 
     if (req.method === 'GET' && (url === '/' || url.startsWith('/index'))) {
-      const html = readFileSync(join(__dirname, 'debug-page.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
+      res.end(DEBUG_PAGE_HTML);
       return;
     }
 
