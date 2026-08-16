@@ -24,6 +24,16 @@ const connectionStore = new WeakMap<object, ConnectionMap>();
 const ITERATION_KEY = Symbol("iteration key");
 
 /*
+ * 迭代操作的依赖键必须与通知时的查找键一致,否则依赖永不触发:
+ * - 普通对象: ownKeys trap 注册的依赖挂在 ITERATION_KEY 上,新增/删除属性时也按 ITERATION_KEY 查找
+ * - 数组: 数组的 ownKeys 结果由 length 决定(索引键集合随 length 变化),
+ *   注册和通知都统一使用 "length" 键,保证两者相交
+ * */
+export function iterationKeyFor(target: object): PropertyKey | symbol {
+  return Array.isArray(target) ? "length" : ITERATION_KEY;
+}
+
+/*
  * 在 observable.js 中创建 observable 时调用
  * const state = observable({ count: 0, name: 'Alice' })
  * 执行后,connectionStore 的结构:
@@ -44,11 +54,12 @@ export function registerReactionForOperation(
   reaction: Reaction,
   { target, key, type }: Operation
 ): void {
-  // 处理迭代操作(如 for...of, forEach)时,使用特殊的迭代键 ITERATION_KEY
+  // 处理迭代操作(如 for...of, forEach)时,使用特殊的迭代键
+  // 数组用 "length"(见 iterationKeyFor 的说明),其他对象用 ITERATION_KEY
   // 其他操作(如 get, set)使用普通的属性键 key
   let actualKey: PropertyKey | symbol = key;
   if (type === "iterate") {
-    actualKey = ITERATION_KEY;
+    actualKey = iterationKeyFor(target);
   }
 
   const reactionsForObj = connectionStore.get(target);
@@ -72,11 +83,10 @@ export function registerReactionForOperation(
 /*
  * 作用: 查询某个操作会触发哪些 reactions。
  * */
-export function getReactionsForOperation({
-  target,
-  key,
-  type,
-}: Operation): Set<Reaction> {
+export function getReactionsForOperation(
+  operation: Operation
+): Set<Reaction> {
+  const { target, key, type } = operation;
   const reactionsForTarget = connectionStore.get(target);
   const reactionsForKey = new Set<Reaction>();
 
@@ -93,16 +103,55 @@ export function getReactionsForOperation({
     }
   } else {
     addReactionsForKey(reactionsForKey, reactionsForTarget, key);
+    // 数组 length 收缩: 隐式删除的索引依赖也要通知 (value 为收缩后的新 length)
+    if (
+      Array.isArray(target) &&
+      key === "length" &&
+      type === "set" &&
+      typeof operation.value === "number"
+    ) {
+      addReactionsForTruncatedArrayKeys(
+        reactionsForKey,
+        reactionsForTarget,
+        target.length + 1, // 近似旧 length; 多收集一些索引键是安全的(没有依赖的键查不到 reactions)
+        operation.value
+      );
+    }
   }
 
   if (type === "add" || type === "delete" || type === "clear") {
-    const iterationKey: PropertyKey | symbol = Array.isArray(target)
-      ? "length"
-      : ITERATION_KEY;
-    addReactionsForKey(reactionsForKey, reactionsForTarget, iterationKey);
+    addReactionsForKey(
+      reactionsForKey,
+      reactionsForTarget,
+      iterationKeyFor(target)
+    );
   }
 
   return reactionsForKey;
+}
+
+/*
+ * 数组 length 收缩时,被截断的索引(>= newLength)的依赖也必须被通知,
+ * 否则直接读取 arr[i] 的 reaction 会读到已删除的脏数据。
+ * 原生数组语义下 length 收缩会隐式删除这些索引,因此这里把它们的依赖一并收集。
+ * */
+function addReactionsForTruncatedArrayKeys(
+  reactionsForKey: Set<Reaction>,
+  reactionsForTarget: ConnectionMap,
+  oldLength: number,
+  newLength: number
+): void {
+  for (const key of reactionsForTarget.keys()) {
+    const index = Number(key);
+    if (
+      Number.isInteger(index) &&
+      index >= newLength &&
+      index < oldLength &&
+      key !== ITERATION_KEY
+    ) {
+      addReactionsForKey(reactionsForKey, reactionsForTarget, key);
+    }
+  }
 }
 
 /*
