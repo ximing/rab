@@ -1,6 +1,6 @@
 import { getGlobalContainer } from '@rabjs/service';
 import type { Container, Service } from '@rabjs/service';
-import { executeAssertions } from '@rabjs/shared';
+import { executeAssertions, resolvePath } from '@rabjs/shared';
 import type { Assertion } from '@rabjs/shared';
 
 import { safeSerialize } from './serialize';
@@ -69,14 +69,6 @@ function findService(payload: { instanceId?: string; identifierLabel?: string })
   return found;
 }
 
-function getByPath(obj: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((acc, key) => {
-    if (acc == null) return undefined;
-    if (Array.isArray(acc)) return acc[Number(key)];
-    return (acc as Record<string, unknown>)[key];
-  }, obj);
-}
-
 function publicState(instance: Service): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const record = instance as unknown as Record<string, unknown>;
@@ -101,7 +93,7 @@ export function createRabHandlers(): Record<string, DebugHandler> {
       const ref = findService(p);
       if (p.paths && p.paths.length > 0) {
         const out: Record<string, unknown> = {};
-        for (const path of p.paths) out[path] = getByPath(ref.instance, path);
+        for (const path of p.paths) out[path] = resolvePath(ref.instance as object, path);
         const serialized = safeSerialize(out);
         if (!serialized.ok) throw new Error(serialized.error.message);
         return serialized.data;

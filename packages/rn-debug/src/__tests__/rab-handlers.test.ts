@@ -41,6 +41,8 @@ describe('rab handlers', () => {
     expect(state.total).toBe(0);
     const partial = (await call('rab.getServiceState', { instanceId: cart.instanceId, paths: ['total'] })) as Record<string, unknown>;
     expect(partial).toEqual({ total: 0 });
+    const withLength = (await call('rab.getServiceState', { instanceId: cart.instanceId, paths: ['items.length', 'items.0.id'] })) as Record<string, unknown>;
+    expect(withLength).toEqual({ 'items.length': 0, 'items.0.id': undefined });
   });
 
   it('rab.getServiceState 找不到时抛错（executor 转为 error result）', async () => {
