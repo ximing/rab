@@ -105,6 +105,49 @@ describe('debug server command endpoints', () => {
     expect(none.status).toBe(404);
   });
 
+  it('POST 非法 JSON body 返回 400，server 存活继续服务（不触发 unhandledRejection）', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (err: unknown) => unhandled.push(err);
+    process.on('unhandledRejection', onUnhandled);
+    server = await createDebugServer({ port });
+    const { ws, received } = await connectDevice(port, 'dev-1');
+
+    try {
+      const bad = await fetch(`http://127.0.0.1:${port}/api/commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"type": "ping",',
+      });
+      expect(bad.status).toBe(400);
+      expect(((await bad.json()) as { error: string }).error).toMatch(/JSON/);
+
+      // 畸形百分号编码的 deviceId（decodeURIComponent 抛 URIError）同样兜底
+      const badUri = await fetch(`http://127.0.0.1:${port}/api/devices/%/commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'ping' }),
+      });
+      expect(badUri.status).toBe(400);
+
+      // server 未崩溃：同一连接的设备仍可正常接收指令并回传
+      const promise = fetch(`http://127.0.0.1:${port}/api/commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'ping', payload: {} }),
+      }).then((r) => r.json());
+      await new Promise((r) => setTimeout(r, 150));
+      const command = received.find((m) => JSON.parse(m).kind === 'command')!;
+      reply(ws, command, 'ok', { alive: true });
+      const body = (await promise) as { status: string; result: unknown };
+      expect(body.status).toBe('ok');
+      expect(body.result).toEqual({ alive: true });
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+      ws.close();
+    }
+    expect(unhandled).toHaveLength(0);
+  });
+
   it('GET /api/commands/:id 返回指令状态', async () => {
     server = await createDebugServer({ port });
     const { ws, received } = await connectDevice(port, 'dev-1');

@@ -32,7 +32,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     onEvent: (event) => eventsBus.publish(event),
   });
 
-  const httpServer: HttpServer = createHttpServer(async (req, res) => {
+  async function handleRequest(req: import('http').IncomingMessage, res: import('http').ServerResponse) {
     const url = req.url ?? '';
 
     if (req.method === 'GET' && (url === '/' || url.startsWith('/index'))) {
@@ -96,6 +96,17 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
 
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
+  }
+
+  const httpServer: HttpServer = createHttpServer((req, res) => {
+    handleRequest(req, res).catch((err: unknown) => {
+      // 异常兜底：坏请求（非法 JSON / 畸形 URL 编码等）不能击溃 server 进程
+      const badRequest = err instanceof SyntaxError || err instanceof URIError;
+      if (!res.headersSent) {
+        res.writeHead(badRequest ? 400 : 500, { 'Content-Type': 'application/json' });
+      }
+      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+    });
   });
 
   const wss = new WebSocketServer({ noServer: true });
