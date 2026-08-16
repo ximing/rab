@@ -12,7 +12,7 @@
  * jest 的 toEqual 会忽略尾部 undefined 元素, [5] 与 [5, undefined] 视为相等,
  * 无法证明 reaction 真的被触发。
  */
-import { observable, observe } from "../main";
+import { observable, observe, unobserve, shadowObservable } from "../main";
 
 describe("数组 length 收缩通知 (oldValue 修复)", () => {
   test("收缩到中间值时读非边界索引 (5→3 读 arr[4]) 应被通知为 undefined", () => {
@@ -110,5 +110,90 @@ describe("数组 length 收缩通知 (oldValue 修复)", () => {
     arr.length = 3;
     expect(runs).toBe(2);
     expect(last).toBe(3);
+  });
+});
+
+/*
+ * 对抗审查加固用例 (GG1): 覆盖 set/defineProperty 之外的通知入口
+ * 与浅层 (shadow) 数组、非法写入后的状态一致性。
+ */
+describe("数组 length 收缩通知 (加固)", () => {
+  test("shadowObservable 数组 5→3 读 arr[4] 应被通知为 undefined", () => {
+    const arr = shadowObservable([1, 2, 3, 4, 5]);
+    let runs = 0;
+    let last: unknown = "initial";
+    observe(() => {
+      runs++;
+      last = arr[4];
+    });
+    arr.length = 3;
+    expect(runs).toBe(2);
+    expect(last).toBeUndefined();
+  });
+
+  test("Reflect.set(arr, 'length', '3') 字符串收缩应通知非边界索引", () => {
+    const arr = observable([1, 2, 3, 4, 5]);
+    let runs = 0;
+    let last: unknown = "initial";
+    observe(() => {
+      runs++;
+      last = arr[4];
+    });
+    Reflect.set(arr, "length", "3");
+    expect(arr.length).toBe(3);
+    expect(runs).toBe(2);
+    expect(last).toBeUndefined();
+  });
+
+  test("非法长度写入 (小数) 抛 RangeError 后状态一致: 不通知、length 不变", () => {
+    const arr = observable([1, 2, 3, 4, 5]);
+    let runs = 0;
+    let last: unknown = "initial";
+    observe(() => {
+      runs++;
+      last = arr[3];
+    });
+    expect(() => Reflect.set(arr, "length", 3.5)).toThrow(RangeError);
+    expect(arr.length).toBe(5);
+    expect(runs).toBe(1);
+    expect(last).toBe(4);
+  });
+
+  test("同一 reaction 依赖多个被截断索引 (arr[3] 与 arr[4]) 只重跑一次", () => {
+    const arr = observable([1, 2, 3, 4, 5]);
+    let runs = 0;
+    let last = "";
+    observe(() => {
+      runs++;
+      last = `${arr[3]}/${arr[4]}`;
+    });
+    arr.length = 2;
+    expect(runs).toBe(2);
+    expect(last).toBe("undefined/undefined");
+  });
+
+  test("收缩前 unobserve 的 reaction 不再被通知", () => {
+    const arr = observable([1, 2, 3, 4, 5]);
+    let runs = 0;
+    const reaction = observe(() => {
+      runs++;
+      void arr[4];
+    });
+    unobserve(reaction);
+    arr.length = 3;
+    expect(runs).toBe(1);
+  });
+
+  test("defineProperty 增长 (value: 10) 不误报索引依赖 (回归)", () => {
+    const arr = observable([1, 2]);
+    let runs = 0;
+    let last: unknown = "initial";
+    observe(() => {
+      runs++;
+      last = arr[0];
+    });
+    Object.defineProperty(arr, "length", { value: 10 });
+    expect(runs).toBe(1);
+    expect(last).toBe(1);
   });
 });
