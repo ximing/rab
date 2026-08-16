@@ -147,18 +147,29 @@ export function getReactionsForOperation(
     }
   } else {
     addReactionsForKey(reactionsForKey, reactionsForTarget, wrapKey(key));
-    // 数组 length 收缩: 隐式删除的索引依赖也要通知 (value 为收缩后的新 length)
+    /*
+     * 数组 length 收缩: 隐式删除的索引依赖也要通知。
+     * 旧 length 必须用 trap 在赋值前捕获的 oldValue —— 通知发生在赋值之后,
+     * target.length 已是新值, 用它近似旧 length 会漏掉非边界索引
+     * (如 5→3 时读 arr[4] 的依赖)。
+     * 新 length 用赋值后的 target.length: operation.value 可能是字符串
+     * (arr.length = "3" 会被引擎合法转换) 或非整数, 不能作为数值依据。
+     * 进入条件放宽为 "oldValue 是 number 且确实发生了收缩":
+     * - 增长时 target.length >= oldValue, 不会误报;
+     * - oldValue 不可用 (理论上不会发生, 防御性降级) 时跳过收缩分支。
+     * */
     if (
       Array.isArray(target) &&
       key === "length" &&
       type === "set" &&
-      typeof operation.value === "number"
+      typeof operation.oldValue === "number" &&
+      target.length < operation.oldValue
     ) {
       addReactionsForTruncatedArrayKeys(
         reactionsForKey,
         reactionsForTarget,
-        target.length + 1, // 近似旧 length; 多收集一些索引键是安全的(没有依赖的键查不到 reactions)
-        operation.value
+        operation.oldValue,
+        target.length
       );
     }
   }
