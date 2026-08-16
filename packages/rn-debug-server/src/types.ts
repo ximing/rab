@@ -1,5 +1,7 @@
 import type { WebSocket as WsSocket } from 'ws';
 
+export type { CommandDispatcher, CommandOutcome, CommandRecord } from './command-dispatcher';
+
 export interface DeviceInfo {
   deviceId: string;
   appName: string;
@@ -52,6 +54,13 @@ export interface DeviceEventMessage {
 }
 
 export type DeviceToServerMessage = RegisterMessage | PingMessage | ResultMessage | DeviceEventMessage;
+
+/** Agent → 服务端 指令输入 */
+export interface CommandInput {
+  type: string;
+  payload?: unknown;
+  timeout?: number;
+}
 
 export interface CommandMessage {
   kind: 'command';

@@ -1,25 +1,85 @@
 import { createServer as createHttpServer, type Server as HttpServer } from 'http';
 import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
+import { createCommandDispatcher, type CommandDispatcher } from './command-dispatcher';
 import { createDeviceRegistry } from './device-registry';
-import type { DeviceRegistry, DeviceToServerMessage } from './types';
+import type { CommandInput, DeviceRegistry, DeviceToServerMessage, ResultMessage } from './types';
 
 export interface DebugServer {
   port: number;
   registry: DeviceRegistry;
+  dispatcher: CommandDispatcher;
   close(): Promise<void>;
+}
+
+async function readJson(req: import('http').IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  const text = Buffer.concat(chunks).toString('utf8');
+  return text ? JSON.parse(text) : {};
 }
 
 export async function createDebugServer(options: { port: number }): Promise<DebugServer> {
   const { port } = options;
   const registry = createDeviceRegistry();
+  const dispatcher = createCommandDispatcher({ registry });
 
-  const httpServer: HttpServer = createHttpServer((req, res) => {
-    if (req.method === 'GET' && req.url === '/api/devices') {
+  const httpServer: HttpServer = createHttpServer(async (req, res) => {
+    const url = req.url ?? '';
+
+    if (req.method === 'GET' && url === '/api/devices') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(registry.list()));
       return;
     }
+
+    const byDevice = url.match(/^\/api\/devices\/([^/]+)\/commands$/);
+    if (req.method === 'POST' && byDevice) {
+      const deviceId = decodeURIComponent(byDevice[1]);
+      if (!registry.get(deviceId)) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `device not found: ${deviceId}` }));
+        return;
+      }
+      const input = (await readJson(req)) as CommandInput;
+      const outcome = await dispatcher.sendCommand(deviceId, input);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(outcome));
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/api/commands') {
+      const devices = registry.list();
+      if (devices.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'no device connected' }));
+        return;
+      }
+      if (devices.length > 1) {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'multiple devices, specify deviceId', devices: devices.map((d) => d.deviceId) }));
+        return;
+      }
+      const input = (await readJson(req)) as CommandInput;
+      const outcome = await dispatcher.sendCommand(devices[0].deviceId, input);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(outcome));
+      return;
+    }
+
+    const byId = url.match(/^\/api\/commands\/([^/]+)$/);
+    if (req.method === 'GET' && byId) {
+      const record = dispatcher.getCommand(decodeURIComponent(byId[1]));
+      if (!record) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'command not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(record));
+      return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'not found' }));
   });
@@ -57,12 +117,16 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
       } else if (msg.kind === 'ping') {
         if (registeredId) registry.touch(registeredId);
         ws.send(JSON.stringify({ kind: 'pong' }));
+      } else if (msg.kind === 'result') {
+        dispatcher.handleResult(msg as ResultMessage);
       }
-      // result / event 在 Task 2/4 处理
     });
 
     ws.on('close', () => {
-      if (registeredId) registry.remove(registeredId);
+      if (registeredId) {
+        dispatcher.handleDisconnect(registeredId);
+        registry.remove(registeredId);
+      }
     });
   });
 
@@ -71,6 +135,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   return {
     port,
     registry,
+    dispatcher,
     close() {
       return new Promise<void>((resolve) => {
         for (const client of wss.clients) client.terminate();
