@@ -156,7 +156,9 @@ export function getReactionsForOperation(
      * (arr.length = "3" 会被引擎合法转换) 或非整数, 不能作为数值依据。
      * 进入条件放宽为 "oldValue 是 number 且确实发生了收缩":
      * - 增长时 target.length >= oldValue, 不会误报;
-     * - oldValue 不可用 (理论上不会发生, 防御性降级) 时跳过收缩分支。
+     * - oldValue 不可用 (理论上不会发生, 防御性降级) 时跳过收缩分支;
+     *   此时即使 fallback 到 target.length, target.length < target.length
+     *   恒为 false, 行为与跳过完全等价, 因此直接选择更安全的 skip。
      * */
     if (
       Array.isArray(target) &&
@@ -197,12 +199,20 @@ function addReactionsForTruncatedArrayKeys(
   newLength: number
 ): void {
   for (const key of reactionsForTarget.keys()) {
+    // symbol 不是数组索引 (Number(symbol) 会直接抛 TypeError), 必须先跳过。
+    // 这同时覆盖了 ITERATION_KEY 之类的内部 symbol 键。
+    if (typeof key === "symbol") {
+      continue;
+    }
     const index = Number(key);
     if (
       Number.isInteger(index) &&
+      // 只匹配 canonical 数组索引: "03"、"-0"、"1e2" 这类奇异字符串
+      // 会被 Number() 折叠成整数, 但它们是永远读 undefined 的普通属性,
+      // length 收缩不影响其值, 误匹配会产生与依赖自身无关的假通知。
+      String(index) === String(key) &&
       index >= newLength &&
-      index < oldLength &&
-      key !== ITERATION_KEY
+      index < oldLength
     ) {
       addReactionsForKey(reactionsForKey, reactionsForTarget, key);
     }
