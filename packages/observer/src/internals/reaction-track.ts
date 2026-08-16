@@ -204,7 +204,7 @@ function addReactionsForTruncatedArrayKeys(
 function addReactionsForKey(
   reactionsForKey: Set<Reaction>,
   reactionsForTarget: ConnectionMap,
-  key: PropertyKey | symbol
+  key: StoredKey
 ): void {
   // 如果该 key 有 reactions,将它们全部添加到结果集合中
   // 使用 Set.forEach 的第二个参数作为 this 上下文

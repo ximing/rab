@@ -84,15 +84,22 @@ export function queueReactionsForOperation(operation: Operation): void {
   // iterate and queue every reaction, which is triggered by obj.key mutation
   const { target, key } = operation;
   const reactions = getReactionsForOperation(operation);
-  let reactionsArray = [...reactions];
   // 允许用户通过自定义 handler 过滤或转换 reactions
   // 默认情况下直接返回原数组
   const options = rawToOptions.get(target);
-  if (
+  const hasTransformReactions = Boolean(
     options &&
-    options.reactionHandlers &&
-    options.reactionHandlers.transformReactions
-  ) {
+      options.reactionHandlers &&
+      options.reactionHandlers.transformReactions
+  );
+  // 性能优化: 最常见的写操作是"修改没有任何依赖的属性",
+  // 此时不 spread 空集合、不分配数组, 直接返回。
+  // (配置了 transformReactions 时不早退 —— 自定义 handler 可能从空集补充 reactions)
+  if (reactions.size === 0 && !hasTransformReactions) {
+    return;
+  }
+  let reactionsArray = [...reactions];
+  if (hasTransformReactions && options && options.reactionHandlers) {
     reactionsArray = options.reactionHandlers.transformReactions(
       target,
       key,

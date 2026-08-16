@@ -67,6 +67,13 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
    *   }
    * })
    * */
+  // Proxy 不变式只对"会被改写的返回值"有意义: 只有对象/函数会经
+  // observableChild 包装 (原始值原样返回, 不可能违反不变式)。
+  // 因此原始值直接返回, 跳过 getOwnPropertyDescriptor 的热路径开销。
+  if (!isObject(result) && typeof result !== "function") {
+    return result;
+  }
+
   const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
   if (
     descriptor &&

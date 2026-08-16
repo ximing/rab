@@ -37,18 +37,10 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   // 如果当前有 reaction 在运行，建立 (target.key -> reaction) 的依赖
   registerRunningReactionForOperation({ target, key, receiver, type: "get" });
 
-  // 处理不可配置且不可写的属性
-  const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
-  if (
-    descriptor &&
-    descriptor.writable === false &&
-    descriptor.configurable === false
-  ) {
-    return result;
-  }
-
   // 关键区别：不进行深层包装，直接返回原始值
   // 这样嵌套对象不会被转换为 observable
+  // (返回值始终是 Reflect.get 的原样结果, 天然满足 Proxy 的
+  //  non-writable + non-configurable 不变式, 无需 descriptor 检查)
   return result;
 }
 
