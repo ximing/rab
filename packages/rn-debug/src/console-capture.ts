@@ -15,10 +15,19 @@ const LEVELS = ['log', 'info', 'warn', 'error', 'debug'] as const;
 
 type ConsoleFn = (...args: unknown[]) => void;
 
+const noop: ConsoleFn = () => {};
+
 /**
  * 用访问器属性 patch console：后续对 console[level] 的再赋值
- * （测试、RN polyfill、其他工具都可能这样做）只会替换“当前原方法”，
- * 拦截本身不被覆盖。restore 时还原为 patch 前的属性描述符。
+ * （测试、RN polyfill、Sentry/LogBox 等 save/restore 工具都可能这样做）
+ * 通过 setter 替换“当前原方法”，拦截本身不被覆盖。restore 时还原为
+ * patch 前的属性描述符。
+ *
+ * setter 语义（save/restore 兼容）：
+ * - 赋入普通函数 → 记录历史，替换当前原方法（包裹）
+ * - 赋入的值 === intercept 自身（即调用方此前经 getter 读到的引用）→
+ *   视为第三方 restore，弹历史回到上一个原方法，避免 current === intercept
+ *   导致的无限递归
  */
 export function setupConsoleCapture(options: {
   capacity?: number;
@@ -30,15 +39,33 @@ export function setupConsoleCapture(options: {
 
   for (const level of LEVELS) {
     const target = console as unknown as Record<string, ConsoleFn>;
-    const ownDescriptor = Object.getOwnPropertyDescriptor(target, level);
     const proto = Object.getPrototypeOf(target) as Record<string, ConsoleFn> | null;
+    const ownDescriptor = Object.getOwnPropertyDescriptor(target, level);
     const protoDescriptor = proto ? Object.getOwnPropertyDescriptor(proto, level) : undefined;
     const descriptor = ownDescriptor ?? protoDescriptor;
-    let current: ConsoleFn = descriptor!.value.bind(target);
 
+    // 初始原方法：value 缺失（own 描述符是访问器——嵌套 setup 场景）时读 getter；
+    // level 完全缺失时回退 no-op，保证 setup 不抛。
+    let current: ConsoleFn;
+    if (descriptor && typeof descriptor.value === 'function') {
+      current = descriptor.value.bind(target);
+    } else if (descriptor && typeof descriptor.get === 'function') {
+      const got = descriptor.get.call(target);
+      current = typeof got === 'function' && got !== noop ? got.bind(target) : noop;
+    } else {
+      current = noop;
+    }
+
+    const history: ConsoleFn[] = [];
+    let calling = false;
     const intercept: ConsoleFn = (...args: unknown[]) => {
-      // 先调原方法，不改变原 console 行为
-      current(...args);
+      if (calling) return; // 自递归保险丝
+      calling = true;
+      try {
+        current(...args);
+      } finally {
+        calling = false;
+      }
       const serialized = safeSerialize(args);
       const entry: ConsoleLogEntry = {
         level,
@@ -54,7 +81,15 @@ export function setupConsoleCapture(options: {
       configurable: true,
       get: () => intercept,
       set: (fn: ConsoleFn) => {
-        if (typeof fn === 'function') current = fn;
+        if (typeof fn !== 'function') return;
+        if (fn === intercept) {
+          // 第三方把经 getter 读到的 intercept 赋回来（restore）：弹回上一个原方法
+          const prev = history.pop();
+          if (prev) current = prev;
+          return;
+        }
+        history.push(current);
+        current = fn;
       },
     });
 

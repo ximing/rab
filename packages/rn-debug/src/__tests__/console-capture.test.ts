@@ -58,6 +58,51 @@ describe('ConsoleCapture', () => {
     capture.restore();
   });
 
+  it('第三方 save/restore 模式不递归且捕获继续（回归）', () => {
+    const capture = setupConsoleCapture();
+    // Sentry/LogBox 常见模式：save → wrap → restore
+    const orig = console.log; // getter → intercept 本身
+    console.log = (...args: unknown[]) => {
+      (orig as (...a: unknown[]) => void)(...args);
+    };
+    console.log = orig; // 还原时赋回的是 intercept，不得造成 current === intercept
+    expect(() => console.log('after-restore')).not.toThrow();
+    expect(capture.getLogs().map((l) => l.args[0])).toContain('after-restore');
+    capture.restore();
+  });
+
+  it('嵌套 setup 不抛且外层捕获继续（回归）', () => {
+    const outer = setupConsoleCapture();
+    expect(() => {
+      const inner = setupConsoleCapture();
+      inner.restore();
+    }).not.toThrow();
+    const orig = console.log;
+    console.log = () => {};
+    console.log('still-works');
+    console.log = orig;
+    expect(outer.getLogs().map((l) => l.args[0])).toContain('still-works');
+    outer.restore();
+  });
+
+  it('level 完全缺失时不抛（回退 no-op）（回归）', () => {
+    const proto = Object.getPrototypeOf(console) as Record<string, unknown>;
+    const savedOwn = Object.getOwnPropertyDescriptor(console, 'debug');
+    const savedProto = Object.getOwnPropertyDescriptor(proto, 'debug');
+    if (savedOwn) delete (console as unknown as Record<string, unknown>).debug;
+    if (savedProto) delete proto.debug;
+    try {
+      const capture = setupConsoleCapture({ capacity: 10 });
+      expect(() => (console as unknown as Record<string, (...a: unknown[]) => void>).debug('x'))
+        .not.toThrow();
+      expect(capture.getLogs().map((l) => l.args[0])).toEqual(['x']);
+      capture.restore();
+    } finally {
+      if (savedOwn) Object.defineProperty(console, 'debug', savedOwn);
+      if (savedProto) Object.defineProperty(proto, 'debug', savedProto);
+    }
+  });
+
   it('restore 后不再捕获', () => {
     const capture = setupConsoleCapture();
     capture.restore();
