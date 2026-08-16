@@ -1,12 +1,14 @@
 {
   "name": "@rabjs/rn-debug-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "RABjs RN 调试服务 - Agent 通过 HTTP 指令调试 React Native 设备",
   "type": "module",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
   "types": "lib/main.d.ts",
-  "bin": { "rab-rn-debug": "bin/rab-rn-debug.js" },
+  "bin": {
+    "rab-rn-debug": "bin/rab-rn-debug.js"
+  },
   "exports": {
     ".": {
       "types": "./lib/main.d.ts",
@@ -24,10 +26,18 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
-  "keywords": ["reactive", "state", "debug", "react-native", "devtools"],
+  "keywords": [
+    "reactive",
+    "state",
+    "debug",
+    "react-native",
+    "devtools"
+  ],
   "author": "ximing",
   "license": "MIT",
-  "dependencies": { "ws": "^8.16.0" },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
@@ -39,6 +49,13 @@
     "tsx": "^4.0.0",
     "typescript": "^5.1.3"
   },
-  "files": ["lib/**/*", "bin/**/*", "README.md"],
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
+  "files": [
+    "lib/**/*",
+    "bin/**/*",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }

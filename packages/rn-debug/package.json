@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/rn-debug",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "RABjs React Native 调试 SDK - 长连接接收指令并顺序执行",
   "type": "module",
   "main": "lib/main.cjs",
@@ -23,7 +23,13 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
-  "keywords": ["reactive", "state", "debug", "react-native", "devtools"],
+  "keywords": [
+    "reactive",
+    "state",
+    "debug",
+    "react-native",
+    "devtools"
+  ],
   "author": "ximing",
   "license": "MIT",
   "peerDependencies": {
@@ -44,6 +50,12 @@
     "typescript": "^5.1.3",
     "ws": "^8.16.0"
   },
-  "files": ["lib/**/*", "README.md"],
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
+  "files": [
+    "lib/**/*",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
