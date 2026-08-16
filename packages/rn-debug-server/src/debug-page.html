@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>rab-rn-debug</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: ui-monospace, Menlo, Consolas, monospace; margin: 0; display: grid;
+         grid-template-columns: 340px 1fr; gap: 1px; background: #8882; min-height: 100vh; }
+  section { background: Canvas; padding: 12px; overflow: auto; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin: 0 0 8px; }
+  .device { border: 1px solid #8884; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2c2; margin-right: 6px; }
+  form { display: flex; flex-direction: column; gap: 6px; }
+  textarea, select, input { font: inherit; padding: 4px; border: 1px solid #8886; border-radius: 4px; background: inherit; color: inherit; }
+  textarea { min-height: 90px; }
+  button { font: inherit; padding: 6px 12px; cursor: pointer; }
+  .row { border-bottom: 1px solid #8883; padding: 6px 0; font-size: 12px; }
+  .ok { color: #2a2; } .error { color: #c33; } .timeout { color: #c83; } .pending { color: #88a; }
+  details > summary { cursor: pointer; }
+  pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all; opacity: .85; }
+  .log-warn { color: #b80; } .log-error { color: #c33; }
+</style>
+</head>
+<body>
+  <section>
+    <h2>设备</h2>
+    <div id="devices"></div>
+    <h2 style="margin-top:16px">发送指令</h2>
+    <form id="command-form">
+      <select id="cmd-device"></select>
+      <input id="cmd-type" placeholder="指令 type，如 rab.listServices" required />
+      <textarea id="cmd-payload" placeholder='payload JSON，如 {}'></textarea>
+      <button type="submit">发送</button>
+    </form>
+    <div id="cmd-result"></div>
+  </section>
+  <section>
+    <h2>指令流水</h2>
+    <div id="timeline"></div>
+    <h2 style="margin-top:16px">Console 日志</h2>
+    <div id="logs"></div>
+  </section>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const devices = new Map();
+
+  function renderDevices() {
+    $('devices').innerHTML = devices.size === 0
+      ? '<div class="row">暂无设备连接</div>'
+      : [...devices.values()].map((d) =>
+          `<div class="device"><span class="dot"></span><b>${d.deviceId}</b><br/>` +
+          `${d.appName ?? ''} · ${d.platform ?? ''} ${d.osVersion ?? ''}<br/>` +
+          `<small>connected ${new Date(d.connectedAt).toLocaleTimeString()}</small></div>`
+        ).join('');
+    const sel = $('cmd-device');
+    const cur = sel.value;
+    sel.innerHTML = [...devices.keys()].map((id) => `<option value="${id}">${id}</option>`).join('');
+    if (devices.has(cur)) sel.value = cur;
+  }
+
+  function renderCommand(cmd) {
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.dataset.id = cmd.id;
+    div.innerHTML =
+      `<details><summary><span class="${cmd.status}">${cmd.status}</span> ` +
+      `${new Date(cmd.sentAt).toLocaleTimeString()} ${cmd.deviceId} → ${cmd.type}` +
+      ` (${cmd.durationMs ?? 0}ms)</summary>` +
+      `<pre>payload: ${JSON.stringify(cmd.payload ?? {}, null, 2)}</pre>` +
+      `<pre>${cmd.status === 'pending' ? '' : JSON.stringify(cmd.result ?? cmd.error ?? '', null, 2)}</pre></details>`;
+    const old = document.querySelector(`#timeline .row[data-id="${cmd.id}"]`);
+    if (old) old.replaceWith(div); else $('timeline').prepend(div);
+  }
+
+  function renderLog(deviceId, data) {
+    const div = document.createElement('div');
+    div.className = 'row log-' + (data.level ?? 'log');
+    div.textContent = `${new Date(data.time ?? Date.now()).toLocaleTimeString()} [${deviceId}] ${data.level ?? 'log'} ${(data.args ?? []).map(safeStr).join(' ')}`;
+    $('logs').prepend(div);
+  }
+  const safeStr = (v) => typeof v === 'string' ? v : JSON.stringify(v);
+
+  const ws = new WebSocket(`ws://${location.host}/events`);
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.kind === 'device') {
+      if (msg.action === 'connected') devices.set(msg.device.deviceId, msg.device);
+      else devices.delete(msg.device.deviceId);
+      renderDevices();
+    } else if (msg.kind === 'command') {
+      renderCommand(msg.command);
+    } else if (msg.kind === 'console') {
+      renderLog(msg.deviceId, msg.data);
+    }
+  };
+  // 初始拉一次设备列表
+  fetch('/api/devices').then((r) => r.json()).then((list) => {
+    for (const d of list) devices.set(d.deviceId, d);
+    renderDevices();
+  });
+
+  $('command-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const deviceId = $('cmd-device').value;
+    const type = $('cmd-type').value.trim();
+    let payload = {};
+    try { payload = JSON.parse($('cmd-payload').value || '{}'); }
+    catch { $('cmd-result').textContent = 'payload 不是合法 JSON'; return; }
+    const url = deviceId ? `/api/devices/${encodeURIComponent(deviceId)}/commands` : '/api/commands';
+    $('cmd-result').textContent = '…';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, payload }),
+    });
+    $('cmd-result').textContent = `${res.status} ${JSON.stringify(await res.json(), null, 2)}`;
+  });
+</script>
+</body>
+</html>

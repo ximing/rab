@@ -1,4 +1,6 @@
 import { createServer as createHttpServer, type Server as HttpServer } from 'http';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
 import { createCommandDispatcher, type CommandDispatcher } from './command-dispatcher';
@@ -33,6 +35,13 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
 
   const httpServer: HttpServer = createHttpServer(async (req, res) => {
     const url = req.url ?? '';
+
+    if (req.method === 'GET' && (url === '/' || url.startsWith('/index'))) {
+      const html = readFileSync(join(__dirname, 'debug-page.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
 
     if (req.method === 'GET' && url === '/api/devices') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
