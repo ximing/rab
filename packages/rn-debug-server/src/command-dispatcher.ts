@@ -42,8 +42,11 @@ const DEFAULT_TIMEOUT = 30_000;
 const MAX_TIMEOUT = 120_000;
 const HISTORY_CAP = 100;
 
-export function createCommandDispatcher(options: { registry: DeviceRegistry }): CommandDispatcher {
-  const { registry } = options;
+export function createCommandDispatcher(options: {
+  registry: DeviceRegistry;
+  onEvent?: (event: Record<string, unknown>) => void;
+}): CommandDispatcher {
+  const { registry, onEvent } = options;
   const pending = new Map<string, Pending>();
   const history: CommandRecord[] = [];
   const queues = new Map<string, Promise<void>>();
@@ -54,6 +57,7 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
     Object.assign(p.record, outcome, { completedAt: Date.now() });
     history.push(p.record);
     if (history.length > HISTORY_CAP) history.shift();
+    onEvent?.({ kind: 'command', action: 'completed', command: p.record });
     p.resolve(outcome);
   }
 
@@ -87,6 +91,7 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
         return;
       }
       entry.ws.send(JSON.stringify({ kind: 'command', id, type: input.type, payload: input.payload ?? {} }));
+      onEvent?.({ kind: 'command', action: 'sent', command: record });
     });
   }
 

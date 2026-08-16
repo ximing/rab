@@ -3,12 +3,15 @@ import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
 import { createCommandDispatcher, type CommandDispatcher } from './command-dispatcher';
 import { createDeviceRegistry } from './device-registry';
+import { createEventsBus } from './events-bus';
+import type { EventsBus } from './events-bus';
 import type { CommandInput, DeviceRegistry, DeviceToServerMessage, ResultMessage } from './types';
 
 export interface DebugServer {
   port: number;
   registry: DeviceRegistry;
   dispatcher: CommandDispatcher;
+  eventsBus: EventsBus;
   close(): Promise<void>;
 }
 
@@ -22,7 +25,11 @@ async function readJson(req: import('http').IncomingMessage): Promise<unknown> {
 export async function createDebugServer(options: { port: number }): Promise<DebugServer> {
   const { port } = options;
   const registry = createDeviceRegistry();
-  const dispatcher = createCommandDispatcher({ registry });
+  const eventsBus = createEventsBus();
+  const dispatcher = createCommandDispatcher({
+    registry,
+    onEvent: (event) => eventsBus.publish(event),
+  });
 
   const httpServer: HttpServer = createHttpServer(async (req, res) => {
     const url = req.url ?? '';
@@ -90,6 +97,10 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     const url = req.url ?? '';
     if (url.startsWith('/device')) {
       wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    } else if (url.startsWith('/events')) {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        eventsBus.subscribe(ws);
+      });
     } else {
       socket.destroy();
     }
@@ -107,25 +118,33 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
       }
       if (msg.kind === 'register') {
         registeredId = msg.deviceId;
-        registry.add({
-          deviceId: msg.deviceId,
-          ws,
-          info: msg.info,
-          connectedAt: Date.now(),
-          lastSeen: Date.now(),
-        });
+        const connectedAt = Date.now();
+        registry.add({ deviceId: msg.deviceId, ws, info: msg.info, connectedAt, lastSeen: connectedAt });
+        eventsBus.publish({ kind: 'device', action: 'connected', device: { deviceId: msg.deviceId, ...msg.info, connectedAt, lastSeen: connectedAt } });
       } else if (msg.kind === 'ping') {
         if (registeredId) registry.touch(registeredId);
         ws.send(JSON.stringify({ kind: 'pong' }));
       } else if (msg.kind === 'result') {
         dispatcher.handleResult(msg as ResultMessage);
+      } else if (msg.kind === 'event') {
+        if (registeredId) {
+          eventsBus.publish({ kind: msg.event, deviceId: registeredId, data: msg.data });
+        }
       }
     });
 
     ws.on('close', () => {
       if (registeredId) {
+        const info = registry.get(registeredId);
         dispatcher.handleDisconnect(registeredId);
         registry.remove(registeredId);
+        if (info) {
+          eventsBus.publish({
+            kind: 'device',
+            action: 'disconnected',
+            device: { deviceId: registeredId, ...info.info, connectedAt: info.connectedAt, lastSeen: info.lastSeen },
+          });
+        }
       }
     });
   });
@@ -136,6 +155,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     port,
     registry,
     dispatcher,
+    eventsBus,
     close() {
       return new Promise<void>((resolve) => {
         for (const client of wss.clients) client.terminate();
