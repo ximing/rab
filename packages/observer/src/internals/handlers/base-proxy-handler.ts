@@ -101,7 +101,14 @@ function set(
   // 用于比较值是否真的改变了
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
-  const result = Reflect.set(target, key, value, receiver);
+  // 转发期间置位, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
+  isForwardingSet = true;
+  let result: boolean;
+  try {
+    result = Reflect.set(target, key, value, receiver) as boolean;
+  } finally {
+    isForwardingSet = false;
+  }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   // 这是因为原型继承，当原型具有setter时，设置操作会遍历整个原型链，并在每个对象上调用设置 trap，直到找到setter
   // 而不是直接在当前对象上设置属性
@@ -192,11 +199,67 @@ function construct(
   return result as object;
 }
 
+/*
+ * 标记 set trap 正在做 Reflect.set 转发。
+ * 背景: set trap 调用 Reflect.set(target, key, value, receiver) 且 receiver 是 proxy 时,
+ * 规范 (OrdinarySetWithOwnDescriptor) 会把写入路由回 Receiver.[[DefineOwnProperty]],
+ * 即普通赋值也会触发 defineProperty trap。此时通知由 set trap 统一负责,
+ * defineProperty trap 不应重复通知, 否则每次赋值触发两次 reactions。
+ * */
+let isForwardingSet = false;
+
+/*
+ * 拦截 Object.defineProperty, 防止其绕过 set trap 静默修改属性。
+ * 没有 this trap 时, defineProperty 默认转发直接写 raw target,
+ * 通知逻辑被完全绕过, 已注册的 reaction 看不到变化。
+ * */
+function defineProperty(
+  target: object,
+  key: PropertyKey,
+  descriptor: PropertyDescriptor
+): boolean {
+  // 来自 set trap 的 Reflect.set 转发: 只透传, 通知由 set trap 负责
+  if (isForwardingSet) {
+    return Reflect.defineProperty(target, key, descriptor);
+  }
+  const hadKey = hasOwnProperty.call(target, key);
+  const oldValue = hadKey
+    ? (target as Record<PropertyKey, unknown>)[key]
+    : undefined;
+  const result = Reflect.defineProperty(target, key, descriptor);
+  if (!result) {
+    return false;
+  }
+  // 与 set trap 保持一致的判定: 新增属性 → add, 值变化 → set
+  // 不对 accessor descriptor (getter) 和值未变化的情况发通知
+  if (!hadKey) {
+    queueReactionsForOperation({
+      target,
+      key,
+      value: descriptor.value,
+      type: "add",
+    });
+  } else if (
+    descriptor.value !== undefined &&
+    descriptor.value !== oldValue
+  ) {
+    queueReactionsForOperation({
+      target,
+      key,
+      value: descriptor.value,
+      oldValue,
+      type: "set",
+    });
+  }
+  return result;
+}
+
 export const baseProxyHandler = {
   get,
   has,
   ownKeys,
   set,
   deleteProperty,
+  defineProperty,
   construct,
 };

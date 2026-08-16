@@ -77,7 +77,14 @@ function set(
   // 用于比较值是否真的改变了
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
-  const result = Reflect.set(target, key, value, receiver);
+  // 转发期间置位，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
+  isForwardingSet = true;
+  let result: boolean;
+  try {
+    result = Reflect.set(target, key, value, receiver) as boolean;
+  } finally {
+    isForwardingSet = false;
+  }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   if (
     typeof receiver === "object" &&
@@ -144,11 +151,60 @@ function construct(
   return result as object;
 }
 
+/*
+ * 标记 set trap 正在做 Reflect.set 转发 (原因见 base-proxy-handler 同名变量)
+ * */
+let isForwardingSet = false;
+
+/*
+ * 拦截 Object.defineProperty (与 base-proxy-handler 的实现一致,
+ * shadow 模式同样需要防止 defineProperty 绕过 set trap 静默失效)。
+ * */
+function defineProperty(
+  target: object,
+  key: PropertyKey,
+  descriptor: PropertyDescriptor
+): boolean {
+  // 来自 set trap 的 Reflect.set 转发: 只透传, 通知由 set trap 负责
+  if (isForwardingSet) {
+    return Reflect.defineProperty(target, key, descriptor);
+  }
+  const hadKey = hasOwnProperty.call(target, key);
+  const oldValue = hadKey
+    ? (target as Record<PropertyKey, unknown>)[key]
+    : undefined;
+  const result = Reflect.defineProperty(target, key, descriptor);
+  if (!result) {
+    return false;
+  }
+  if (!hadKey) {
+    queueReactionsForOperation({
+      target,
+      key,
+      value: descriptor.value,
+      type: "add",
+    });
+  } else if (
+    descriptor.value !== undefined &&
+    descriptor.value !== oldValue
+  ) {
+    queueReactionsForOperation({
+      target,
+      key,
+      value: descriptor.value,
+      oldValue,
+      type: "set",
+    });
+  }
+  return result;
+}
+
 export const shadowProxyHandler = {
   get,
   has,
   ownKeys,
   set,
   deleteProperty,
+  defineProperty,
   construct,
 };
