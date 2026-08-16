@@ -83,10 +83,19 @@ function createShadowCollectionProxyHandlers() {
         )[key];
       }
 
-      // 否则，从 target 获取（但不要获取 Map/Set 的原生方法，因为它们需要特殊的 this 绑定）
-      // 对于 Map/Set 的原生方法，我们应该返回 undefined 或抛出错误
-      // 但是为了兼容性，我们返回 undefined
-      return undefined;
+      // 否则，从 target 原生获取 (constructor / toString / Symbol.toStringTag 等)。
+      // 修复: 之前这里返回 undefined, 导致 map.constructor === undefined、
+      // String(map) 抛 TypeError, duck-typing 检测和序列化全挂。
+      const value = Reflect.get(target, key, receiver);
+      // Map/Set 的原生方法需要内部槽位对应的 this —— 以 proxy 为 this 调用会抛
+      // "incompatible receiver"。参照 Vue 的做法, 把原生方法绑定到 raw target。
+      // constructor 除外: 绑定后会破坏 map.constructor === Map 的恒等性。
+      if (typeof value === "function" && key !== "constructor") {
+        return (value as (this: object, ...args: unknown[]) => unknown).bind(
+          target
+        );
+      }
+      return value;
     },
   };
 }
