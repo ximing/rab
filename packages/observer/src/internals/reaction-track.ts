@@ -7,7 +7,46 @@
 
 import type { Operation, Reaction } from "./types";
 
-type ConnectionMap = Map<PropertyKey | symbol, Set<Reaction>>;
+type StoredKey = PropertyKey | symbol | WeakRef<object>;
+type ConnectionMap = Map<StoredKey, Set<Reaction>>;
+
+/*
+ * 集合 (Map/Set/WeakMap/WeakSet) 的依赖注册会把用户传入的 key 对象
+ * 存进 ConnectionMap。普通 Map 对 key 是强引用 —— 只要 observable 还活着,
+ * key 对象就永远无法被 GC, 这对 WeakMap 使用者是语义破坏 (内存泄漏)。
+ *
+ * 修复: 对象 key 统一包装成 WeakRef 再存入 (每个 key 通过 side WeakMap
+ * 缓存同一个 WeakRef 实例, 保证 Map 查找的恒等性)。Map 本身只强持有
+ * WeakRef 包装对象 (几十字节), 不持有 key。
+ * 遍历 (clear) 时发现 deref() 为 undefined 的死条目会顺手清除。
+ *
+ * 兼容: 旧 RN JSC 等无 WeakRef 的环境退化为原来的强持有行为。
+ * */
+const supportsWeakRef = typeof WeakRef === "function";
+const keyToWeakRef: WeakMap<object, WeakRef<object>> | null = supportsWeakRef
+  ? new WeakMap()
+  : null;
+
+function wrapKey(key: PropertyKey | symbol): StoredKey {
+  if (!keyToWeakRef || typeof key !== "object" || key === null) {
+    return key;
+  }
+  let ref = keyToWeakRef.get(key);
+  if (!ref) {
+    ref = new WeakRef(key);
+    keyToWeakRef.set(key, ref);
+  }
+  return ref;
+}
+
+function isDeadRef(storedKey: StoredKey): boolean {
+  return (
+    typeof storedKey === "object" &&
+    storedKey !== null &&
+    storedKey instanceof WeakRef &&
+    storedKey.deref() === undefined
+  );
+}
 
 // connectionStore
 // ├── observable1 (WeakMap key)
@@ -67,10 +106,10 @@ export function registerReactionForOperation(
     return;
   }
 
-  let reactionsForKey = reactionsForObj.get(actualKey);
+  let reactionsForKey = reactionsForObj.get(wrapKey(actualKey));
   if (!reactionsForKey) {
     reactionsForKey = new Set<Reaction>();
-    reactionsForObj.set(actualKey, reactionsForKey);
+    reactionsForObj.set(wrapKey(actualKey), reactionsForKey);
   }
 
   if (!reactionsForKey.has(reaction)) {
@@ -97,12 +136,17 @@ export function getReactionsForOperation(
   if (type === "clear") {
     /*
      * 清空集合时,需要触发所有属性的 reactions, 遍历所有 key,收集它们的 reactions
+     * 顺带清除已死的 WeakRef 条目 (key 对象已被 GC 的依赖残留)
      * */
-    for (const [key, _] of reactionsForTarget.entries()) {
-      addReactionsForKey(reactionsForKey, reactionsForTarget, key);
+    for (const [storedKey, _] of reactionsForTarget.entries()) {
+      if (isDeadRef(storedKey)) {
+        reactionsForTarget.delete(storedKey);
+        continue;
+      }
+      addReactionsForKey(reactionsForKey, reactionsForTarget, storedKey);
     }
   } else {
-    addReactionsForKey(reactionsForKey, reactionsForTarget, key);
+    addReactionsForKey(reactionsForKey, reactionsForTarget, wrapKey(key));
     // 数组 length 收缩: 隐式删除的索引依赖也要通知 (value 为收缩后的新 length)
     if (
       Array.isArray(target) &&
