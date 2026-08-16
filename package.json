@@ -3,6 +3,16 @@
   "version": "9.0.0",
   "private": true,
   "type": "module",
+  "main": ".opencode/plugins/rab.js",
+  "keywords": [
+    "pi-package",
+    "skills"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
   "workspaces": [
     "packages/*"
   ],

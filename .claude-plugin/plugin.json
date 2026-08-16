@@ -1,0 +1,20 @@
+{
+  "name": "rab",
+  "description": "RAB skills for coding agents: rab-react (@rabjs/react conventions), rab-cdp-debug (CDP debugging of live rab apps), rab-rn-debug (React Native debug bridge)",
+  "version": "9.0.0",
+  "author": {
+    "name": "ximing"
+  },
+  "homepage": "https://github.com/ximing/rab",
+  "repository": "https://github.com/ximing/rab",
+  "license": "MIT",
+  "keywords": [
+    "rab",
+    "rabjs",
+    "react",
+    "react-native",
+    "state-management",
+    "debugging",
+    "skills"
+  ]
+}

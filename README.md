@@ -117,6 +117,69 @@ Reactions track the properties they read. Changes to those properties rerun the 
 
 [`@rabjs/web-mcp`](./packages/web-mcp) bridges active Service instances to WebMCP tools. A browser agent can discover Services, read state, invoke methods, make permitted state updates, and run assertions; those operations flow through the same observable layer that React renders. See the [DevTools guide](https://ximing.github.io/rab/#/guides/devtools), [AI overview](https://ximing.github.io/rab/#/ai), and [Web MCP guide](https://ximing.github.io/rab/#/ai/web-mcp).
 
+## Coding Agent Skills
+
+RAB ships [Agent Skills](https://code.claude.com/docs/en/claude-code/skills) in [`skills/`](./skills) that teach coding agents the correct RAB patterns and let them debug live applications:
+
+| Skill | Purpose |
+| --- | --- |
+| [`rab-react`](./skills/rab-react) | Write `@rabjs/react` code with the right conventions (`observer`, `useService`, `bindServices`, Service lifecycle). |
+| [`rab-cdp-debug`](./skills/rab-cdp-debug) | Inspect, call, and assert Service instances of a running rab app via Chrome DevTools MCP. |
+| [`rab-rn-debug`](./skills/rab-rn-debug) | Debug a React Native app on a device through the `@rabjs/rn-debug-server` bridge. |
+
+The skills are plain `SKILL.md` documents with no runtime dependency, so the same files work across coding tools. Installation differs by tool — if you use more than one, install separately for each.
+
+### Claude Code
+
+```bash
+/plugin marketplace add ximing/rab
+/plugin install rab@rab
+```
+
+Or manually: `cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug ~/.claude/skills/`
+
+### Codex App / Codex CLI
+
+The plugin manifest lives at [`.codex-plugin/plugin.json`](.codex-plugin/plugin.json). Once listed in the [official Codex plugin marketplace](https://github.com/openai/plugins), search for `rab` in the plugin panel (`/plugins` in the CLI; the Plugins sidebar in the app) and install. Before listing lands, copy the skill directories into `~/.codex/skills/`.
+
+### Cursor
+
+The plugin manifest lives at [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json). In Cursor Agent chat run `/add-plugin rab`, or search for `rab` in the plugin marketplace. Manually, copy the skill directories into `.cursor/skills/` of your project.
+
+### Grok Build CLI
+
+Install from xAI's official plugin marketplace (listing follows the same manifest set):
+
+```bash
+grok plugin install rab@xai-official --trust
+```
+
+### Kimi Code
+
+```text
+/plugins install https://github.com/ximing/rab
+```
+
+Then start a fresh session (`/new`) so the plugin loads.
+
+### OpenCode
+
+Add the plugin to `opencode.json` (global or project-level); it registers `skills/` through OpenCode's plugin system:
+
+```json
+{
+  "plugin": ["rab@git+https://github.com/ximing/rab.git"]
+}
+```
+
+### Pi
+
+```bash
+pi install git:github.com/ximing/rab
+```
+
+The package manifest in [`package.json`](package.json) declares the `skills/` directory for Pi's native skill discovery.
+
 ## Repository Structure
 
 ```text
@@ -128,6 +191,7 @@ rab/
 │   ├── devtools/       # @rabjs/devtools
 │   └── web-mcp/        # @rabjs/web-mcp
 ├── examples/           # Runnable examples
+├── skills/             # Coding agent skills (rab-react, rab-cdp-debug, rab-rn-debug)
 ├── website/            # Documentation site
 ├── docs/               # Project documentation and assets
 └── configs/            # Shared TypeScript and ESLint configuration
@@ -152,7 +216,7 @@ The documentation site's production JavaScript bundle is minified by Vite. A pro
 
 | Asset | Minified size | Gzip size |
 | --- | ---: | ---: |
-| `website/dist/assets/index-*.js` | 439,514 bytes (439.51 kB) | 138,943 bytes (138.94 kB) |
+| `website/dist/assets/index-*.js` | 448,651 bytes (448.65 kB) | 140,928 bytes (140.93 kB) |
 
 The reported gzip size uses Vite's production build output.
 
