@@ -4,16 +4,17 @@ import { CodeBlock } from "../../components/CodeBlock";
 const claudeCodeSetupCode = `/plugin marketplace add ximing/rab
 /plugin install rab@rab`;
 
-const codexSetupCode = `# Codex 插件市场（CLI 输入 /plugins，App 在 Plugins 侧边栏）搜索 rab 安装
-# 上架前可手动安装：
-cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug ~/.codex/skills/`;
+const codexSetupCode = `# rab 仓库自身就是一个 Codex 插件市场，无需官方上架
+codex plugin marketplace add ximing/rab
+codex plugin add rab@rab`;
 
 const cursorSetupCode = `# Cursor Agent 对话框中执行：
 /add-plugin rab
 # 或手动安装到项目：
 cp -r skills/rab-react skills/rab-cdp-debug skills/rab-rn-debug your-project/.cursor/skills/`;
 
-const grokSetupCode = `grok plugin install rab@xai-official --trust`;
+const grokSetupCode = `grok plugin install rab@xai-official --trust
+# xAI 官方市场收录审核中：xai-org/plugin-marketplace#265`;
 
 const kimiSetupCode = `/plugins install https://github.com/ximing/rab
 # 安装后新开会话（/new）使插件生效`;
