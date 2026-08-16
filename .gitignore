@@ -18,3 +18,4 @@ coverage
 .ob
 build
 .docusaurus
+packages/rn-debug-server/src/debug-page-content.ts
