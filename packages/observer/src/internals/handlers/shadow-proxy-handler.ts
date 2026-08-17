@@ -119,6 +119,9 @@ function set(
     }
   } else if (value !== oldValue) {
     // 修改属性
+    // 已知限制 (归 G3 值比较批次, 原因见 base-proxy-handler 同名分支):
+    // 自有 accessor setter 内对同一 key defineProperty 落盘变换值时,
+    // "赋值值 vs 旧值"比较可能误判无变化而丢通知。
     queueReactionsForOperation({
       target,
       key,
@@ -193,10 +196,19 @@ function defineProperty(
   descriptor: PropertyDescriptor
 ): boolean {
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
+  //
+  // 已知限制 (对抗审查确认, 归 G3 值比较批次, 详见 base-proxy-handler 同名处理):
+  // 转发窗口内用户对**同一 {target,key}** 的 Object.defineProperty 与引擎路由回的
+  // [[DefineOwnProperty]] 不可区分, 会被当转发透传; 若落盘值与 set trap 捕获的
+  // oldValue 满足 value === oldValue, 通知静默丢失。
+  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
   if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
+  // 已知限制 (归 G3/G7): 以 this=raw 读旧值会触发 accessor getter,
+  // 副作用型 getter 内对 raw 的 defineProperty 绕过 trap, 窗口内外都丢通知。
+  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
   const oldValue = hadKey
     ? (target as Record<PropertyKey, unknown>)[key]
     : undefined;

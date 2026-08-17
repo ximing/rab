@@ -204,6 +204,10 @@ function set(
     }
   } else if (value !== oldValue) {
     // 修改属性
+    // 已知限制 (归 G3 值比较批次): 自有 accessor 的 setter 内若对同一 key
+    // defineProperty 落盘了变换后的值, 这里以"赋值值 vs 旧值"比较可能误判为
+    // 无变化 (且通知时 value 携带原始入参而非实际落盘值, debuggerReaction
+    // 会消费到)。落盘后重读 target[key] 实际值再比较可补偿, 属 G3 范围。
     queueReactionsForOperation({
       target,
       key,
@@ -293,10 +297,24 @@ function defineProperty(
   descriptor: PropertyDescriptor
 ): boolean {
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
+  //
+  // 已知限制 (对抗审查确认, 归 G3 值比较批次): 转发窗口内用户对**同一 {target,key}**
+  // 的 Object.defineProperty 与引擎路由回的 [[DefineOwnProperty]] 在 trap 边界不可区分,
+  // 会被当转发透传。若 setter 内 defineProperty 落盘的值与 set trap 捕获的 oldValue
+  // 满足 value === oldValue, set trap 也不通知 → 值已变但 reaction 静默 (丢通知)。
+  // 实测 master (无 defineProperty trap) 与旧布尔实现同场景同样丢通知, 非帧栈方案的回归。
+  // {target,key} 匹配无法进一步收窄 (路由回的 key 必然等于正在写的 key);
+  // 真正的修法在 set trap 侧落盘后重读 target[key] 实际值参与变化比较。
+  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
   if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
+  // 已知限制 (归 G3/G7): 这里以 this=raw 读取旧值会触发 accessor getter,
+  // 副作用型 getter 内对 this (raw) 的 Object.defineProperty 直接改 raw、
+  // 完全绕过 proxy trap, 窗口内外都丢通知。待 G3/G7 改为仅对 data
+  // descriptor 读旧值 / accessor 标记 unknown 强制通知。
+  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
   const oldValue = hadKey
     ? (target as Record<PropertyKey, unknown>)[key]
     : undefined;
