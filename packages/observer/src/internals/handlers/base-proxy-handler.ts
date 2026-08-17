@@ -11,6 +11,7 @@ import { proxyToRaw } from "../proxy-raw-map";
 import {
   markCoveredForReceiverRoot,
   markForwardedDefineProperty,
+  markNotifiedInFlightFrames,
   popForwardingFrame,
   pushForwardingFrame,
 } from "./forwarding-frames";
@@ -144,7 +145,7 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  const frame = pushForwardingFrame(target, key);
+  const frame = pushForwardingFrame(target, key, receiver);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
@@ -195,7 +196,9 @@ function set(
     // 变化时才通知; 仅读自有属性, 不沿原型链 (避免 raw 读触发外层 proxy
     // get trap 的副作用)。通知后把仍在栈上的同 key 外层帧标记为 covered,
     // 最外层 receiver 的兜底 add 据此跳过, 防止链上 reaction 双通知。
-    if (frame.hit && hasOwnProperty.call(target, key)) {
+    // frame.covered: 窗口内已有同 {target,key} 的嵌套写入通知过 (见
+    // markNotifiedInFlightFrames), 本层 mismatch 通知是重复的, 跳过 (G2b)。
+    if (frame.hit && !frame.covered && hasOwnProperty.call(target, key)) {
       const landedValue = (target as Record<PropertyKey, unknown>)[key];
       let notified = false;
       if (!hadKey) {
@@ -243,7 +246,12 @@ function set(
         receiver,
         type: "add",
       });
+      markNotifiedInFlightFrames(target, key);
     } else if (!frame.covered) {
+      // 兜底 add (本链没有落盘, 写到了别处): 不做 markNotifiedInFlightFrames ——
+      // 它不代表本 raw 上的落盘状态变化, 嵌套写入的兜底通知不得抑制外层另一次
+      // 写入的兜底通知 (转发窗口内 reaction 重入写回 in-flight key 的场景,
+      // 两次写入都必须被观察到)。
       queueReactionsForOperation({ target, key, value, receiver, type: "add" });
     }
   } else if (Array.isArray(target) && key === "length") {
@@ -262,6 +270,7 @@ function set(
         receiver,
         type: "set",
       });
+      markNotifiedInFlightFrames(target, key);
     }
   } else {
     // 修改属性: 落盘后重读 target[key] 实际值参与比较。
@@ -281,6 +290,7 @@ function set(
         receiver,
         type: "set",
       });
+      markNotifiedInFlightFrames(target, key);
     }
   }
   return result as boolean;

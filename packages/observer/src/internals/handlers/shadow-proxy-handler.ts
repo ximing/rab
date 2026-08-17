@@ -12,6 +12,7 @@ import { hasOwnProperty, isObject } from "../utils";
 import {
   markCoveredForReceiverRoot,
   markForwardedDefineProperty,
+  markNotifiedInFlightFrames,
   popForwardingFrame,
   pushForwardingFrame,
 } from "./forwarding-frames";
@@ -86,7 +87,7 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  const frame = pushForwardingFrame(target, key);
+  const frame = pushForwardingFrame(target, key, receiver);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
@@ -107,7 +108,9 @@ function set(
     // 转发 walk 的中间层: 仅在本帧被 defineProperty trap 命中过 (frame.hit)
     // 且落盘后状态真的变化时才通知, 并把仍在栈上的同 key 外层帧标记为
     // covered (对抗审查第 3 轮 #1b, 原因见 base-proxy-handler 同名处理)。
-    if (frame.hit && hasOwnProperty.call(target, key)) {
+    // frame.covered: 窗口内已有同 {target,key} 的嵌套写入通知过 (见
+    // markNotifiedInFlightFrames), 本层 mismatch 通知是重复的, 跳过 (G2b)。
+    if (frame.hit && !frame.covered && hasOwnProperty.call(target, key)) {
       const landedValue = (target as Record<PropertyKey, unknown>)[key];
       let notified = false;
       if (!hadKey) {
@@ -149,7 +152,9 @@ function set(
         receiver,
         type: "add",
       });
+      markNotifiedInFlightFrames(target, key);
     } else if (!frame.covered) {
+      // 兜底 add 不做 markNotifiedInFlightFrames (原因见 base-proxy-handler 同名分支)
       queueReactionsForOperation({ target, key, value, receiver, type: "add" });
     }
   } else if (Array.isArray(target) && key === "length") {
@@ -165,6 +170,7 @@ function set(
         receiver,
         type: "set",
       });
+      markNotifiedInFlightFrames(target, key);
     }
   } else {
     // 修改属性: 落盘后重读实际值参与比较
@@ -179,6 +185,7 @@ function set(
         receiver,
         type: "set",
       });
+      markNotifiedInFlightFrames(target, key);
     }
   }
   return result as boolean;
