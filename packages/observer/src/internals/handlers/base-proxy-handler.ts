@@ -297,7 +297,16 @@ function set(
         });
       } else {
         // key 相对窗口起点是新增, 保持 add (含 ITERATION_KEY 依赖),
-        // 携带落盘后的实际值
+        // 携带落盘后的实际值。
+        // 先标记后通知 (对抗审查第 2 轮 #3/#4): queueReactionsForOperation
+        // 默认同步执行 reaction, 若 reaction 在转发窗口内重入写回同一
+        // in-flight key, 重入 trap 的 markNotifiedInFlightFrames 会把本帧
+        // notifiedValue 推进到重入值; 若本分支的事后 markNotified 在其之后
+        // 执行, 会把它**覆写回本分支的旧值** —— 外层 mismatch 分支据差值
+        // 对同一终值再补发一次 (双通知), setter 再 defineProperty 回该旧值
+        // 时又被判「已通知」而静默跳过 (丢通知)。必须先把本帧标记为
+        // 「即将通知本落盘值」, 重入推进与 unwind 比较才有正确基准。
+        markNotifiedInFlightFrames(target, key, landedValue);
         queueReactionsForOperation({
           target,
           key,
@@ -305,7 +314,6 @@ function set(
           receiver,
           type: "add",
         });
-        markNotifiedInFlightFrames(target, key, landedValue);
       }
     } else if (!frame.covered) {
       // 兜底 add (本链没有落盘, 写到了别处): 不做 markNotifiedInFlightFrames ——
@@ -325,6 +333,8 @@ function set(
     if (frame.covered && Object.is(newLength, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, newLength);
       queueReactionsForOperation({
         target,
         key,
@@ -333,8 +343,9 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, newLength);
     } else if (!Object.is(newLength, oldValue)) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, newLength);
       queueReactionsForOperation({
         target,
         key,
@@ -343,7 +354,6 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, newLength);
     }
   } else {
     // 修改属性: 落盘后重读 target[key] 实际值参与比较。
@@ -358,6 +368,10 @@ function set(
     if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)。
+      // 注意 markNotifiedInFlightFrames 只改仍在栈上的外层帧, 本 trap 自己
+      // 的帧已出栈, oldValue: frame.notifiedValue 读到的仍是通知前的旧值
+      markNotifiedInFlightFrames(target, key, landedValue);
       queueReactionsForOperation({
         target,
         key,
@@ -366,8 +380,9 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, landedValue);
     } else if (!Object.is(landedValue, oldValue)) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, landedValue);
       queueReactionsForOperation({
         target,
         key,
@@ -376,7 +391,6 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, landedValue);
     }
   }
   return result as boolean;

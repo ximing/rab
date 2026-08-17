@@ -197,6 +197,10 @@ function set(
           type: "set",
         });
       } else {
+        // 先标记后通知 (对抗审查第 2 轮 #3/#4, 原因见 base-proxy-handler
+        // landed-add 分支注释): 同步 reaction 重入写回 in-flight key 时,
+        // 本分支的事后 markNotified 不得把外层帧的 notifiedValue 覆写回旧值
+        markNotifiedInFlightFrames(target, key, landedValue);
         queueReactionsForOperation({
           target,
           key,
@@ -204,7 +208,6 @@ function set(
           receiver,
           type: "add",
         });
-        markNotifiedInFlightFrames(target, key, landedValue);
       }
     } else if (!frame.covered) {
       // 兜底 add 不做 markNotifiedInFlightFrames (原因见 base-proxy-handler 同名分支)
@@ -217,6 +220,8 @@ function set(
     if (frame.covered && Object.is(newLength, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, newLength);
       queueReactionsForOperation({
         target,
         key,
@@ -225,8 +230,9 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, newLength);
     } else if (!Object.is(newLength, oldValue)) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, newLength);
       queueReactionsForOperation({
         target,
         key,
@@ -235,7 +241,6 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, newLength);
     }
   } else {
     // 修改属性: 落盘后重读实际值参与比较;
@@ -244,6 +249,8 @@ function set(
     if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, landedValue);
       queueReactionsForOperation({
         target,
         key,
@@ -252,8 +259,9 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, landedValue);
     } else if (!Object.is(landedValue, oldValue)) {
+      // 先标记后通知 (原因见上方 landed-add 分支注释)
+      markNotifiedInFlightFrames(target, key, landedValue);
       queueReactionsForOperation({
         target,
         key,
@@ -262,7 +270,6 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key, landedValue);
     }
   }
   return result as boolean;
