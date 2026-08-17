@@ -97,13 +97,24 @@ function createShadowCollectionProxyHandlers() {
       // 修复: 之前这里返回 undefined, 导致 map.constructor === undefined、
       // String(map) 抛 TypeError, duck-typing 检测和序列化全挂。
       const value = Reflect.get(target, key, receiver);
-      // Map/Set 的原生方法需要内部槽位对应的 this —— 以 proxy 为 this 调用会抛
-      // "incompatible receiver"。参照 Vue 的做法, 把原生方法绑定到 raw target。
-      // constructor 除外: 绑定后会破坏 map.constructor === Map 的恒等性。
+      // GG7 对抗审查第 2 轮 issue #6: 未知 key 的函数不能 bind 到 raw ——
+      // 集合子类的自定义方法 (如 putTwice 内部 this.set) 一旦 bind(raw),
+      // 其变更会走原生 Map.prototype.set, 静默绕过全部 trap (数据变了、
+      // reaction 不通知)。改为以 proxy 为 receiver 调用 (与 deep 模式的
+      // 语义一致): 自定义方法内的 this.set 走 instrumented trap; 若落在
+      // 这里的真是依赖内部槽位的原生方法, 会大声抛 "incompatible
+      // receiver" 而不是静默丢通知。
+      // 标准集合方法 (set/get/has/delete/clear/迭代/size) 都在
+      // shadowCollectionHandlers 里, 不会走到这个分支。
+      // constructor 除外: 保持 map.constructor === Map 的恒等性。
       if (typeof value === "function" && key !== "constructor") {
-        return (value as (this: object, ...args: unknown[]) => unknown).bind(
-          target
-        );
+        const fn = value as (
+          this: unknown,
+          ...args: unknown[]
+        ) => unknown;
+        return function (this: unknown, ...args: unknown[]): unknown {
+          return Reflect.apply(fn, receiver, args);
+        };
       }
       return value;
     },

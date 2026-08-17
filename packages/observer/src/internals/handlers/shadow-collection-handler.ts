@@ -14,6 +14,7 @@ import { toRawIfProxy } from "../utils";
 import {
   isAnyCollectionTarget,
   isMapTarget,
+  isPlainMapOrSetTarget,
   isSetTarget,
   isWeakMapTarget,
   isWeakSetTarget,
@@ -199,9 +200,15 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     const hadItems = target.size > 0;
     // #10: 同 collectionHandlers.clear —— oldValue 拷贝仅在存在 debugger
     // 消费者时才做, 语义不变 (clear 前内容拷贝)。
+    // 子类覆写 clear() 的 TOCTOU 窗口 (GG7 第 2 轮 issue #7) 同样保守:
+    // constructor 非 Map/Set 时始终拷贝, 详见 collection-handler.ts 注释。
     const operation = { target, key: "" as PropertyKey, type: "clear" as const };
     let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
-    if (hadItems && hasOperationOldValueConsumer(operation)) {
+    if (
+      hadItems &&
+      (!isPlainMapOrSetTarget(target) ||
+        hasOperationOldValueConsumer(operation))
+    ) {
       oldTarget = isMapTarget(target)
         ? new Map(target)
         : new Set(target);

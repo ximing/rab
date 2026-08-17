@@ -23,6 +23,22 @@ import { toRawIfProxy } from "../utils";
  * */
 const objectToString = Object.prototype.toString;
 
+/*
+ * 模块加载时捕获本 realm 的真实 Map/Set 构造函数: clear 的 TOCTOU
+ * 保守分支 (issue #7) 用 `constructor === Map` 判 plain 集合, 若在
+ * 调用点解析全局绑定, 测试/用户对 globalThis.Map 的临时替换 (如
+ * copy-construction spy) 会把 plain Map 误判为子类而多付拷贝。
+ * */
+const RealMapConstructor = Map;
+const RealSetConstructor = Set;
+
+export function isPlainMapOrSetTarget(target: object): boolean {
+  return (
+    target.constructor === RealMapConstructor ||
+    target.constructor === RealSetConstructor
+  );
+}
+
 export function isMapTarget(target: object): target is Map<unknown, unknown> {
   return target instanceof Map || objectToString.call(target) === "[object Map]";
 }
@@ -234,9 +250,18 @@ export const collectionHandlers = {
     // 的唯一消费者是 reaction.debugger (如 @rabjs/react 的 debuggerReaction)。
     // 仅当本次 clear 的操作真的会到达某个 debugger 时才付拷贝成本;
     // debugger 收到的语义不变 —— 仍是 clear 前的内容拷贝。
+    // GG7 第 2 轮 issue #7 (TOCTOU 窗口): 子类可以覆写 clear() 并在
+    // super.clear() 之前注册新的 debugger reaction —— 该 reaction 落在
+    // hasOperationOldValueConsumer 检查之后、queue 之前, 会被通知但拿不到
+    // 拷贝。plain Map/Set 没有用户代码能在这个窗口运行, 维持惰性检查;
+    // constructor 非 Map/Set 的 (子类 / 跨 realm) 保守视为有消费者, 始终拷贝。
     const operation = { target, key: "" as PropertyKey, type: "clear" as const };
     let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
-    if (hadItems && hasOperationOldValueConsumer(operation)) {
+    if (
+      hadItems &&
+      (!isPlainMapOrSetTarget(target) ||
+        hasOperationOldValueConsumer(operation))
+    ) {
       oldTarget = isMapTarget(target)
         ? new Map(target)
         : new Set(target);
@@ -417,13 +442,95 @@ const collectionHandlersByTag = new Map<string, HandlerValue>([
 ]);
 
 /*
+ * GG7 对抗审查第 2 轮加固: tag 只是对象的自述 —— Symbol.toStringTag 可被
+ * 子类覆写、伪造, 其 getter 甚至可以抛错, 路由不能裸信任单一信号:
+ *   - 同 realm 集合 (含自定义 toStringTag 的子类, instanceof 仍成立) 用
+ *     instanceof 判定 (issue #2/#5: 只看 tag 时这类子类落 base handler 抛
+ *     'incompatible receiver');
+ *   - 跨 realm 集合 instanceof 失效, 只能靠 tag —— 但对伪造 tag 的普通
+ *     对象 (issue #3/#8: { [Symbol.toStringTag]: 'Map' }) 再做一次
+ *     duck-check, 不像集合就回落 base handler (包装为普通响应式对象);
+ *   - Symbol.toStringTag getter 抛错时 (issue #3) 回落 constructor 路径,
+ *     不向 observable() 调用方抛错。
+ * */
+function safeObjectTag(obj: object): string | undefined {
+  try {
+    return objectToString.call(obj);
+  } catch {
+    return undefined;
+  }
+}
+
+function isCollectionByPrototype(obj: object): boolean {
+  return (
+    obj instanceof Map ||
+    obj instanceof Set ||
+    obj instanceof WeakMap ||
+    obj instanceof WeakSet
+  );
+}
+
+// 跨 realm 分支的伪造 tag 防线: 方法不存在即不像集合。属性读取可能触发
+// 用户 getter, 抛错时视为不通过。
+function passesCollectionDuckCheck(obj: object, tag: string): boolean {
+  const o = obj as Record<string, unknown>;
+  try {
+    switch (tag) {
+      case "[object Map]":
+      case "[object WeakMap]":
+        return (
+          typeof o.get === "function" &&
+          typeof o.set === "function" &&
+          typeof o.has === "function"
+        );
+      case "[object Set]":
+      case "[object WeakSet]":
+        return (
+          typeof o.add === "function" &&
+          typeof o.has === "function" &&
+          typeof o.delete === "function"
+        );
+      default:
+        return false;
+    }
+  } catch {
+    return false;
+  }
+}
+
+function getCollectionRouteHandlers(
+  obj: object
+): ProxyHandler<object> | undefined {
+  // 函数是一等 observable, 走 base 路径, 不参与集合路由
+  if (typeof obj === "function") {
+    return undefined;
+  }
+  // 同 realm 集合 (含自定义 toStringTag 的子类 —— 其 tag 已不是
+  // '[object Map]' 等) 以 instanceof 优先判定
+  if (isCollectionByPrototype(obj)) {
+    return defaultProxyHandlers;
+  }
+  // 跨 realm 集合: instanceof 失效, 靠 tag + duck-check
+  const tag = safeObjectTag(obj);
+  if (tag !== undefined && collectionHandlersByTag.has(tag)) {
+    if (passesCollectionDuckCheck(obj, tag)) {
+      return defaultProxyHandlers;
+    }
+    // 伪造 tag 的非集合对象: 回落 base handler (与 tag 路由引入前一致)
+  }
+  return undefined;
+}
+
+/*
  * #9: 内置对象黑名单 —— 这些对象的方法依赖内部槽位 (internal slots),
  * 以 Proxy 为 receiver 调用会抛 "this is not a Date object." /
  * "incompatible receiver" 之类的错误, 不可包装。
  * 用 tag 而不是 constructor.name in globalObj 判定: 跨 realm 的内置对象
  * (vm.runInNewContext / iframe / RN 远程调试) 的 constructor 不等于本
  * realm 的全局构造函数, 旧检测会把它们误判为可包装。
- * (子类同样继承 tag, 如 class MyDate extends Date 也安全落入黑名单。)
+ * (子类同样继承 tag, 如 class MyDate extends Date 也安全落入黑名单;
+ * Error 子类的 carve-out 见 shouldInstrument 内注释 —— 它们是普通
+ * 自有属性对象, base 包装可用。)
  * 注意: typed array 不在黑名单 —— 它们与普通数组一样走 base proxy handler
  * (索引读写经 Reflect 转发可用), 保持既有行为。
  * */
@@ -484,14 +591,39 @@ export function shouldInstrument(obj: object | Function): boolean {
     return true;
   }
 
-  // #7/#9: 集合 (含子类与跨 realm 实例) 按 tag 路由到 instrumented 方法
-  const tag = objectToString.call(obj);
-  if (collectionHandlersByTag.has(tag)) {
+  // #7/#9: 集合 (含子类与跨 realm 实例) 路由到 instrumented 方法
+  // (instanceof 或集 + tag duck-check, 见 getCollectionRouteHandlers)
+  if (getCollectionRouteHandlers(obj) !== undefined) {
     return true;
   }
 
+  const tag = safeObjectTag(obj);
+
   // #9: 依赖内部槽位的内置对象 (含跨 realm) 按 tag 拒绝包装
-  if (nonInstrumentableTags.has(tag)) {
+  if (tag !== undefined && nonInstrumentableTags.has(tag)) {
+    /*
+     * GG7 第 2 轮 issue #4: 用户自定义子类 carve-out —— Error 子类
+     * (class AppError extends Error) 是普通自有属性对象, base handler
+     * 包装完全可用 (HEAD~1 行为), tag 黑名单会把它们静默打回 raw、
+     * 失去响应式。constructor 名既不是内置名也不是全局精确命中时视为
+     * 用户子类, 放行 base 包装 (getHandlers 对其返回 falsy → base)。
+     * 其余黑名单 tag (Date/RegExp/Promise/boxed/...) 的子类不放行:
+     * 它们的方法同样依赖内部槽位, 包装后调用必然抛错, 拒绝包装保持
+     * 原实例可用, 严格优于 HEAD~1 的"包装即坏"。
+     * */
+    if (tag === "[object Error]") {
+      const constructor = (obj as { constructor?: Function }).constructor;
+      if (
+        typeof constructor === "function" &&
+        constructor.name !== "Error" &&
+        !(
+          constructor.name in globalObj &&
+          globalObj[constructor.name] === constructor
+        )
+      ) {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -511,10 +643,11 @@ export function shouldInstrument(obj: object | Function): boolean {
 }
 
 export function getHandlers(obj: object): HandlerValue {
-  // #7/#9: tag 命中 (子类/跨 realm 同样命中) 时路由到集合 handlers
-  const tagHandlers = collectionHandlersByTag.get(objectToString.call(obj));
-  if (tagHandlers) {
-    return tagHandlers;
+  // #7/#9: 集合路由 (instanceof 或集 + tag duck-check) 命中时返回集合
+  // handlers; 伪造 tag 的普通对象回落 constructor 路径 (base handler)
+  const routeHandlers = getCollectionRouteHandlers(obj);
+  if (routeHandlers) {
+    return routeHandlers;
   }
   const constructor = (obj as { constructor?: Function }).constructor;
   return constructor ? handlers.get(constructor) || false : false;

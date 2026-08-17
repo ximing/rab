@@ -55,6 +55,12 @@ export function toRawIfProxy<T>(value: T): T {
  * 换 key（delete proxy + set raw）新增的 raw key 会被再次访问到，
  * 但那时 toRawIfProxy 已是恒等，不会再改写 —— 无死循环。
  *
+ * 判"确实发生了替换"必须用 Object.is 而不是 !==：Map/Set 以
+ * SameValueZero 合法支持 NaN key，而 NaN !== NaN 恒为 true，
+ * 用 !== 判重会把 NaN 条目删掉再追加到尾部，迭代器重访该条目
+ * → 无限死循环 (GG7 对抗审查第 2 轮 issue #1)。toRawIfProxy 对
+ * 原始值恒等返回，Object.is 只在真的 proxy→raw 替换时为 false。
+ *
  * 限制：WeakMap/WeakSet 不可枚举，无法在此归一化 —— 构造期存入的
  * proxy key 依旧不可达（Vue 3 的集合 instrumentation 存在同样边缘），
  * 由 collection-unwrap-prepopulated-normalization.test.ts 的 pin 测试
@@ -65,10 +71,10 @@ export function normalizeCollectionEntries(target: object): void {
     for (const [key, value] of target) {
       const rawKey = toRawIfProxy(key);
       const rawValue = toRawIfProxy(value);
-      if (rawKey !== key) {
+      if (!Object.is(rawKey, key)) {
         target.delete(key);
         target.set(rawKey, rawValue);
-      } else if (rawValue !== value) {
+      } else if (!Object.is(rawValue, value)) {
         target.set(key, rawValue);
       }
     }
@@ -77,7 +83,7 @@ export function normalizeCollectionEntries(target: object): void {
   if (target instanceof Set) {
     for (const value of target) {
       const rawValue = toRawIfProxy(value);
-      if (rawValue !== value) {
+      if (!Object.is(rawValue, value)) {
         target.delete(value);
         target.add(rawValue);
       }
