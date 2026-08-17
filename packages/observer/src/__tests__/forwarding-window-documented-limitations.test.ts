@@ -8,8 +8,9 @@
  * 转发 walk 中间层路径), defineProperty trap 改用 `'value' in descriptor`
  * 判定数据描述符 —— 这些断言已翻转为正确行为。
  *
- * 仍保留为限制的: 第 1 轮 #2 (defineProperty trap oldValue 捕获触发的
- * getter 副作用绕过 trap, 归 G3/G7), 见文件末尾 describe。
+ * 原第 1 轮 #2 (defineProperty trap oldValue 捕获触发的 getter 副作用
+ * 绕过 trap, 归 G3/G7) 已随 G3 对抗审查 #2/#4 修复 (trap 不再调用
+ * accessor getter), 见文件末尾 describe。
  */
 import { observable, observe, shadowObservable } from "../main";
 
@@ -308,15 +309,17 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
 });
 
 /*
- * 已知限制 #2 (转交 G3/G7): defineProperty trap 捕获 oldValue 时以
+ * 原已知限制 #2 (G3/G7): defineProperty trap 捕获 oldValue 时以
  * this=raw 调用 getter, 副作用型 getter 内对 this (raw) 的
  * Object.defineProperty 直接改 raw 对象、完全绕过 proxy trap,
- * 转发窗口内外都丢通知。与 GG2 帧栈无关 (窗口外同样发生)。
- * 建议 G3/G7: oldValue 捕获仅对 data descriptor 读旧值,
- * accessor 情况标记 unknown 强制通知。
+ * 转发窗口内外都丢通知。
+ *
+ * 已随 G3 对抗审查 #2/#4 修复: defineProperty trap 对旧 accessor 属性
+ * 不再读取 oldValue (getter 从不在 trap 内被调用)。下列断言已从
+ * "pin 丢通知的限制" 翻转为正确行为。
  */
-describe("已知限制: defineProperty trap oldValue 捕获的 getter 副作用绕过 trap (G3/G7)", () => {
-  test("LIMITATION: 武装的 lazy getter 在 oldValue 读取时 defineProperty(raw) → 窗口外丢通知", () => {
+describe("已修复: defineProperty trap 不再调用旧 getter (oldValue 捕获隔离)", () => {
+  test("武装的 lazy getter 正常读取时 defineProperty(proxy) → reaction 收到通知", () => {
     let armed = false;
     const obj: any = observable({});
     Object.defineProperty(obj, "lazy", {
@@ -324,8 +327,7 @@ describe("已知限制: defineProperty trap oldValue 捕获的 getter 副作用�
       enumerable: true,
       get() {
         if (armed) {
-          // this 是 raw (oldValue 捕获路径) 或 proxy (正常 get 路径):
-          // oldValue 捕获时 this=raw, defineProperty 落在 raw 上不经过 trap
+          // 正常 get 路径 this 是 proxy, defineProperty 经 trap 通知
           Object.defineProperty(this, "lazy", {
             value: 777,
             writable: true,
@@ -349,8 +351,33 @@ describe("已知限制: defineProperty trap oldValue 捕获的 getter 副作用�
     armed = true;
     const v = obj.lazy; // 普通读, 无任何转发窗口
     expect(v).toBe(777);
-    // documented limitation: 值已变 777, reaction 未被通知
-    expect(calls).toBe(1);
-    expect(seen).toBe(1);
+    // getter 内 defineProperty(proxy) 经 trap 正常通知
+    expect(calls).toBe(2);
+    expect(seen).toBe(777);
+  });
+
+  test("defineProperty 重定义旧 accessor 期间旧 getter 不被调用 (副作用隔离)", () => {
+    let oldGetterCalls = 0;
+    const raw: Record<string, unknown> = {};
+    Object.defineProperty(raw, "x", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        oldGetterCalls++;
+        return 1;
+      },
+    });
+    const obj = observable(raw) as { x: number };
+    expect(obj.x).toBe(1);
+    expect(oldGetterCalls).toBe(1);
+
+    // 重定义为数据属性: trap 不得为捕获 oldValue 而调用旧 getter
+    Object.defineProperty(obj, "x", {
+      value: 2,
+      writable: true,
+      configurable: true,
+    });
+    expect(oldGetterCalls).toBe(1);
+    expect(obj.x).toBe(2);
   });
 });

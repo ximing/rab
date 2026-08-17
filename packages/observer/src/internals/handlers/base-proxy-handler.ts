@@ -488,17 +488,23 @@ function defineProperty(
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
-  // 已知限制 (归 G3/G7): 这里以 this=raw 读取旧值会触发 accessor getter,
-  // 副作用型 getter 内对 this (raw) 的 Object.defineProperty 直接改 raw、
-  // 完全绕过 proxy trap, 窗口内外都丢通知。待 G3/G7 改为仅对 data
-  // descriptor 读旧值 / accessor 标记 unknown 强制通知。
-  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
-  const oldValue = hadKey
-    ? (target as Record<PropertyKey, unknown>)[key]
-    : undefined;
   const oldDescriptor = hadKey
     ? Reflect.getOwnPropertyDescriptor(target, key)
     : undefined;
+  // 旧值捕获**不得调用 accessor getter** (G3 对抗审查 #2/#4):
+  // - getter 可能抛错, 原生 defineProperty 从不读旧值, 抛错会让
+  //   本应成功的重定义向调用方抛 TypeError 且根本不落盘;
+  // - getter 可能有副作用 (以 this=raw 对 raw 的 defineProperty 绕过
+  //   proxy trap, 窗口内外丢通知 —— 原 forwarding-window-documented-
+  //   limitations 中的已知限制, 现已消除)。
+  // 因此旧属性是 accessor 时 oldValue 记 undefined (不读), 是数据属性时
+  // 直接读自有值 (无 getter 可触发)。
+  const oldIsAccessor =
+    oldDescriptor !== undefined && !("value" in oldDescriptor);
+  const oldValue =
+    hadKey && !oldIsAccessor
+      ? (target as Record<PropertyKey, unknown>)[key]
+      : undefined;
   const result = Reflect.defineProperty(target, key, descriptor);
   if (!result) {
     return false;
@@ -528,8 +534,6 @@ function defineProperty(
     // 数据描述符: 用 Object.is 判值变化 (NaN 连写不误通知, ±0 区分)。
     // 旧属性是 accessor 时, 即使值 "相同" 也发生了 属性种类 翻转,
     // 读取语义已改变, 不得静默跳过。
-    const oldIsAccessor =
-      oldDescriptor !== undefined && !("value" in oldDescriptor);
     if (oldIsAccessor || !Object.is(descriptor.value, oldValue)) {
       queueReactionsForOperation({
         target,
@@ -541,24 +545,34 @@ function defineProperty(
     }
   } else if ("get" in descriptor || "set" in descriptor) {
     // accessor 描述符: 旧属性是数据属性 (种类翻转), 或 get/set 函数身份
-    // 变化时, 读取语义已改变, 必须以 "set" 通知; 重新定义相同的
-    // getter/setter 不通知。setter-only 描述符读取会抛错, 此时 value
-    // 传 undefined, 不调用 getter。
+    // 变化时, 读取语义已改变, 必须以 "set" 通知。
+    //
+    // 身份比较必须先按旧描述符补全部分描述符 (spec CompletePropertyDescriptor:
+    // 省略的 get/set 分量保持旧值) 再比较 —— 只重定义与旧属性相同的分量
+    // 是 no-op, 不得发幽灵通知 (G3 对抗审查 #1)。
     const oldWasData =
       oldDescriptor === undefined || "value" in oldDescriptor;
     const accessorChanged =
       !oldWasData &&
-      (!Object.is(descriptor.get, oldDescriptor!.get) ||
-        !Object.is(descriptor.set, oldDescriptor!.set));
+      (!Object.is(
+        "get" in descriptor ? descriptor.get : oldDescriptor!.get,
+        oldDescriptor!.get
+      ) ||
+        !Object.is(
+          "set" in descriptor ? descriptor.set : oldDescriptor!.set,
+          oldDescriptor!.set
+        ));
     if (oldWasData || accessorChanged) {
-      const newValue =
-        descriptor.get === undefined
-          ? undefined
-          : (target as Record<PropertyKey, unknown>)[key];
+      // 通知不携带新值: **不得在 trap 内调用刚定义的新 getter**
+      // (G3 对抗审查 #2/#4) —— 副作用型/lazy-memo getter 会被提前执行;
+      // 抛错型 getter 会让"已成功落盘的重定义"向调用方抛错且通知丢失。
+      // 与 add 分支对 accessor 描述符传 descriptor.value (即 undefined)
+      // 的现行做法一致; reactions 重跑时自行经 get trap 读取真值,
+      // getter 抛错场景由 get trap 按读取语义处理。
       queueReactionsForOperation({
         target,
         key,
-        value: newValue,
+        value: undefined,
         oldValue,
         type: "set",
       });

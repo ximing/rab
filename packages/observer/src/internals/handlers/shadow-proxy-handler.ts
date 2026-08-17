@@ -341,15 +341,17 @@ function defineProperty(
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
-  // 已知限制 (归 G3/G7): 以 this=raw 读旧值会触发 accessor getter,
-  // 副作用型 getter 内对 raw 的 defineProperty 绕过 trap, 窗口内外都丢通知。
-  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
-  const oldValue = hadKey
-    ? (target as Record<PropertyKey, unknown>)[key]
-    : undefined;
   const oldDescriptor = hadKey
     ? Reflect.getOwnPropertyDescriptor(target, key)
     : undefined;
+  // 旧值捕获**不得调用 accessor getter** (G3 对抗审查 #2/#4, 原因见
+  // base-proxy-handler 同名处理): getter 可能抛错或有副作用。
+  const oldIsAccessor =
+    oldDescriptor !== undefined && !("value" in oldDescriptor);
+  const oldValue =
+    hadKey && !oldIsAccessor
+      ? (target as Record<PropertyKey, unknown>)[key]
+      : undefined;
   const result = Reflect.defineProperty(target, key, descriptor);
   if (!result) {
     return false;
@@ -376,8 +378,6 @@ function defineProperty(
   } else if ("value" in descriptor) {
     // 数据描述符: Object.is 判值变化; 旧属性是 accessor 时种类翻转必通知
     // (原因见 base-proxy-handler 同名处理)
-    const oldIsAccessor =
-      oldDescriptor !== undefined && !("value" in oldDescriptor);
     if (oldIsAccessor || !Object.is(descriptor.value, oldValue)) {
       queueReactionsForOperation({
         target,
@@ -388,23 +388,27 @@ function defineProperty(
       });
     }
   } else if ("get" in descriptor || "set" in descriptor) {
-    // accessor 描述符: 种类翻转或 get/set 身份变化必通知
+    // accessor 描述符: 种类翻转或 get/set 身份变化必通知。
+    // 身份比较前按旧描述符补全部分描述符 (spec: 省略的分量保持旧值),
+    // 通知不携带新值、不调用新 getter
     // (原因见 base-proxy-handler 同名处理)
     const oldWasData =
       oldDescriptor === undefined || "value" in oldDescriptor;
     const accessorChanged =
       !oldWasData &&
-      (!Object.is(descriptor.get, oldDescriptor!.get) ||
-        !Object.is(descriptor.set, oldDescriptor!.set));
+      (!Object.is(
+        "get" in descriptor ? descriptor.get : oldDescriptor!.get,
+        oldDescriptor!.get
+      ) ||
+        !Object.is(
+          "set" in descriptor ? descriptor.set : oldDescriptor!.set,
+          oldDescriptor!.set
+        ));
     if (oldWasData || accessorChanged) {
-      const newValue =
-        descriptor.get === undefined
-          ? undefined
-          : (target as Record<PropertyKey, unknown>)[key];
       queueReactionsForOperation({
         target,
         key,
-        value: newValue,
+        value: undefined,
         oldValue,
         type: "set",
       });
