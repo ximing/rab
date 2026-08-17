@@ -9,7 +9,7 @@ import {
   registerRunningReactionForOperation,
 } from "../reaction-runner";
 import { iterationKeyFor } from "../reaction-track";
-import { hasOwnProperty, isObject } from "../utils";
+import { hasOwnProperty, isObject, ownDataValue } from "../utils";
 import {
   markCoveredForReceiverRoot,
   markForwardedDefineProperty,
@@ -84,8 +84,11 @@ function set(
   }
   // 判断是新增属性还是修改属性
   const hadKey = hasOwnProperty.call(target, key);
-  // 用于比较值是否真的改变了
-  const oldValue = (target as Record<PropertyKey, unknown>)[key];
+  // 用于比较值是否真的改变了。
+  // 旧值捕获**不得调用自有 accessor 的 getter** (G3 不变量, 原因见
+  // base-proxy-handler set trap 同名处理): accessor 属性的 oldValue 记 undefined,
+  // 修改分支的变化比较退化为 Object.is(落盘值, undefined)。
+  const oldValue = ownDataValue(target, key, undefined);
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
   const frame = pushForwardingFrame(target, key, receiver);
@@ -115,7 +118,8 @@ function set(
     // 又发生了新的同 key 落盘, 按「已通知值→落盘值」补发
     // (原因见 base-proxy-handler 同名处理)。
     if (frame.hit && hasOwnProperty.call(target, key)) {
-      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      // 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释)
+      const landedValue = ownDataValue(target, key, value);
       let notified = false;
       if (frame.covered) {
         if (!Object.is(landedValue, frame.notifiedValue)) {
@@ -185,7 +189,8 @@ function set(
     // 不一致 (covered 后又有新的同 key 落盘) → 按差值补发
     // (原因见 base-proxy-handler 同名处理)
     if (hasOwnProperty.call(target, key)) {
-      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      // 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释)
+      const landedValue = ownDataValue(target, key, value);
       if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
         // 已通知过该确切落盘值, {target,key} 依赖跳过; key 相对本帧窗口
         // 是新增, 仍需通知迭代依赖 (原因见 base-proxy-handler 同名处理)
@@ -244,8 +249,10 @@ function set(
     }
   } else {
     // 修改属性: 落盘后重读实际值参与比较;
-    // covered 时与已通知值比较 (原因见 base-proxy-handler 同名分支)
-    const landedValue = (target as Record<PropertyKey, unknown>)[key];
+    // covered 时与已通知值比较 (原因见 base-proxy-handler 同名分支);
+    // 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释):
+    // 落盘后仍是 accessor 时退化为赋入的 value 参与比较 (master 语义)
+    const landedValue = ownDataValue(target, key, value);
     if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
@@ -281,7 +288,10 @@ function set(
 function deleteProperty(target: object, key: PropertyKey): boolean {
   // 记录旧状态
   const hadKey = hasOwnProperty.call(target, key);
-  const oldValue = (target as Record<PropertyKey, unknown>)[key];
+  // oldValue 捕获不得调用自有 accessor 的 getter (G3 不变量, 原因见
+  // base-proxy-handler deleteProperty 同名处理): accessor 属性的 oldValue
+  // 记 undefined
+  const oldValue = ownDataValue(target, key, undefined);
   // 执行删除操作
   const result = Reflect.deleteProperty(target, key);
   // 只有删除确实生效时才触发，会触发依赖该属性的 reactions
@@ -413,6 +423,19 @@ function defineProperty(
         type: "set",
       });
     }
+  }
+  // 枚举语义翻转必须通知迭代依赖; writable/configurable 翻转不通知
+  // (原因见 base-proxy-handler 同名处理)
+  if (
+    hadKey &&
+    oldDescriptor!.enumerable !==
+      (descriptor.enumerable ?? oldDescriptor!.enumerable)
+  ) {
+    queueReactionsForOperation({
+      target,
+      key: iterationKeyFor(target),
+      type: "set",
+    });
   }
   return result;
 }

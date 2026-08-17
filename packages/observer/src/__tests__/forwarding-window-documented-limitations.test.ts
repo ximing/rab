@@ -144,7 +144,15 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     expect(obj.flag).toBe(10);
   });
 
-  test("变换型 accessor 写回值恰等于旧观察值 → 观察值未变, 不通知 (landed 比较语义)", () => {
+  test("变换型 accessor (写后仍是 accessor) → 无法无副作用获知落盘值, 必通知 (master 语义)", () => {
+    // G3 第 3 轮对抗审查 #1/#4 翻转了本用例原先 pin 的行为:
+    // 原『落盘后重读 target[key] 与旧 getter 值比较, 观察值不变则不通知』
+    // 依赖 set trap 两次调用自有 accessor getter (入口 oldValue + landedValue)
+    // —— 抛错型 getter 会让已落盘的赋值向调用方抛错, 副作用型 getter 会以
+    // this=raw 改 raw 绕过所有 trap。属性写后仍是 accessor (setter 把变换
+    // 结果存进闭包/backing field) 时, 落盘值根本无从无副作用获知, 退回
+    // master 语义: 必通知; reaction 重跑经 get trap 读到正确观察值
+    // (写回值恰使观察值不变时是一次良性重跑, 不产生错误状态)。
     let stored = 4;
     const raw: Record<string, unknown> = {};
     Object.defineProperty(raw, "x", {
@@ -167,13 +175,13 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     });
     expect(calls).toBe(1);
     expect(seen).toBe(4);
-    obj.x = 2; // stored: 4 → 4, 观察值不变 → 不通知
+    obj.x = 2; // stored: 4 → 4, 观察值不变 → 仍通知 (良性重跑, 值正确)
     expect(obj.x).toBe(4);
-    expect(calls).toBe(1);
+    expect(calls).toBe(2);
     expect(seen).toBe(4);
     obj.x = 3; // stored: 4 → 6 → 通知
     expect(obj.x).toBe(6);
-    expect(calls).toBe(2);
+    expect(calls).toBe(3);
     expect(seen).toBe(6);
   });
 });

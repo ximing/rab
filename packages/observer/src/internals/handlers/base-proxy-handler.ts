@@ -20,7 +20,7 @@ import {
   registerRunningReactionForOperation,
 } from "../reaction-runner";
 import { iterationKeyFor } from "../reaction-track";
-import { hasOwnProperty, isObject } from "../utils";
+import { hasOwnProperty, isObject, ownDataValue } from "../utils";
 
 /*
  * 存储所有内置的 Symbol(如 Symbol.iterator, Symbol.toStringTag 等)
@@ -142,8 +142,13 @@ function set(
   }
   // 判断是新增属性还是修改属性
   const hadKey = hasOwnProperty.call(target, key);
-  // 用于比较值是否真的改变了
-  const oldValue = (target as Record<PropertyKey, unknown>)[key];
+  // 用于比较值是否真的改变了。
+  // 旧值捕获**不得调用自有 accessor 的 getter** (G3 不变量, 对齐 defineProperty
+  // trap): 抛错型 getter 会让赋值在 Reflect.set 之前就向调用方抛错、写入丢失;
+  // 副作用型 getter 会以 this=raw 改 raw 绕过所有 trap。旧属性是 accessor 时
+  // oldValue 记 undefined (debuggerReaction 消费到 undefined, 与 defineProperty
+  // trap 的现行做法一致), 修改分支的变化比较退化为 Object.is(落盘值, undefined)。
+  const oldValue = ownDataValue(target, key, undefined);
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
   const frame = pushForwardingFrame(target, key, receiver);
@@ -204,7 +209,9 @@ function set(
     // defineProperty 改值 / 重定义 accessor), 必须按「已通知值→落盘值」
     // 补发, 否则 reaction 永久停留在中间值 (对抗审查第 4 轮 #1/#3)。
     if (frame.hit && hasOwnProperty.call(target, key)) {
-      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      // 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释):
+      // 落盘后仍是 accessor 时退化为赋入的 value 参与比较
+      const landedValue = ownDataValue(target, key, value);
       let notified = false;
       if (frame.covered) {
         if (!Object.is(landedValue, frame.notifiedValue)) {
@@ -284,7 +291,8 @@ function set(
     //   (对抗审查第 4 轮 #2: 写入起点在被改层自身时, 根帧 landed 分支同样
     //   受 covered 约束, 不再对已通知过的同一落盘值重复发 add)。
     if (hasOwnProperty.call(target, key)) {
-      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      // 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释)
+      const landedValue = ownDataValue(target, key, value);
       if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
         // 已通知过该确切落盘值, {target,key} 依赖跳过; 但 key 相对本帧窗口
         // 是新增, 键集合变化仍需通知迭代依赖 (原因见 mismatch 分支注释)
@@ -363,8 +371,13 @@ function set(
     //   实际落盘值 (debuggerReaction 会消费到);
     // - 引擎路由回 receiver 的普通赋值 landed === value, 行为不变;
     // - 变换型 setter 写回值恰使观察值不变时, 不再发假通知;
-    // - covered 时与已通知值比较 (原因见上方 landed-add 分支注释)。
-    const landedValue = (target as Record<PropertyKey, unknown>)[key];
+    // - covered 时与已通知值比较 (原因见上方 landed-add 分支注释);
+    // - 落盘值读取不得调用 accessor getter (原因见 trap 入口 oldValue 注释):
+    //   落盘后仍是 accessor (典型: 普通 setter 未改变属性种类) 时无从无副作用
+    //   获知落盘值, 退化为赋入的 value 参与比较 (master 语义 —— setter 忽略
+    //   写入时本来也无从得知落盘值), accessor 旧值已记 undefined → 必通知,
+    //   通知 value 携带赋入值, reaction 重跑时经 get trap 读取真值。
+    const landedValue = ownDataValue(target, key, value);
     if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
       // 已通知过该确切落盘值, 跳过
     } else if (frame.covered) {
@@ -402,7 +415,11 @@ function set(
 function deleteProperty(target: object, key: PropertyKey): boolean {
   // 记录旧状态
   const hadKey = hasOwnProperty.call(target, key);
-  const oldValue = (target as Record<PropertyKey, unknown>)[key];
+  // oldValue 捕获不得调用自有 accessor 的 getter (G3 不变量, 原因见 set trap
+  // 入口注释): 抛错型 getter 会让 delete 在 Reflect.deleteProperty 之前就抛错、
+  // 删除丢失; 副作用型 getter 会以 this=raw 改 raw 绕过所有 trap。
+  // accessor 属性删除通知的 oldValue 为 undefined (与 defineProperty trap 一致)。
+  const oldValue = ownDataValue(target, key, undefined);
   // 执行删除操作
   const result = Reflect.deleteProperty(target, key);
   // 只有删除确实生效时才触发,会触发依赖该属性的 reactions
@@ -577,6 +594,24 @@ function defineProperty(
         type: "set",
       });
     }
+  }
+  // 枚举语义翻转 (G3 第 3 轮对抗审查 #2): attribute-only 重定义 {enumerable}
+  // 改变 ownKeys / Object.keys / for-in 的读取语义, 这些依赖挂在该 target 的
+  // ITERATION_KEY 桶 (数组为 "length", 见 iterationKeyFor) 上, 上面的值通知
+  // 分支不会触及, 必须单独通知, 否则 Object.keys 观察者永久停留在旧键集上。
+  // 按 spec 补全: 省略的 enumerable 分量保持旧值。
+  // writable/configurable 翻转不改变值与键集合, 按现行语义**不**通知
+  // (见 src/__tests__/define-property-attribute-flip.test.ts 的 pin 用例)。
+  if (
+    hadKey &&
+    oldDescriptor!.enumerable !==
+      (descriptor.enumerable ?? oldDescriptor!.enumerable)
+  ) {
+    queueReactionsForOperation({
+      target,
+      key: iterationKeyFor(target),
+      type: "set",
+    });
   }
   return result;
 }
