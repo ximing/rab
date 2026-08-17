@@ -9,6 +9,12 @@ import {
   registerRunningReactionForOperation,
 } from "../reaction-runner";
 import { hasOwnProperty, isObject } from "../utils";
+import {
+  markCoveredForReceiverRoot,
+  markForwardedDefineProperty,
+  popForwardingFrame,
+  pushForwardingFrame,
+} from "./forwarding-frames";
 
 /*
  * 存储所有内置的 Symbol(如 Symbol.iterator, Symbol.toStringTag 等)
@@ -80,13 +86,12 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  const frame: ForwardingSetFrame = { target, key, hit: false, covered: false };
-  forwardingSetFrames.push(frame);
+  const frame = pushForwardingFrame(target, key);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
   } finally {
-    forwardingSetFrames.pop();
+    popForwardingFrame();
   }
   // Reflect.set 返回 false: 写入未生效, 状态没有变化, 不得发通知
   // (原因见 base-proxy-handler 同名处理)
@@ -126,11 +131,8 @@ function set(
         notified = true;
       }
       if (notified) {
-        for (const outer of forwardingSetFrames) {
-          if (outer.key === key) {
-            outer.covered = true;
-          }
-        }
+        // 只标记本转发链的根帧 (锚定 receiver), 原因见 forwarding-frames.ts
+        markCoveredForReceiverRoot(receiver, key);
       }
     }
     return result as boolean;
@@ -226,20 +228,10 @@ function construct(
 }
 
 /*
- * 记录 set trap 正在做 Reflect.set 转发的 {target, key} 帧栈
- * (为什么是 {target,key} 帧的栈而不是布尔/单个 target/裸 target 栈,
- *  原因见 base-proxy-handler 同名变量)
+ * 转发帧栈定义与全部帧操作都在共享模块 forwarding-frames.ts
+ * (原型链可混合 base/shadow handler, 栈必须全局唯一,
+ *  原因见该模块顶部注释)
  * */
-interface ForwardingSetFrame {
-  target: object;
-  key: PropertyKey;
-  // 本帧转发窗口内, defineProperty trap 命中过该帧
-  hit: boolean;
-  // 转发 walk 链上同 key 的某一层已按落盘状态发出通知,
-  // 最外层 receiver 的兜底 add 应跳过 (防止链上 reaction 双通知)
-  covered: boolean;
-}
-const forwardingSetFrames: ForwardingSetFrame[] = [];
 
 /*
  * 拦截 Object.defineProperty (与 base-proxy-handler 的实现一致,
@@ -253,13 +245,7 @@ function defineProperty(
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
   // (命中帧标记 hit=true, 命中帧所在层的 set trap 落盘后重读实际值参与比较,
   //  详见 base-proxy-handler 同名处理)
-  let forwarded = false;
-  for (const frame of forwardingSetFrames) {
-    if (frame.target === target && frame.key === key) {
-      frame.hit = true;
-      forwarded = true;
-    }
-  }
+  const forwarded = markForwardedDefineProperty(target, key);
   if (forwarded) {
     return Reflect.defineProperty(target, key, descriptor);
   }

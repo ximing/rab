@@ -9,6 +9,12 @@ import { observable } from "../observable";
 import { observableChild } from "../observable-child";
 import { proxyToRaw } from "../proxy-raw-map";
 import {
+  markCoveredForReceiverRoot,
+  markForwardedDefineProperty,
+  popForwardingFrame,
+  pushForwardingFrame,
+} from "./forwarding-frames";
+import {
   queueReactionsForOperation,
   registerRunningReactionForOperation,
 } from "../reaction-runner";
@@ -138,13 +144,12 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  const frame: ForwardingSetFrame = { target, key, hit: false, covered: false };
-  forwardingSetFrames.push(frame);
+  const frame = pushForwardingFrame(target, key);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
   } finally {
-    forwardingSetFrames.pop();
+    popForwardingFrame();
   }
   // Reflect.set 返回 false: 写入未生效 (sealed/frozen target、不可写属性、
   // strict setter 返回 false 等), 状态没有变化, 不得发通知 ——
@@ -215,11 +220,9 @@ function set(
         notified = true;
       }
       if (notified) {
-        for (const outer of forwardingSetFrames) {
-          if (outer.key === key) {
-            outer.covered = true;
-          }
-        }
+        // 只标记本转发链的根帧 (锚定 receiver), 不按 key 名匹配所有外层帧 ——
+        // setter 内无关链的同名嵌套写入会误标外层链, 吞掉外层的兜底 add
+        markCoveredForReceiverRoot(receiver, key);
       }
     }
     return result as boolean;
@@ -345,17 +348,12 @@ function construct(
  * (OrdinarySetWithOwnDescriptor 语义), 因此帧按 {target, key} 精确匹配即可
  * 在保留防双通知行为的同时, 让 setter 内对同 target 异 key 的 defineProperty 正常通知。
  * */
-interface ForwardingSetFrame {
-  target: object;
-  key: PropertyKey;
-  // 本帧转发窗口内, defineProperty trap 命中过该帧 (引擎路由回 receiver 的
-  // [[DefineOwnProperty]], 或原型链 setter 对本层的同 key defineProperty)
-  hit: boolean;
-  // 转发 walk 链上同 key 的某一层已按落盘状态发出通知,
-  // 最外层 receiver 的兜底 add 应跳过 (防止链上 reaction 双通知)
-  covered: boolean;
-}
-const forwardingSetFrames: ForwardingSetFrame[] = [];
+/*
+ * 转发帧栈定义与全部帧操作都在共享模块 forwarding-frames.ts:
+ * 原型链可混合 base/shadow 两种 handler, 各持独立栈会让跨 handler 的
+ * covered 抑制失效 (链上 reaction 双通知), 栈必须全局唯一。
+ * */
+
 
 /*
  * 拦截 Object.defineProperty, 防止其绕过 set trap 静默修改属性。
@@ -375,13 +373,7 @@ function defineProperty(
   // 实际值参与变化比较 (见 set trap 注释), setter 同 key defineProperty
   // 变换落盘值时由 set trap 统一通知。
   // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
-  let forwarded = false;
-  for (const frame of forwardingSetFrames) {
-    if (frame.target === target && frame.key === key) {
-      frame.hit = true;
-      forwarded = true;
-    }
-  }
+  const forwarded = markForwardedDefineProperty(target, key);
   if (forwarded) {
     return Reflect.defineProperty(target, key, descriptor);
   }
