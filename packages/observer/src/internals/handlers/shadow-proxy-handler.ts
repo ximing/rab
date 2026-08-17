@@ -87,6 +87,11 @@ function set(
   } finally {
     forwardingSetFrames.pop();
   }
+  // Reflect.set 返回 false: 写入未生效, 状态没有变化, 不得发通知
+  // (原因见 base-proxy-handler 同名处理)
+  if (!result) {
+    return result;
+  }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   if (
     typeof receiver === "object" &&
@@ -98,6 +103,20 @@ function set(
   if (!hadKey) {
     // 新增属性，会触发依赖 ITERATION_KEY 的 reactions(因为键集合改变了)
     queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+  } else if (Array.isArray(target) && key === "length") {
+    // 数组 length 赋值用折叠后的 target.length 与旧值比较
+    // (原因见 base-proxy-handler 同名处理)
+    const newLength = target.length;
+    if (newLength !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue,
+        receiver,
+        type: "set",
+      });
+    }
   } else if (value !== oldValue) {
     // 修改属性
     queueReactionsForOperation({
@@ -192,6 +211,18 @@ function defineProperty(
       value: descriptor.value,
       type: "add",
     });
+  } else if (Array.isArray(target) && key === "length") {
+    // 与 set trap 一致: 数组 length 用折叠后的 target.length 与旧值比较
+    const newLength = target.length;
+    if (newLength !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue,
+        type: "set",
+      });
+    }
   } else if (
     descriptor.value !== undefined &&
     descriptor.value !== oldValue

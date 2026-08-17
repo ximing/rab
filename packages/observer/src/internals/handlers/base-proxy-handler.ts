@@ -145,6 +145,12 @@ function set(
   } finally {
     forwardingSetFrames.pop();
   }
+  // Reflect.set 返回 false: 写入未生效 (sealed/frozen target、不可写属性、
+  // strict setter 返回 false 等), 状态没有变化, 不得发通知 ——
+  // 否则 sealed 数组上失败的 length 收缩会假通知 length 依赖。
+  if (!result) {
+    return result;
+  }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   // 这是因为原型继承，当原型具有setter时，设置操作会遍历整个原型链，并在每个对象上调用设置 trap，直到找到setter
   // 而不是直接在当前对象上设置属性
@@ -179,6 +185,23 @@ function set(
   if (!hadKey) {
     // 新增属性，会触发依赖 ITERATION_KEY 的 reactions(因为键集合改变了)
     queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+  } else if (Array.isArray(target) && key === "length") {
+    // 数组 length 赋值: 引擎按 ArraySetLength 规则把 value 折叠成
+    // canonical number 后生效, 原始 value 可能是字符串 ('5') 或非整数,
+    // 不能与 trap 捕获的旧 length 直接比较 ('5' !== 5 → 同值假通知)。
+    // 用赋值后的 target.length (折叠后的新长度) 比较, 并把 canonical
+    // 新长度作为通知的 value (下游收缩窗口计算依赖数值化的新长度)。
+    const newLength = target.length;
+    if (newLength !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue,
+        receiver,
+        type: "set",
+      });
+    }
   } else if (value !== oldValue) {
     // 修改属性
     queueReactionsForOperation({
@@ -290,6 +313,19 @@ function defineProperty(
       value: descriptor.value,
       type: "add",
     });
+  } else if (Array.isArray(target) && key === "length") {
+    // 与 set trap 一致: 数组 length 的 descriptor.value 可能是字符串 ('5'),
+    // 直接与旧值比较会同值假通知, 用折叠后的 target.length 比较。
+    const newLength = target.length;
+    if (newLength !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue,
+        type: "set",
+      });
+    }
   } else if (
     descriptor.value !== undefined &&
     descriptor.value !== oldValue
