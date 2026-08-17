@@ -25,18 +25,23 @@ const objectToString = Object.prototype.toString;
 
 /*
  * 模块加载时捕获本 realm 的真实 Map/Set 构造函数: clear 的 TOCTOU
- * 保守分支 (issue #7) 用 `constructor === Map` 判 plain 集合, 若在
- * 调用点解析全局绑定, 测试/用户对 globalThis.Map 的临时替换 (如
- * copy-construction spy) 会把 plain Map 误判为子类而多付拷贝。
+ * 保守分支 (issue #7) 判 plain 集合时若在调用点解析全局绑定, 测试/用户
+ * 对 globalThis.Map 的临时替换 (如 copy-construction spy) 会把 plain Map
+ * 误判为子类而多付拷贝。
+ * GG7 第 3 轮 issue #3: 判定改用 `Object.getPrototypeOf(target) ===
+ * RealXxxConstructor.prototype` —— 不再裸读 target.constructor (自有
+ * throwing 'constructor' accessor 会让 clear() 抛用户 getter 的异常),
+ * 且原型不可伪造: 子类实例的直接原型是子类 prototype, 永不等于内置
+ * prototype。跨 realm plain Map 的原型是远 realm 的 Map.prototype,
+ * 被保守判为非 plain → clear 始终拷贝 (仅损失该场景的 #10 惰性优化,
+ * 无正确性影响)。
  * */
-const RealMapConstructor = Map;
-const RealSetConstructor = Set;
+const RealMapPrototype = Map.prototype;
+const RealSetPrototype = Set.prototype;
 
 export function isPlainMapOrSetTarget(target: object): boolean {
-  return (
-    target.constructor === RealMapConstructor ||
-    target.constructor === RealSetConstructor
-  );
+  const proto = Object.getPrototypeOf(target);
+  return proto === RealMapPrototype || proto === RealSetPrototype;
 }
 
 export function isMapTarget(target: object): target is Map<unknown, unknown> {
@@ -388,6 +393,63 @@ export const collectionHandlers = {
   },
 };
 
+/*
+ * GG7 第 3 轮 issue #1/#4: ES2024 Set 方法 (union/intersection/difference/
+ * symmetricDifference/isSubsetOf/isSupersetOf/isDisjointFrom) 等「恰为内置
+ * 集合原型成员」的函数, 不能以 proxy 为 receiver 调用 —— 内部槽位的
+ * brand-check 会抛 "incompatible receiver"。所有会变更集合的原生方法
+ * (set/add/delete/clear/...) 都已 instrumented, 因此凡是能通过这个恒等
+ * 判定的函数必然是纯只读的原生方法, 以 raw target 为 receiver 转发是
+ * 安全的 (变更无法静默绕过 trap)。用户子类自定义方法 (如 putTwice)
+ * 不在任何内置原型上, 判定不命中, 仍以 proxy 为 receiver 走 trap
+ * (round2 issue #6 的通知语义保持)。
+ * */
+const builtinCollectionPrototypes: object[] = [
+  Map.prototype,
+  Set.prototype,
+  WeakMap.prototype,
+  WeakSet.prototype,
+];
+
+export function isBuiltinCollectionPrototypeMethod(
+  key: PropertyKey,
+  value: unknown
+): boolean {
+  if (typeof value !== "function") {
+    return false;
+  }
+  // constructor 恒等性必须保持: map.constructor === Map, 不做转发包装
+  if (key === "constructor") {
+    return false;
+  }
+  for (const proto of builtinCollectionPrototypes) {
+    if ((proto as unknown as Record<PropertyKey, unknown>)[key] === value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/*
+ * 转发包装: 以 raw target 为 receiver 调用原生只读方法; 参数统一解包为
+ * raw (原生方法对参数同样做内部槽位 brand-check, observable proxy 参数
+ * 会抛错)。这些方法 (union/intersection/...) 都完整迭代 this, 因此注册
+ * iterate 依赖 —— reaction 里读取 s.union(...) 的结果会随集合变更重跑。
+ * */
+export function forwardBuiltinCollectionMethod(
+  target: object,
+  fn: (...args: unknown[]) => unknown
+): (...args: unknown[]) => unknown {
+  return function (this: unknown, ...args: unknown[]): unknown {
+    registerRunningReactionForOperation({
+      target,
+      key: "" as PropertyKey,
+      type: "iterate",
+    });
+    return Reflect.apply(fn, target, args.map(toRawIfProxy));
+  };
+}
+
 export const createCollectionProxyHandlers = (
   customCollectionHandlers?: CollectionHandlers
 ) => {
@@ -411,8 +473,17 @@ export const createCollectionProxyHandlers = (
         return Reflect.get(collectionHandlers, key, receiver);
       }
 
-      // Otherwise, get from target
-      return Reflect.get(target, key, receiver);
+      // Otherwise, get from target. 原生只读集合方法 (如 Set.prototype.union)
+      // 以 raw target 为 receiver 转发 —— 直接返回原函数会以 proxy 为
+      // receiver 调用, 内部槽位 brand-check 抛错 (GG7 第 3 轮 issue #1/#4)。
+      const value = Reflect.get(target, key, receiver);
+      if (isBuiltinCollectionPrototypeMethod(key, value)) {
+        return forwardBuiltinCollectionMethod(
+          target,
+          value as (...args: unknown[]) => unknown
+        );
+      }
+      return value;
     },
   };
 };
@@ -472,6 +543,22 @@ function isCollectionByPrototype(obj: object): boolean {
 
 // 跨 realm 分支的伪造 tag 防线: 方法不存在即不像集合。属性读取可能触发
 // 用户 getter, 抛错时视为不通过。
+// GG7 第 3 轮 issue #6: 方法还必须是原生函数 —— 真实跨 realm 集合的方法
+// 来自远 realm 的 Map.prototype/set.prototype (Function.prototype.toString
+// 跨 realm 一致地打印 "[native code]"); 用户类伪造 tag + 自写 get/set/has
+// 不满足, 回落 base handler, 其自有属性获得正常追踪与通知。
+const nativeFunctionToString = Function.prototype.toString;
+function isNativeLikeFunction(fn: unknown): boolean {
+  if (typeof fn !== "function") {
+    return false;
+  }
+  try {
+    return nativeFunctionToString.call(fn).includes("[native code]");
+  } catch {
+    return false;
+  }
+}
+
 function passesCollectionDuckCheck(obj: object, tag: string): boolean {
   const o = obj as Record<string, unknown>;
   try {
@@ -479,16 +566,16 @@ function passesCollectionDuckCheck(obj: object, tag: string): boolean {
       case "[object Map]":
       case "[object WeakMap]":
         return (
-          typeof o.get === "function" &&
-          typeof o.set === "function" &&
-          typeof o.has === "function"
+          isNativeLikeFunction(o.get) &&
+          isNativeLikeFunction(o.set) &&
+          isNativeLikeFunction(o.has)
         );
       case "[object Set]":
       case "[object WeakSet]":
         return (
-          typeof o.add === "function" &&
-          typeof o.has === "function" &&
-          typeof o.delete === "function"
+          isNativeLikeFunction(o.add) &&
+          isNativeLikeFunction(o.has) &&
+          isNativeLikeFunction(o.delete)
         );
       default:
         return false;
@@ -522,15 +609,61 @@ function getCollectionRouteHandlers(
 }
 
 /*
+ * GG7 第 3 轮 issue #2/#5: 黑名单 tag 的「用户子类」carve-out。
+ * 用户子类 (class MyDate extends Date / class AppError extends Error) 的
+ * 自有数据属性是普通属性, base handler 包装完全可用 (子类自有字段的
+ * 响应式不因黑名单静默丢失)。判定必须同时满足两个条件:
+ *   1. constructor 既非内置名、也非 globalObj 的精确命中 ——
+ *      同 realm 原生子类 (new TypeError / new Date) 的 constructor 名
+ *      精确命中全局, 不放行 (与 HEAD 行为一致: 返回 raw);
+ *   2. 原型链必达本 realm 对应的内置 prototype (Error.prototype 等) ——
+ *      跨 realm 原生实例 (vm.runInNewContext 的 TypeError/Date/...) 的
+ *      constructor 名会命中全局但构造函数不等 (条件 1 意外通过), 靠这条
+ *      原型链限定把它挡回黑名单 (issue #2 的根因, #9 契约: 跨 realm 内置
+ *      不被包装, observable(d) === d)。
+ * 迭代器 / Generator / WebAssembly 等 tag 的原型没有安全的公开获取途径,
+ * 不做 carve-out, 维持黑名单拒绝。
+ * */
+const blacklistTagLocalPrototypes = new Map<string, object | undefined>([
+  ["[object Date]", Date.prototype],
+  ["[object RegExp]", RegExp.prototype],
+  ["[object Error]", Error.prototype],
+  ["[object Promise]", Promise.prototype],
+  ["[object ArrayBuffer]", ArrayBuffer.prototype],
+  [
+    "[object SharedArrayBuffer]",
+    typeof SharedArrayBuffer === "function"
+      ? SharedArrayBuffer.prototype
+      : undefined,
+  ],
+  ["[object DataView]", DataView.prototype],
+  [
+    "[object WeakRef]",
+    typeof WeakRef === "function" ? WeakRef.prototype : undefined,
+  ],
+  [
+    "[object FinalizationRegistry]",
+    typeof FinalizationRegistry === "function"
+      ? FinalizationRegistry.prototype
+      : undefined,
+  ],
+  ["[object String]", String.prototype],
+  ["[object Number]", Number.prototype],
+  ["[object Boolean]", Boolean.prototype],
+  ["[object Symbol]", Symbol.prototype],
+  ["[object BigInt]", BigInt.prototype],
+]);
+
+/*
  * #9: 内置对象黑名单 —— 这些对象的方法依赖内部槽位 (internal slots),
  * 以 Proxy 为 receiver 调用会抛 "this is not a Date object." /
  * "incompatible receiver" 之类的错误, 不可包装。
  * 用 tag 而不是 constructor.name in globalObj 判定: 跨 realm 的内置对象
  * (vm.runInNewContext / iframe / RN 远程调试) 的 constructor 不等于本
  * realm 的全局构造函数, 旧检测会把它们误判为可包装。
- * (子类同样继承 tag, 如 class MyDate extends Date 也安全落入黑名单;
- * Error 子类的 carve-out 见 shouldInstrument 内注释 —— 它们是普通
- * 自有属性对象, base 包装可用。)
+ * (子类同样继承 tag, 如 class MyDate extends Date 也落入黑名单; 用户
+ * 子类的 carve-out 见 blacklistTagLocalPrototypes 注释 —— 子类自有
+ * 属性是普通属性, base 包装可用; 原生实例无论同/跨 realm 均拒绝包装。)
  * 注意: typed array 不在黑名单 —— 它们与普通数组一样走 base proxy handler
  * (索引读写经 Reflect 转发可用), 保持既有行为。
  * */
@@ -602,24 +735,23 @@ export function shouldInstrument(obj: object | Function): boolean {
   // #9: 依赖内部槽位的内置对象 (含跨 realm) 按 tag 拒绝包装
   if (tag !== undefined && nonInstrumentableTags.has(tag)) {
     /*
-     * GG7 第 2 轮 issue #4: 用户自定义子类 carve-out —— Error 子类
-     * (class AppError extends Error) 是普通自有属性对象, base handler
-     * 包装完全可用 (HEAD~1 行为), tag 黑名单会把它们静默打回 raw、
-     * 失去响应式。constructor 名既不是内置名也不是全局精确命中时视为
-     * 用户子类, 放行 base 包装 (getHandlers 对其返回 falsy → base)。
-     * 其余黑名单 tag (Date/RegExp/Promise/boxed/...) 的子类不放行:
-     * 它们的方法同样依赖内部槽位, 包装后调用必然抛错, 拒绝包装保持
-     * 原实例可用, 严格优于 HEAD~1 的"包装即坏"。
+     * 用户子类 carve-out (见 blacklistTagLocalPrototypes 注释): 子类自有
+     * 数据属性是普通属性, 放行 base 包装; 原生实例 (同 realm 或跨 realm)
+     * 被两个条件挡回黑名单。自有 constructor accessor 抛错时保守拒绝
+     * (不放行包装, 也不向 observable() 调用方抛用户的异常)。
      * */
-    if (tag === "[object Error]") {
-      const constructor = (obj as { constructor?: Function }).constructor;
+    const localPrototype = blacklistTagLocalPrototypes.get(tag);
+    if (localPrototype !== undefined) {
+      let constructor: unknown;
+      try {
+        constructor = (obj as { constructor?: unknown }).constructor;
+      } catch {
+        return false;
+      }
       if (
         typeof constructor === "function" &&
-        constructor.name !== "Error" &&
-        !(
-          constructor.name in globalObj &&
-          globalObj[constructor.name] === constructor
-        )
+        !(constructor.name in globalObj && globalObj[constructor.name] === constructor) &&
+        localPrototype.isPrototypeOf(obj)
       ) {
         return true;
       }

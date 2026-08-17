@@ -1,6 +1,8 @@
 import {
   getHandlers,
   shouldInstrument,
+  isBuiltinCollectionPrototypeMethod,
+  forwardBuiltinCollectionMethod,
 } from "./internals/handlers/collection-handler";
 import { shadowCollectionHandlers } from "./internals/handlers/shadow-collection-handler";
 import { shadowProxyHandler } from "./internals/handlers/shadow-proxy-handler";
@@ -97,16 +99,28 @@ function createShadowCollectionProxyHandlers() {
       // 修复: 之前这里返回 undefined, 导致 map.constructor === undefined、
       // String(map) 抛 TypeError, duck-typing 检测和序列化全挂。
       const value = Reflect.get(target, key, receiver);
-      // GG7 对抗审查第 2 轮 issue #6: 未知 key 的函数不能 bind 到 raw ——
+      // GG7 对抗审查第 2 轮 issue #6: 未知 key 的函数不能一律 bind 到 raw ——
       // 集合子类的自定义方法 (如 putTwice 内部 this.set) 一旦 bind(raw),
       // 其变更会走原生 Map.prototype.set, 静默绕过全部 trap (数据变了、
       // reaction 不通知)。改为以 proxy 为 receiver 调用 (与 deep 模式的
-      // 语义一致): 自定义方法内的 this.set 走 instrumented trap; 若落在
-      // 这里的真是依赖内部槽位的原生方法, 会大声抛 "incompatible
-      // receiver" 而不是静默丢通知。
-      // 标准集合方法 (set/get/has/delete/clear/迭代/size) 都在
-      // shadowCollectionHandlers 里, 不会走到这个分支。
+      // 语义一致): 自定义方法内的 this.set 走 instrumented trap。
+      // GG7 第 3 轮 issue #1/#4 修正: 恰为内置集合原型成员的函数 (ES2024
+      // Set 方法 union/intersection/... 未在 shadowCollectionHandlers 中)
+      // 依赖内部槽位, 以 proxy 为 receiver 会抛 "incompatible receiver"
+      // —— 这类纯只读原生方法以 raw target 为 receiver 转发 (变更类原生
+      // 方法均已 instrumented, 不存在静默绕过)。用户自定义方法不在内置
+      // 原型上, 判定不命中, 保持 proxy receiver。
       // constructor 除外: 保持 map.constructor === Map 的恒等性。
+      if (
+        typeof value === "function" &&
+        key !== "constructor" &&
+        isBuiltinCollectionPrototypeMethod(key, value)
+      ) {
+        return forwardBuiltinCollectionMethod(
+          target,
+          value as (...args: unknown[]) => unknown
+        );
+      }
       if (typeof value === "function" && key !== "constructor") {
         const fn = value as (
           this: unknown,
