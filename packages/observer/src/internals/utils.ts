@@ -40,6 +40,52 @@ export function toRawIfProxy<T>(value: T): T {
 }
 
 /*
+ * Map/Set 被包装为 observable 时（deep/shadow 两个创建路径）把既有条目中的
+ * observable proxy key/value 归一化为 raw，确立不变量：
+ * 『集合内部只持有 raw 身份』。
+ *
+ * 为什么必须在这里做（G5 第 3 轮审查 issue #1）：trap 入口已统一
+ * toRawIfProxy 解包，若集合在包装**之前**已有 proxy 条目（典型:
+ * observable(new Map([[box, 42]]))，box 是 observable proxy；或经
+ * raw(m).set 绕过 trap 写入），raw target 内持有的仍是 proxy ——
+ * get/has/delete 全部静默失灵，且与 trap 写入混合会产生同一逻辑 key
+ * 的两个条目，残留的 proxy 条目经 trap 永远不可达。
+ *
+ * 迭代中改写 Map/Set 是安全的：改 value 不会重访已访问的 key；
+ * 换 key（delete proxy + set raw）新增的 raw key 会被再次访问到，
+ * 但那时 toRawIfProxy 已是恒等，不会再改写 —— 无死循环。
+ *
+ * 限制：WeakMap/WeakSet 不可枚举，无法在此归一化 —— 构造期存入的
+ * proxy key 依旧不可达（Vue 3 的集合 instrumentation 存在同样边缘），
+ * 由 collection-unwrap-prepopulated-normalization.test.ts 的 pin 测试
+ * 明确该边界。一次性 O(n) 成本，仅在首次包装时发生。
+ */
+export function normalizeCollectionEntries(target: object): void {
+  if (target instanceof Map) {
+    for (const [key, value] of target) {
+      const rawKey = toRawIfProxy(key);
+      const rawValue = toRawIfProxy(value);
+      if (rawKey !== key) {
+        target.delete(key);
+        target.set(rawKey, rawValue);
+      } else if (rawValue !== value) {
+        target.set(key, rawValue);
+      }
+    }
+    return;
+  }
+  if (target instanceof Set) {
+    for (const value of target) {
+      const rawValue = toRawIfProxy(value);
+      if (rawValue !== value) {
+        target.delete(value);
+        target.add(rawValue);
+      }
+    }
+  }
+}
+
+/*
  * 读取自有属性的**数据**值, 不触发 accessor getter。
  *
  * G3 不变量 (defineProperty trap 于 538b29e 确立, set/deleteProperty trap 对齐):

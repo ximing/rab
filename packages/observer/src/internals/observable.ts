@@ -6,6 +6,7 @@ import {
 } from "./handlers/collection-handler";
 import { proxyToRaw, rawToOptions, rawToProxy } from "./proxy-raw-map";
 import { storeObservable } from "./reaction-track";
+import { normalizeCollectionEntries } from "./utils";
 import type { ObservableOptions, ProxyHandlers } from "./types";
 
 export function observable<T extends object>(
@@ -33,6 +34,9 @@ export function createObservable<T extends object>(
   obj: T,
   options?: ObservableOptions
 ): T {
+  // 集合在包装前已有的 proxy key/value 条目统一归一化为 raw
+  // （不变量『集合内部只持有 raw 身份』，详见 utils.normalizeCollectionEntries）
+  normalizeCollectionEntries(obj);
   // Merge handlers, with custom handlers taking precedence
   const handlers = getHandlers(obj) || baseProxyHandler;
   const mergedHandlers: ProxyHandlers = { ...(handlers as ProxyHandlers) };

@@ -6,6 +6,7 @@ import { shadowCollectionHandlers } from "./internals/handlers/shadow-collection
 import { shadowProxyHandler } from "./internals/handlers/shadow-proxy-handler";
 import { proxyToRaw, rawToProxy } from "./internals/proxy-raw-map";
 import { storeObservable } from "./internals/reaction-track";
+import { normalizeCollectionEntries } from "./internals/utils";
 import type { ProxyHandlers } from "./internals/types";
 
 /**
@@ -101,6 +102,9 @@ function createShadowCollectionProxyHandlers() {
 }
 
 export function createShadowObservable<T extends object>(obj: T): T {
+  // 集合在包装前已有的 proxy key/value 条目统一归一化为 raw
+  // （不变量『集合内部只持有 raw 身份』，详见 utils.normalizeCollectionEntries）
+  normalizeCollectionEntries(obj);
   // 获取对象类型对应的处理器（对于集合类型会返回 defaultProxyHandlers）
   const handlers = getHandlers(obj);
 
