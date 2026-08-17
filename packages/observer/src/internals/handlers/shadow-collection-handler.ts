@@ -129,7 +129,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
         value,
         type: "add",
       });
-    } else if (value !== oldValue) {
+    } else if (!Object.is(value, oldValue)) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,

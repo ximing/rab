@@ -203,7 +203,7 @@ function set(
           type: "add",
         });
         notified = true;
-      } else if (landedValue !== oldValue) {
+      } else if (!Object.is(landedValue, oldValue)) {
         queueReactionsForOperation({
           target,
           key,
@@ -250,7 +250,7 @@ function set(
     // 用赋值后的 target.length (折叠后的新长度) 比较, 并把 canonical
     // 新长度作为通知的 value (下游收缩窗口计算依赖数值化的新长度)。
     const newLength = target.length;
-    if (newLength !== oldValue) {
+    if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -269,7 +269,7 @@ function set(
     // - 引擎路由回 receiver 的普通赋值 landed === value, 行为不变;
     // - 变换型 setter 写回值恰使观察值不变时, 不再发假通知。
     const landedValue = (target as Record<PropertyKey, unknown>)[key];
-    if (landedValue !== oldValue) {
+    if (!Object.is(landedValue, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -292,9 +292,11 @@ function deleteProperty(target: object, key: PropertyKey): boolean {
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 执行删除操作
   const result = Reflect.deleteProperty(target, key);
-  // 只有属性确实存在时才触发,会触发依赖该属性的 reactions
+  // 只有删除确实生效时才触发,会触发依赖该属性的 reactions
   // 也会触发依赖 ITERATION_KEY 的 reactions(键集合改变)
-  if (hadKey) {
+  // Reflect.deleteProperty 返回 false (frozen 等不可配置属性): 删除未生效,
+  // 状态没有变化, 不得发通知 (与 set trap 的 !result 守卫对齐)
+  if (hadKey && result) {
     queueReactionsForOperation({ target, key, oldValue, type: "delete" });
   }
   return result as boolean;
@@ -392,12 +394,14 @@ function defineProperty(
   const oldValue = hadKey
     ? (target as Record<PropertyKey, unknown>)[key]
     : undefined;
+  const oldDescriptor = hadKey
+    ? Reflect.getOwnPropertyDescriptor(target, key)
+    : undefined;
   const result = Reflect.defineProperty(target, key, descriptor);
   if (!result) {
     return false;
   }
   // 与 set trap 保持一致的判定: 新增属性 → add, 值变化 → set
-  // 不对 accessor descriptor (getter) 和值未变化的情况发通知
   if (!hadKey) {
     queueReactionsForOperation({
       target,
@@ -409,7 +413,7 @@ function defineProperty(
     // 与 set trap 一致: 数组 length 的 descriptor.value 可能是字符串 ('5'),
     // 直接与旧值比较会同值假通知, 用折叠后的 target.length 比较。
     const newLength = target.length;
-    if (newLength !== oldValue) {
+    if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -418,18 +422,45 @@ function defineProperty(
         type: "set",
       });
     }
-  } else if ("value" in descriptor && descriptor.value !== oldValue) {
-    // 用 'value' in descriptor 判定数据描述符而非 value !== undefined:
-    // 显式 { value: undefined } 覆盖旧值是真实变化, 不得静默跳过
-    // (对抗审查第 3 轮 #1c); accessor descriptor 与无 value 的部分 define
-    // 没有 'value' 字段, 仍按现行设计跳过数据值通知。
-    queueReactionsForOperation({
-      target,
-      key,
-      value: descriptor.value,
-      oldValue,
-      type: "set",
-    });
+  } else if ("value" in descriptor) {
+    // 数据描述符: 用 Object.is 判值变化 (NaN 连写不误通知, ±0 区分)。
+    // 旧属性是 accessor 时, 即使值 "相同" 也发生了 属性种类 翻转,
+    // 读取语义已改变, 不得静默跳过。
+    const oldIsAccessor =
+      oldDescriptor !== undefined && !("value" in oldDescriptor);
+    if (oldIsAccessor || !Object.is(descriptor.value, oldValue)) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: descriptor.value,
+        oldValue,
+        type: "set",
+      });
+    }
+  } else if ("get" in descriptor || "set" in descriptor) {
+    // accessor 描述符: 旧属性是数据属性 (种类翻转), 或 get/set 函数身份
+    // 变化时, 读取语义已改变, 必须以 "set" 通知; 重新定义相同的
+    // getter/setter 不通知。setter-only 描述符读取会抛错, 此时 value
+    // 传 undefined, 不调用 getter。
+    const oldWasData =
+      oldDescriptor === undefined || "value" in oldDescriptor;
+    const accessorChanged =
+      !oldWasData &&
+      (!Object.is(descriptor.get, oldDescriptor!.get) ||
+        !Object.is(descriptor.set, oldDescriptor!.set));
+    if (oldWasData || accessorChanged) {
+      const newValue =
+        descriptor.get === undefined
+          ? undefined
+          : (target as Record<PropertyKey, unknown>)[key];
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newValue,
+        oldValue,
+        type: "set",
+      });
+    }
   }
   return result;
 }

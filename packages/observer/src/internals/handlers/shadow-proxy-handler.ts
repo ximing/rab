@@ -114,7 +114,7 @@ function set(
           type: "add",
         });
         notified = true;
-      } else if (landedValue !== oldValue) {
+      } else if (!Object.is(landedValue, oldValue)) {
         queueReactionsForOperation({
           target,
           key,
@@ -154,7 +154,7 @@ function set(
     // 数组 length 赋值用折叠后的 target.length 与旧值比较
     // (原因见 base-proxy-handler 同名处理)
     const newLength = target.length;
-    if (newLength !== oldValue) {
+    if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -168,7 +168,7 @@ function set(
     // 修改属性: 落盘后重读实际值参与比较
     // (原因见 base-proxy-handler 同名分支)
     const landedValue = (target as Record<PropertyKey, unknown>)[key];
-    if (landedValue !== oldValue) {
+    if (!Object.is(landedValue, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -191,9 +191,11 @@ function deleteProperty(target: object, key: PropertyKey): boolean {
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 执行删除操作
   const result = Reflect.deleteProperty(target, key);
-  // 只有属性确实存在时才触发，会触发依赖该属性的 reactions
+  // 只有删除确实生效时才触发，会触发依赖该属性的 reactions
   // 也会触发依赖 ITERATION_KEY 的 reactions(键集合改变)
-  if (hadKey) {
+  // Reflect.deleteProperty 返回 false: 删除未生效, 不得发通知
+  // (与 set trap 的 !result 守卫对齐)
+  if (hadKey && result) {
     queueReactionsForOperation({ target, key, oldValue, type: "delete" });
   }
   return result as boolean;
@@ -268,6 +270,9 @@ function defineProperty(
   const oldValue = hadKey
     ? (target as Record<PropertyKey, unknown>)[key]
     : undefined;
+  const oldDescriptor = hadKey
+    ? Reflect.getOwnPropertyDescriptor(target, key)
+    : undefined;
   const result = Reflect.defineProperty(target, key, descriptor);
   if (!result) {
     return false;
@@ -282,7 +287,7 @@ function defineProperty(
   } else if (Array.isArray(target) && key === "length") {
     // 与 set trap 一致: 数组 length 用折叠后的 target.length 与旧值比较
     const newLength = target.length;
-    if (newLength !== oldValue) {
+    if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -291,16 +296,42 @@ function defineProperty(
         type: "set",
       });
     }
-  } else if ("value" in descriptor && descriptor.value !== oldValue) {
-    // 'value' in descriptor 判定数据描述符 (原因见 base-proxy-handler 同名处理):
-    // 显式 { value: undefined } 覆盖旧值是真实变化, 不得静默跳过
-    queueReactionsForOperation({
-      target,
-      key,
-      value: descriptor.value,
-      oldValue,
-      type: "set",
-    });
+  } else if ("value" in descriptor) {
+    // 数据描述符: Object.is 判值变化; 旧属性是 accessor 时种类翻转必通知
+    // (原因见 base-proxy-handler 同名处理)
+    const oldIsAccessor =
+      oldDescriptor !== undefined && !("value" in oldDescriptor);
+    if (oldIsAccessor || !Object.is(descriptor.value, oldValue)) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: descriptor.value,
+        oldValue,
+        type: "set",
+      });
+    }
+  } else if ("get" in descriptor || "set" in descriptor) {
+    // accessor 描述符: 种类翻转或 get/set 身份变化必通知
+    // (原因见 base-proxy-handler 同名处理)
+    const oldWasData =
+      oldDescriptor === undefined || "value" in oldDescriptor;
+    const accessorChanged =
+      !oldWasData &&
+      (!Object.is(descriptor.get, oldDescriptor!.get) ||
+        !Object.is(descriptor.set, oldDescriptor!.set));
+    if (oldWasData || accessorChanged) {
+      const newValue =
+        descriptor.get === undefined
+          ? undefined
+          : (target as Record<PropertyKey, unknown>)[key];
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newValue,
+        oldValue,
+        type: "set",
+      });
+    }
   }
   return result;
 }
