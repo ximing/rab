@@ -145,6 +145,99 @@ describe("转发窗口已知限制: 同 {target,key} 的用户 defineProperty �
 });
 
 /*
+ * 已知限制 #1b / #1c (GG2 对抗审查第 3 轮发现, 归 G3 值比较批次):
+ *
+ * #1b: 转发链中间层 observable 的同 {target,key} defineProperty 同样被帧吞。
+ * 文档限制 #1 只 pin 了"正在被写的 observable 自身"; 实际上转发 walk 链上
+ * 每一层 set trap 都压了帧 (child → middle → grandparent), setter 对**链上
+ * 任何一层**的同 key defineProperty 都会命中该层自己的帧被透传, 且该层
+ * set trap 因 receiver 不匹配提前返回不通知 → 中间层 reaction 丢通知。
+ * master (无 defineProperty trap) 同场景同样丢通知, 非帧栈方案的回归。
+ *
+ * #1c: defineProperty trap 的通知守卫用 `descriptor.value !== undefined` 判定
+ * "是数据描述符且值参与比较", 显式 `{ value: undefined }` 被当成"无值写入"
+ * 跳过通知: 5 → undefined 的实际变化静默丢失 (对照: 普通赋值 obj.x = undefined
+ * 走 set trap 的 value !== oldValue 比较会正常通知)。正确的判定是
+ * `'value' in descriptor`。归 G3 值比较批次处理。
+ */
+describe("转发窗口已知限制: 链上中间层同 key define 与显式 undefined 值 (G3)", () => {
+  test("LIMITATION(#1b): grandparent setter 对链上 middle 同 key defineProperty, middle reaction 丢通知", () => {
+    const middle = observable({ side: 0 });
+    const gpRaw: Record<string, unknown> = {};
+    Object.defineProperty(gpRaw, "k", {
+      configurable: true,
+      set(this: unknown, v: number) {
+        Object.defineProperty(middle, "k", {
+          value: v,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      },
+    });
+    const gp = observable(gpRaw);
+    Object.setPrototypeOf(middle, gp);
+    const child = observable(Object.create(middle) as { k?: number });
+
+    let midCalls = 0;
+    observe(() => {
+      void (middle as Record<string, unknown>).k;
+      midCalls++;
+    });
+    let childCalls = 0;
+    observe(() => {
+      void child.k;
+      childCalls++;
+    });
+    expect(midCalls).toBe(1);
+    expect(childCalls).toBe(1);
+
+    child.k = 5;
+    // middle 的值确实变了 (k 从 undefined -> 5)...
+    expect((middle as Record<string, unknown>).k).toBe(5);
+    // ...但 middle 的 defineProperty 命中自身转发帧被透传, middle 的 set trap
+    // 因 receiver 是 child 不通知 → documented limitation: middle reaction 丢通知
+    expect(midCalls).toBe(1);
+    // child 侧 (写入发起者) 仍单次通知
+    expect(childCalls).toBe(2);
+  });
+
+  test("LIMITATION(#1c): Object.defineProperty 显式 { value: undefined } 覆盖旧值不通知 (对照 set trap 正常)", () => {
+    const obj = observable({ x: 5 }) as { x: number | undefined };
+    let calls = 0;
+    let seen: number | undefined;
+    observe(() => {
+      seen = obj.x;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    Object.defineProperty(obj, "x", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    // documented limitation: 值已从 5 变为 undefined, 通知被
+    // `descriptor.value !== undefined` 守卫跳过
+    expect(obj.x).toBeUndefined();
+    expect(calls).toBe(1);
+    expect(seen).toBe(5);
+
+    // 对照: 普通赋值 undefined 走 set trap 正常通知
+    const obj2 = observable({ x: 5 }) as { x: number | undefined };
+    let calls2 = 0;
+    observe(() => {
+      void obj2.x;
+      calls2++;
+    });
+    obj2.x = undefined;
+    expect(obj2.x).toBeUndefined();
+    expect(calls2).toBe(2);
+  });
+});
+
+/*
  * 已知限制 #2 (转交 G3/G7): defineProperty trap 捕获 oldValue 时以
  * this=raw 调用 getter, 副作用型 getter 内对 this (raw) 的
  * Object.defineProperty 直接改 raw 对象、完全绕过 proxy trap,
