@@ -23,10 +23,14 @@ export function raw<T extends object>(obj: T): T {
  * 对象身份缓存 WeakRef —— proxy 与 raw 是两个不同身份:
  *   - 存 proxy 取 raw: Map/Set 查找直接失灵;
  *   - 注册用一种身份、通知用另一种: 依赖落在不同 WeakRef 上, 永久漏通知。
- * 因此入口处统一解包: 是对象且是 observable proxy 时替换为 raw 对象。
+ * 因此入口处统一解包: 是对象或函数且是 observable proxy 时替换为 raw。
+ * 函数守卫与 observableChild 对齐 —— 函数在本系统中是一等 observable
+ * (observable(fn) 返回 function proxy, shouldInstrument 显式支持函数),
+ * 若沿用 typeof === "object" 守卫, 函数 key/value 的 proxy/raw 身份分裂
+ * 依然存在 (存 proxy 取 raw 失灵、依赖注册与通知落在不同身份上永久漏通知)。
  */
 export function toRawIfProxy<T>(value: T): T {
-  if (isObject(value)) {
+  if (isObject(value) || typeof value === "function") {
     const rawValue = proxyToRaw.get(value);
     if (rawValue !== undefined) {
       return rawValue as T;

@@ -20,6 +20,12 @@ import { toRawIfProxy } from "../utils";
  * 这样可以保持浅层响应式的特性：
  * - 集合本身的操作（add、set、delete、clear）会触发 reactions
  * - 但集合中的嵌套对象不会被转换为 observable
+ *
+ * 注意（浅层语义的明确后果）：set/add 会把传入的 observable proxy 解包为
+ * raw 落盘，get/迭代因此返回 raw 而非存入的 proxy —— 用户经返回值直接变更
+ * 完全绕过 trap，不会被追踪（无任何通知）。需要响应式嵌套值时应使用
+ * deep 集合（collectionHandlers 经 observableChild 命中缓存 proxy，往返
+ * 身份保持）。该行为由 collection-unwrap-iteration-and-shadow.test.ts pin 住。
  * */
 
 /*
