@@ -22,6 +22,33 @@ const reactionStack = new Stack<Reaction>();
 let isDebugging = false;
 
 /*
+ * #10: clear() 通知前为 operation.oldValue 做全量拷贝 (new Map(target)) 是
+ * 热路径 O(n) 开销, 而 oldValue 的唯一消费者是 reaction.debugger
+ * (如 @rabjs/react 的 debuggerReaction)。本函数判断一次操作是否会到达
+ * 任何 debugger —— 只有会到达时, clear 才值得付拷贝成本。
+ * */
+export function hasOperationOldValueConsumer(operation: Operation): boolean {
+  // transformReactions 可能向通知集补充带 debugger 的 reaction,
+  // 无法静态判断, 保守视为存在消费者。
+  const options = rawToOptions.get(operation.target);
+  const hasTransformReactions = Boolean(
+    options &&
+      options.reactionHandlers &&
+      options.reactionHandlers.transformReactions
+  );
+  if (hasTransformReactions) {
+    return true;
+  }
+  const reactions = getReactionsForOperation(operation);
+  for (const reaction of reactions) {
+    if (reaction.debugger) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/*
  * 将一个普通函数作为 reaction 执行,并在执行期间建立依赖追踪。
  * */
 export function runAsReaction<T extends Function, R>(

@@ -3,6 +3,7 @@ import { proxyToRaw } from "../proxy-raw-map";
 import {
   registerRunningReactionForOperation,
   queueReactionsForOperation,
+  hasOperationOldValueConsumer,
 } from "../reaction-runner";
 import {
   Collection,
@@ -11,6 +12,49 @@ import {
   PatchableIterator,
 } from "../types";
 import { toRawIfProxy } from "../utils";
+
+/*
+ * #7/#9: 集合身份判定不能只靠 instanceof ——
+ *   - Map/Set 子类 (class MyMap extends Map) 同 realm 下 instanceof 成立,
+ *     但自定义了 Symbol.toStringTag 的子类 tag 会变, 两者取或集最稳;
+ *   - 跨 realm 的 Map (vm.runInNewContext / iframe / RN 远程调试) 的
+ *     instanceof 本 realm 构造函数不成立, 但 Object.prototype.toString
+ *     的 tag 跨 realm 一致 ('[object Map]')。
+ * */
+const objectToString = Object.prototype.toString;
+
+export function isMapTarget(target: object): target is Map<unknown, unknown> {
+  return target instanceof Map || objectToString.call(target) === "[object Map]";
+}
+
+export function isSetTarget(target: object): target is Set<unknown> {
+  return target instanceof Set || objectToString.call(target) === "[object Set]";
+}
+
+export function isWeakMapTarget(
+  target: object
+): target is WeakMap<object, unknown> {
+  return (
+    target instanceof WeakMap ||
+    objectToString.call(target) === "[object WeakMap]"
+  );
+}
+
+export function isWeakSetTarget(target: object): target is WeakSet<object> {
+  return (
+    target instanceof WeakSet ||
+    objectToString.call(target) === "[object WeakSet]"
+  );
+}
+
+export function isAnyCollectionTarget(target: object): target is Collection {
+  return (
+    isMapTarget(target) ||
+    isSetTarget(target) ||
+    isWeakMapTarget(target) ||
+    isWeakSetTarget(target)
+  );
+}
 
 /*
  * 当你使用 Map 或 Set 的迭代器方法(如 values(), entries(), Symbol.iterator)时,这些方法返回的是一个迭代器对象。
@@ -60,15 +104,7 @@ export const collectionHandlers = {
     key = toRawIfProxy(key);
     // this 是 observable(Proxy),需要获取原始的 Map/Set
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     // 建立 (target.key -> reaction) 的依赖
@@ -84,7 +120,7 @@ export const collectionHandlers = {
     // 解包: 依赖注册与集合查找都必须使用 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return undefined;
     }
     registerRunningReactionForOperation({
@@ -98,7 +134,7 @@ export const collectionHandlers = {
     // 解包: Set 的 key 就是 value, 存储与通知都必须使用 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Set || target instanceof WeakSet)) {
+    if (!target || !(isSetTarget(target) || isWeakSetTarget(target))) {
       return this;
     }
     const hadKey = (target as Set<unknown> | WeakSet<object>).has(
@@ -125,7 +161,7 @@ export const collectionHandlers = {
     key = toRawIfProxy(key);
     value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return this;
     }
     const hadKey = (
@@ -161,15 +197,7 @@ export const collectionHandlers = {
     // 解包: 删除与通知都必须使用与存储一致的 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     const hadKey = (target as Map<unknown, unknown> | Set<unknown>).has
@@ -198,19 +226,27 @@ export const collectionHandlers = {
   },
   clear(this: Collection): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     const hadItems = target.size > 0;
-    const oldTarget = target instanceof Map ? new Map(target) : new Set(target);
+    // #10: oldValue 的全量拷贝 (new Map(target)) 是热路径 O(n) 开销, 而 oldValue
+    // 的唯一消费者是 reaction.debugger (如 @rabjs/react 的 debuggerReaction)。
+    // 仅当本次 clear 的操作真的会到达某个 debugger 时才付拷贝成本;
+    // debugger 收到的语义不变 —— 仍是 clear 前的内容拷贝。
+    const operation = { target, key: "" as PropertyKey, type: "clear" as const };
+    let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
+    if (hadItems && hasOperationOldValueConsumer(operation)) {
+      oldTarget = isMapTarget(target)
+        ? new Map(target)
+        : new Set(target);
+    }
     // forward the operation before queueing reactions
     target.clear();
     if (hadItems) {
       queueReactionsForOperation({
-        target,
-        key: "" as PropertyKey,
+        ...operation,
         oldValue: oldTarget,
-        type: "clear",
       });
     }
   },
@@ -224,7 +260,7 @@ export const collectionHandlers = {
     thisArg?: unknown
   ): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     registerRunningReactionForOperation({
@@ -247,7 +283,7 @@ export const collectionHandlers = {
   },
   keys(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -266,7 +302,7 @@ export const collectionHandlers = {
   },
   values(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -279,7 +315,7 @@ export const collectionHandlers = {
   },
   entries(this: Collection): IterableIterator<[unknown, unknown]> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]() as IterableIterator<[unknown, unknown]>;
     }
     registerRunningReactionForOperation({
@@ -294,7 +330,7 @@ export const collectionHandlers = {
   },
   [Symbol.iterator](this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -306,7 +342,7 @@ export const collectionHandlers = {
     return patchIterator(
       iterator,
       target,
-      target instanceof Map
+      isMapTarget(target)
     ) as IterableIterator<unknown>;
   },
   get size(): number {
@@ -314,7 +350,7 @@ export const collectionHandlers = {
     // 我们需要正确地转换它以访问proxyToRaw
     const self = this as unknown as Collection;
     const target = proxyToRaw.get(self);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return 0;
     }
     // 迭代依赖
@@ -368,14 +404,64 @@ const globalObj: Record<string, unknown> = (
 // Type for handler values
 type HandlerValue = ProxyHandler<object> | false;
 
+/*
+ * #7/#9: 集合路由改为按 Object.prototype.toString 的 tag 判定:
+ *   - 子类 (class MyMap extends Map) 继承父类 tag, constructor 精确匹配会漏;
+ *   - 跨 realm 集合的 tag 与本 realm 一致, constructor 比较会漏。
+ * */
+const collectionHandlersByTag = new Map<string, HandlerValue>([
+  ["[object Map]", defaultProxyHandlers],
+  ["[object Set]", defaultProxyHandlers],
+  ["[object WeakMap]", defaultProxyHandlers],
+  ["[object WeakSet]", defaultProxyHandlers],
+]);
+
+/*
+ * #9: 内置对象黑名单 —— 这些对象的方法依赖内部槽位 (internal slots),
+ * 以 Proxy 为 receiver 调用会抛 "this is not a Date object." /
+ * "incompatible receiver" 之类的错误, 不可包装。
+ * 用 tag 而不是 constructor.name in globalObj 判定: 跨 realm 的内置对象
+ * (vm.runInNewContext / iframe / RN 远程调试) 的 constructor 不等于本
+ * realm 的全局构造函数, 旧检测会把它们误判为可包装。
+ * (子类同样继承 tag, 如 class MyDate extends Date 也安全落入黑名单。)
+ * 注意: typed array 不在黑名单 —— 它们与普通数组一样走 base proxy handler
+ * (索引读写经 Reflect 转发可用), 保持既有行为。
+ * */
+const nonInstrumentableTags = new Set([
+  "[object Date]",
+  "[object RegExp]",
+  "[object Error]",
+  "[object Promise]",
+  "[object ArrayBuffer]",
+  "[object SharedArrayBuffer]",
+  "[object DataView]",
+  "[object WeakRef]",
+  "[object FinalizationRegistry]",
+  "[object String]",
+  "[object Number]",
+  "[object Boolean]",
+  "[object Symbol]",
+  "[object BigInt]",
+  "[object Generator]",
+  "[object Map Iterator]",
+  "[object Set Iterator]",
+  "[object Array Iterator]",
+  "[object String Iterator]",
+  "[object RegExp String Iterator]",
+  "[object Module]",
+  "[object WebAssembly.Module]",
+  "[object WebAssembly.Instance]",
+  "[object WebAssembly.Memory]",
+  "[object WebAssembly.Table]",
+  "[object WebAssembly.Global]",
+  "[object WebAssembly.Tag]",
+  "[object WebAssembly.Exception]",
+]);
+
 // these stateful built-in objects can and should be wrapped by Proxies if they are part of a store
 // simple ones - like arrays - ar wrapped with the normal observable Proxy
 // complex ones - like Map and Set - are wrapped with a Proxy of instrumented methods
 const handlers = new Map<Function, HandlerValue>([
-  [Map, defaultProxyHandlers],
-  [Set, defaultProxyHandlers],
-  [WeakMap, defaultProxyHandlers],
-  [WeakSet, defaultProxyHandlers],
   [Object, false],
   [Array, false],
   [Int8Array, false],
@@ -393,14 +479,30 @@ const handlers = new Map<Function, HandlerValue>([
 // their methods expect the object instance as the receiver ('this') instead of the Proxy wrapper
 // wrapping them and calling their methods causes erros like: "TypeError: this is not a Date object."
 export function shouldInstrument(obj: object | Function): boolean {
-  const { constructor } = obj as { constructor: Function };
-
-  // functions and objects in the above handlers array are safe to instrument
-  if (typeof obj === "function" || handlers.has(constructor)) {
+  // functions are first-class observables in this system
+  if (typeof obj === "function") {
     return true;
   }
 
-  // other built-in objects should not be implemented
+  // #7/#9: 集合 (含子类与跨 realm 实例) 按 tag 路由到 instrumented 方法
+  const tag = objectToString.call(obj);
+  if (collectionHandlersByTag.has(tag)) {
+    return true;
+  }
+
+  // #9: 依赖内部槽位的内置对象 (含跨 realm) 按 tag 拒绝包装
+  if (nonInstrumentableTags.has(tag)) {
+    return false;
+  }
+
+  const { constructor } = obj as { constructor: Function };
+
+  // objects in the above handlers array are safe to instrument
+  if (handlers.has(constructor)) {
+    return true;
+  }
+
+  // other same-realm built-in objects should not be instrumented
   const isBuiltIn =
     typeof constructor === "function" &&
     constructor.name in globalObj &&
@@ -409,6 +511,11 @@ export function shouldInstrument(obj: object | Function): boolean {
 }
 
 export function getHandlers(obj: object): HandlerValue {
-  const { constructor } = obj as { constructor: Function };
-  return handlers.get(constructor) || false;
+  // #7/#9: tag 命中 (子类/跨 realm 同样命中) 时路由到集合 handlers
+  const tagHandlers = collectionHandlersByTag.get(objectToString.call(obj));
+  if (tagHandlers) {
+    return tagHandlers;
+  }
+  const constructor = (obj as { constructor?: Function }).constructor;
+  return constructor ? handlers.get(constructor) || false : false;
 }

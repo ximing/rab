@@ -2,6 +2,7 @@ import { proxyToRaw } from "../proxy-raw-map";
 import {
   registerRunningReactionForOperation,
   queueReactionsForOperation,
+  hasOperationOldValueConsumer,
 } from "../reaction-runner";
 import type {
   Collection,
@@ -10,6 +11,13 @@ import type {
   PatchableIterator,
 } from "../types";
 import { toRawIfProxy } from "../utils";
+import {
+  isAnyCollectionTarget,
+  isMapTarget,
+  isSetTarget,
+  isWeakMapTarget,
+  isWeakSetTarget,
+} from "./collection-handler";
 
 /*
  * 浅层集合处理器 - 用于 Map、Set、WeakMap、WeakSet
@@ -56,15 +64,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 解包: 依赖注册与集合查找都必须使用 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     // 建立 (target.key -> reaction) 的依赖
@@ -82,7 +82,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 解包: 依赖注册与集合查找都必须使用 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return undefined;
     }
     registerRunningReactionForOperation({
@@ -99,7 +99,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 解包: Set 的 key 就是 value, 存储与通知都必须使用 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Set || target instanceof WeakSet)) {
+    if (!target || !(isSetTarget(target) || isWeakSetTarget(target))) {
       return this;
     }
     const hadKey = (target as Set<unknown> | WeakSet<object>).has(
@@ -124,7 +124,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     key = toRawIfProxy(key);
     value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return this;
     }
     const hadKey = (
@@ -162,15 +162,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 解包: 删除与通知都必须使用与存储一致的 raw 身份
     key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     const hadKey = (target as Map<unknown, unknown> | Set<unknown>).has
@@ -201,19 +193,25 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 clear 操作
   clear(this: Collection): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     const hadItems = target.size > 0;
-    const oldTarget = target instanceof Map ? new Map(target) : new Set(target);
+    // #10: 同 collectionHandlers.clear —— oldValue 拷贝仅在存在 debugger
+    // 消费者时才做, 语义不变 (clear 前内容拷贝)。
+    const operation = { target, key: "" as PropertyKey, type: "clear" as const };
+    let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
+    if (hadItems && hasOperationOldValueConsumer(operation)) {
+      oldTarget = isMapTarget(target)
+        ? new Map(target)
+        : new Set(target);
+    }
     // forward the operation before queueing reactions
     target.clear();
     if (hadItems) {
       queueReactionsForOperation({
-        target,
-        key: "" as PropertyKey,
+        ...operation,
         oldValue: oldTarget,
-        type: "clear",
       });
     }
   },
@@ -229,7 +227,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     thisArg?: unknown
   ): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     registerRunningReactionForOperation({
@@ -247,7 +245,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 keys 操作
   keys(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -261,7 +259,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 values 操作
   values(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -281,7 +279,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 entries 操作
   entries(this: Collection): IterableIterator<[unknown, unknown]> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]() as IterableIterator<[unknown, unknown]>;
     }
     registerRunningReactionForOperation({
@@ -299,7 +297,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 Symbol.iterator 操作
   [Symbol.iterator](this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -312,7 +310,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     return shadowPatchIterator(
       iterator,
       target,
-      target instanceof Map
+      isMapTarget(target)
     ) as IterableIterator<unknown>;
   },
 
@@ -320,7 +318,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   get size(): number {
     const self = this as unknown as Collection;
     const target = proxyToRaw.get(self);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return 0;
     }
     // 迭代依赖
