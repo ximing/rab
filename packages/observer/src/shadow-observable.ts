@@ -19,7 +19,6 @@ import type { ProxyHandlers } from "./internals/types";
  * shadowCollectionHandlers 的关键区别是不会对集合中的值进行包装
  *
  * @param obj - 要转换为浅层响应式的对象
- * @param options - 可选的配置选项
  * @returns 浅层响应式代理对象
  *
  * **与 `observable(raw)` 共享底层状态的语义**（两轮对抗审查确认，刻意为之）:

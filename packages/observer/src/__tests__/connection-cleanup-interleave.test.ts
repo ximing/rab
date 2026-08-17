@@ -146,6 +146,36 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(calls).toBe(2); // 不得复活
   });
 
+  test("自 unobserve 后继续读新 key: 不复活、entry 归零 (第2轮审查 issue 1)", () => {
+    const rawObj: Record<string, number> = {};
+    const o = observable(rawObj);
+
+    let runs = 0;
+    const holder: { r?: ReturnType<typeof observe> } = {};
+    holder.r = observe(() => {
+      o.a;
+      runs++;
+      if (runs === 1) {
+        unobserve(holder.r as ReturnType<typeof observe>);
+        // unobserve 之后仍在自身运行中, 继续读一个新 key:
+        // 不得为已 unobserve 的 reaction 建立新依赖 (否则写入会复活它,
+        // 且该连接无人释放, entry 永久搁浅)
+        o.b;
+      }
+    }, { lazy: true });
+    (holder.r as unknown as () => void)();
+
+    expect(runs).toBe(1);
+    // unobserve 已释放 a 的连接; b 的读取不得重新注册 → entry 必须归零
+    expect(getConnectionsCount(rawObj)).toBe(0);
+
+    o.a = 1;
+    expect(runs).toBe(1); // 不复活
+    o.b = 2;
+    expect(runs).toBe(1); // 不复活 (核心: 新 key 的注册被跳过)
+    expect(getConnectionsCount(rawObj)).toBe(0); // 无搁浅 entry
+  });
+
   test("批内 unobserve 另一 reaction: 该 reaction 至多再跑一次 (批内已有), 之后不复活", () => {
     const rawObj: Record<string, number> = { v: 1 };
     const p = observable(rawObj);

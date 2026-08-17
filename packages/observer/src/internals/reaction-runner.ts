@@ -70,6 +70,13 @@ export function registerRunningReactionForOperation(
   if (runningReaction) {
     // 如果 reaction 有 debugger,记录这次操作
     debugOperation(runningReaction, operation);
+    // reaction 在自身运行中被 unobserve() 后, 不再为其建立新依赖:
+    // unobserve 已调用 releaseReaction 清掉既有连接, 若继续注册,
+    // 后续写入会"复活"已 unobserve 的 reaction, 且这些新连接无人释放
+    // (reaction 已脱管, cleaners 不会再被遍历), entry 永久搁浅。
+    if (runningReaction.unobserved) {
+      return;
+    }
     // 调用 registerReactionForOperation 建立 (target.key -> reaction) 的映射
     // 存储在 connectionStore 中(来自 store.js)
     registerReactionForOperation(runningReaction, operation);
