@@ -22,6 +22,16 @@ import type { ProxyHandlers } from "./internals/types";
  * @param options - 可选的配置选项
  * @returns 浅层响应式代理对象
  *
+ * **与 `observable(raw)` 共享底层状态的语义**（两轮对抗审查确认，刻意为之）:
+ * - 同一 raw 对象可以同时存在本函数返回的 shadow 代理与 `observable(raw)`
+ *   返回的 deep 代理（缓存按深度模式分桶），但两者共享同一张
+ *   (raw, key) → reactions 连接表：任一代理的写入都会通知在另一个代理上
+ *   建立的 reaction。
+ * - 本函数不接收也不写 options；若同一 raw 存在带
+ *   `reactionHandlers.transformReactions` 的 deep 代理，则**通过本代理写入
+ *   的通知也会经过该 transform**（options 按 raw 键控，见 `observable` 的
+ *   JSDoc）。如需隔离，请使用不同的 raw 对象。
+ *
  * @example
  * ```typescript
  * // 普通对象

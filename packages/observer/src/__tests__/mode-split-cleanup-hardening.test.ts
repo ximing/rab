@@ -163,4 +163,35 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     o.count = 2;
     expect(calls).toBe(1);
   });
+
+  // 第 1 轮审查 issue #1 场景 M (shadow-first 创建顺序), 钉死为**有意的
+  // per-raw options 语义**: connectionStore 按 raw+key 共享, 通知期的
+  // transformReactions 过滤器无法 (也不应) 区分写入走的是哪个代理 ——
+  // shadowObservable 不接收 options, 用户如需隔离请用不同的 raw 对象。
+  // 详见 shadowObservable / observable 的 JSDoc。
+  test("per-raw options 语义 (shadow-first 顺序): deep 的 transformReactions 同样治理 shadow 侧通知", () => {
+    const rawObj = { count: 0 };
+    const s = shadowObservable(rawObj);
+    const o = observable(rawObj, {
+      reactionHandlers: { transformReactions: () => [] },
+    });
+
+    let sCalls = 0;
+    let dCalls = 0;
+    observe(() => {
+      s.count;
+      sCalls++;
+    });
+    observe(() => {
+      o.count;
+      dCalls++;
+    });
+
+    s.count = 1;
+    expect(sCalls).toBe(1); // shadow 写入的通知也被 deep 侧 options 过滤
+    expect(dCalls).toBe(1);
+    o.count = 2;
+    expect(sCalls).toBe(1);
+    expect(dCalls).toBe(1);
+  });
 });
