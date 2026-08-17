@@ -97,6 +97,96 @@ describe("set 转发标记按 target 区分 (base handler)", () => {
   });
 });
 
+describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉同 target 异 key 的 defineProperty (base handler)", () => {
+  // 第 1 轮对抗审查发现: target 栈方案下, 转发窗口内对"栈中 target"的无关 key
+  // defineProperty 仍被静默吞掉 (值已变、reaction 未通知)。
+  // Reflect.set 路由回的 defineProperty 必然携带 set 帧正在写的同一个 key,
+  // 因此栈元素必须是 {target, key} 对, 而不是裸 target。
+
+  test("自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知", () => {
+    const obj = observable({
+      cache: 0,
+      set flag(v: number) {
+        defineValue(obj, "cache", v);
+      },
+    });
+    let calls = 0;
+    observe(() => {
+      void obj.cache;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    obj.flag = 42;
+    expect(obj.cache).toBe(42);
+    expect(calls).toBe(2); // 裸 target 栈会误判为转发而丢通知 (calls 停在 1)
+  });
+
+  test("三层链 setter 内对中间层 observable 的异 key defineProperty: 必须通知", () => {
+    const middle = observable({ side: 0 });
+    const parent = observable({
+      set flag(v: number) {
+        defineValue(middle, "side", v);
+      },
+    });
+    Object.setPrototypeOf(middle, parent);
+    const child = observable(Object.create(middle) as { flag: number });
+    let sideCalls = 0;
+    observe(() => {
+      void middle.side;
+      sideCalls++;
+    });
+    expect(sideCalls).toBe(1);
+
+    child.flag = 7;
+    expect(middle.side).toBe(7);
+    expect(sideCalls).toBe(2); // middle 的 target 因写入链路过而在栈中, 但 key 不同, 不得吞掉
+  });
+
+  test("自有 setter 内对自身另一个 key defineProperty: 必须通知", () => {
+    const parent = observable({
+      side: 0,
+      set flag(v: number) {
+        defineValue(parent, "side", v);
+      },
+    });
+    let calls = 0;
+    observe(() => {
+      void parent.side;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    parent.flag = 9;
+    expect(parent.side).toBe(9);
+    expect(calls).toBe(2);
+  });
+
+  test("child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知", () => {
+    const child2 = observable({ a: 0 }) as {
+      a: number;
+      b?: number;
+      flag?: number;
+    };
+    const proto2 = observable({
+      set flag(v: number) {
+        defineValue(child2, "b", v);
+      },
+    });
+    Object.setPrototypeOf(child2, proto2);
+    let calls = 0;
+    observe(() => {
+      void child2.b;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    child2.flag = 1;
+    expect(child2.b).toBe(1);
+    expect(calls).toBe(2);
+  });
+});
+
 describe("set 转发标记按 target 区分 (shadow handler)", () => {
   test("场景A: 自有属性赋值只通知一次", () => {
     const obj = shadowObservable({ count: 0 });
@@ -131,6 +221,67 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
 
     child.flag = 1;
     expect(other.x).toBe(1);
+    expect(calls).toBe(2);
+  });
+
+  test("场景B: 原型链赋值只通知一次 (child = shadowObservable(Object.create(parent)))", () => {
+    const parent = shadowObservable({ count: 0 });
+    const child = shadowObservable(
+      Object.create(parent) as { count: number }
+    );
+    let calls = 0;
+    observe(() => {
+      void child.count;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    child.count = 1;
+    expect(calls).toBe(2); // delta = 1, 不得出现双通知
+    expect(child.count).toBe(1);
+    expect(parent.count).toBe(0);
+  });
+
+  test("自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知", () => {
+    const obj = shadowObservable({
+      cache: 0,
+      set flag(v: number) {
+        defineValue(obj, "cache", v);
+      },
+    });
+    let calls = 0;
+    observe(() => {
+      void obj.cache;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    obj.flag = 42;
+    expect(obj.cache).toBe(42);
+    expect(calls).toBe(2); // 裸 target 栈会误判为转发而丢通知 (calls 停在 1)
+  });
+
+  test("child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知", () => {
+    const child2 = shadowObservable({ a: 0 }) as {
+      a: number;
+      b?: number;
+      flag?: number;
+    };
+    const proto2 = shadowObservable({
+      set flag(v: number) {
+        defineValue(child2, "b", v);
+      },
+    });
+    Object.setPrototypeOf(child2, proto2);
+    let calls = 0;
+    observe(() => {
+      void child2.b;
+      calls++;
+    });
+    expect(calls).toBe(1);
+
+    child2.flag = 1;
+    expect(child2.b).toBe(1);
     expect(calls).toBe(2);
   });
 });

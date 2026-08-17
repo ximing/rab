@@ -79,13 +79,13 @@ function set(
   // 用于比较值是否真的改变了
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
-  // 转发期间记录当前 target，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  forwardingSetTargets.push(target);
+  // 转发期间记录当前 {target, key} 帧，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
+  forwardingSetFrames.push({ target, key });
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
   } finally {
-    forwardingSetTargets.pop();
+    forwardingSetFrames.pop();
   }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   if (
@@ -154,10 +154,15 @@ function construct(
 }
 
 /*
- * 记录 set trap 正在做 Reflect.set 转发的 target 栈
- * (为什么是栈而不是布尔/单个 target, 原因见 base-proxy-handler 同名变量)
+ * 记录 set trap 正在做 Reflect.set 转发的 {target, key} 帧栈
+ * (为什么是 {target,key} 帧的栈而不是布尔/单个 target/裸 target 栈,
+ *  原因见 base-proxy-handler 同名变量)
  * */
-const forwardingSetTargets: object[] = [];
+interface ForwardingSetFrame {
+  target: object;
+  key: PropertyKey;
+}
+const forwardingSetFrames: ForwardingSetFrame[] = [];
 
 /*
  * 拦截 Object.defineProperty (与 base-proxy-handler 的实现一致,
@@ -168,8 +173,8 @@ function defineProperty(
   key: PropertyKey,
   descriptor: PropertyDescriptor
 ): boolean {
-  // 来自 set trap 的 Reflect.set 转发 (且就是本 target 的转发): 只透传, 通知由 set trap 负责
-  if (forwardingSetTargets.includes(target)) {
+  // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
+  if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);

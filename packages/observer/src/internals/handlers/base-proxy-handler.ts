@@ -137,13 +137,13 @@ function set(
   // 用于比较值是否真的改变了
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
-  // 转发期间记录当前 target, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  forwardingSetTargets.push(target);
+  // 转发期间记录当前 {target, key} 帧, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
+  forwardingSetFrames.push({ target, key });
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
   } finally {
-    forwardingSetTargets.pop();
+    forwardingSetFrames.pop();
   }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
   // 这是因为原型继承，当原型具有setter时，设置操作会遍历整个原型链，并在每个对象上调用设置 trap，直到找到setter
@@ -242,14 +242,22 @@ function construct(
  * 即普通赋值也会触发 defineProperty trap。此时通知由 set trap 统一负责,
  * defineProperty trap 不应重复通知, 否则每次赋值触发两次 reactions。
  *
- * 为什么是栈而不是单个布尔/单个 target:
+ * 为什么是 {target, key} 帧的栈而不是布尔/单个 target/裸 target 栈:
  * - 布尔: 转发期间若原型链 setter 内部对"另一个" observable 调 Object.defineProperty,
  *   会被误判为转发而跳过通知 (跨 target 误伤);
  * - 单个 target: 原型链转发的嵌套 set trap 会用内层 target 覆盖外层记录,
  *   导致最外层 receiver 上的定义回不再匹配 (双通知回归);
- * 栈同时覆盖两个方向: defineProperty trap 只在"自己的 target 正在转发"时透传。
+ * - 裸 target 栈: 转发窗口内对"栈中 target"的**另一个 key** 调 Object.defineProperty
+ *   仍会被吞掉通知 (值已变、reaction 未收到);
+ * Reflect.set 路由回 Receiver.[[DefineOwnProperty]] 时携带的必然是正在写的同一个 key
+ * (OrdinarySetWithOwnDescriptor 语义), 因此帧按 {target, key} 精确匹配即可
+ * 在保留防双通知行为的同时, 让 setter 内对同 target 异 key 的 defineProperty 正常通知。
  * */
-const forwardingSetTargets: object[] = [];
+interface ForwardingSetFrame {
+  target: object;
+  key: PropertyKey;
+}
+const forwardingSetFrames: ForwardingSetFrame[] = [];
 
 /*
  * 拦截 Object.defineProperty, 防止其绕过 set trap 静默修改属性。
@@ -261,8 +269,8 @@ function defineProperty(
   key: PropertyKey,
   descriptor: PropertyDescriptor
 ): boolean {
-  // 来自 set trap 的 Reflect.set 转发 (且就是本 target 的转发): 只透传, 通知由 set trap 负责
-  if (forwardingSetTargets.includes(target)) {
+  // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
+  if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
