@@ -112,6 +112,11 @@ export function queueReactionsForOperation(operation: Operation): void {
     const length = reactionsArray.length;
     // 优化: 提前检查 reactionStack 是否为空,避免重复调用 has()
     const stackSize = reactionStack.size;
+    // 单个 reaction(或其 scheduler 调用)抛错不得中断同批其余 reaction;
+    // 收集本批第一个错误,全部执行完毕后在变更调用点 rethrow。
+    // 异步执行的错误(如 setTimeout 里的 reaction)天然不经过这里。
+    let firstError: unknown;
+    let hasError = false;
     for (let i = 0; i < length; i++) {
       const reaction = reactionsArray[i];
       // 栈不为空时,需要检查当前的 reaction 是否在栈中，在栈中，就不要重复触发
@@ -135,17 +140,27 @@ export function queueReactionsForOperation(operation: Operation): void {
          * 无 scheduler: 立即同步执行
          * observe(fn) // 默认同步执行
          * */
-        if (typeof reaction.scheduler === "function") {
-          reaction.scheduler(reaction);
-        } else if (
-          typeof reaction.scheduler === "object" &&
-          reaction.scheduler !== null
-        ) {
-          reaction.scheduler.add(reaction);
-        } else {
-          reaction();
+        try {
+          if (typeof reaction.scheduler === "function") {
+            reaction.scheduler(reaction);
+          } else if (
+            typeof reaction.scheduler === "object" &&
+            reaction.scheduler !== null
+          ) {
+            reaction.scheduler.add(reaction);
+          } else {
+            reaction();
+          }
+        } catch (error) {
+          if (!hasError) {
+            hasError = true;
+            firstError = error;
+          }
         }
       }
+    }
+    if (hasError) {
+      throw firstError;
     }
   }
 }
