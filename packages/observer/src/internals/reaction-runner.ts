@@ -57,9 +57,19 @@ export function runAsReaction<T extends Function, R>(
   context: unknown,
   args: ArrayLike<unknown>
 ): R | undefined {
-  // 如果 reaction 已经被 unobserve(),直接执行函数,不建立依赖关系
+  // 如果 reaction 已经被 unobserve(),仍执行函数,但不建立任何依赖关系。
+  // 必须把它压入 reactionStack: 若裸执行, 而它又被另一个正在运行的 reaction
+  // 手动调用, 其读取会经 registerRunningReactionForOperation 注册到外层栈顶
+  // reaction 上, 导致存活的外层 reaction 被它从未读过的 key 误触发。
+  // 压栈后读取归属 unobserved reaction 自身 (栈顶), 注册逻辑对其跳过
+  // (见下方 registerRunningReactionForOperation), 顶层与嵌套行为一致。
   if (reaction.unobserved) {
-    return Reflect.apply(fn, context, args) as R;
+    try {
+      reactionStack.push(reaction);
+      return Reflect.apply(fn, context, args) as R;
+    } finally {
+      reactionStack.pop();
+    }
   }
 
   // 检查 reaction 是否已在调用栈中

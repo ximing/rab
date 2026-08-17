@@ -24,8 +24,10 @@ export interface Reaction extends Function {
 }
 
 export interface ReactionScheduler {
+  // add 必需: 触发路径 (queueReactionsForOperation) 调用它排队 reaction
   add: (reaction: Reaction) => void;
-  delete: (reaction: Reaction) => void;
+  // delete 可选: 实现了则 unobserve 时被调用以移除尚未冲刷的排队条目
+  delete?: (reaction: Reaction) => void;
 }
 
 export type Collection =

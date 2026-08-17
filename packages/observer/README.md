@@ -18,19 +18,19 @@ unobserve(reaction); // 停止追踪, 之后变更不再触发
 
 ## observe / unobserve
 
-- `observe(fn, options?)`：非 `lazy` 时立即执行一次并收集依赖。`options.scheduler` 可以是函数（自定义调度，如 `setTimeout`、批处理队列）或带 `add`/`delete` 的对象（如 `Set`，批量收集、稍后统一执行）；`options.debugger` 会在每次依赖读写时收到 operation 信息。
-- `unobserve(reaction)`：把 reaction 标记为 `unobserved`，释放它建立的全部 `(target, key) -> reaction` 连接，并把它从对象型 scheduler（`Set` 等）中移除。重复调用是安全的。
+- `observe(fn, options?)`：非 `lazy` 时立即执行一次并收集依赖。`options.scheduler` 可以是函数（自定义调度，如 `setTimeout`、批处理队列）或带 `add` 的对象（如 `Set`，批量收集、稍后统一执行；`delete` 可选——实现了的话 `unobserve` 会调用它移除尚未冲刷的排队条目）；`options.debugger` 会在每次依赖读写时收到 operation 信息。
+- `unobserve(reaction)`：把 reaction 标记为 `unobserved`，释放它建立的全部 `(target, key) -> reaction` 连接，并把它从对象型 scheduler（`Set` 等）中移除（仅当 scheduler 实现了 `delete`；只实现 `add` 的调度对象不会因此抛错）。重复调用是安全的。
 
 ### unobserve 之后"在途执行"的语义（重要）
 
 `unobserve` 阻止的是**后续排队触发**，但不会（也无法）撤回已经在途的那一次执行：
 
-- **手动调用仍执行**：`unobserve(r)` 之后手动调用 `r()`，函数照常执行一次，只是执行期间不再建立任何新依赖——之后的数据变更依旧不会触发它。
+- **手动调用仍执行**：`unobserve(r)` 之后手动调用 `r()`，函数照常执行一次，只是执行期间不再建立任何新依赖——无论在顶层调用，还是嵌套在另一个正在运行的 reaction 内部调用（其读取不会归属外层 reaction，也不会误触发外层）。之后的数据变更依旧不会触发它。
 - **已排期的执行仍落地**：如果 reaction 之前被函数型 scheduler 排期（例如 `scheduler: (r) => setTimeout(r, 30)`），`unobserve` 无法取消闭包里已经持有的引用，定时器到点后 reaction 仍会执行一次（同样不重建依赖）。对象型 scheduler 是例外：`unobserve` 会调用 `scheduler.delete(reaction)`，尚未冲刷的排队条目会被移除。
 
 也就是说，`unobserve` 的保证是"最后一次在途执行之后不再有新的执行"，而不是"立刻冻结"。如果业务上需要彻底取消（例如组件卸载后不允许再跑一次回调），请在 `unobserve` 的同时自行清理 scheduler 侧的排期（`clearTimeout`、清空队列等）。
 
-该语义由 `src/__tests__/unobserve-post-cancel-semantics.test.ts` 与 `src/__tests__/edge-cases/reactionRunner-coverage.test.ts` 固化。
+该语义由 `src/__tests__/unobserve-post-cancel-semantics.test.ts`、`src/__tests__/unobserve-nested-in-flight.test.ts` 与 `src/__tests__/edge-cases/reactionRunner-coverage.test.ts` 固化。
 
 ## 已知限制
 
