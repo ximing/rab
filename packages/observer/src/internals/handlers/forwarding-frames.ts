@@ -22,6 +22,17 @@ export interface ForwardingSetFrame {
   // 本层的通知责任已被替代: receiver-mismatch 分支与最外层 receiver 的
   // 兜底 add 都应跳过 (防止链上 reaction 双通知)
   covered: boolean;
+  // covered 时随通知携带的「已通知值」(该次嵌套写入实际落盘并通知的值)。
+  // covered 是布尔时有一个漏洞 (对抗审查第 4 轮 #1/#3): 同一转发窗口内,
+  // 嵌套 set 通知之后 setter 还可能对同一 {target, key} 再次落盘 (显式
+  // defineProperty 改值 / 重定义 accessor / 写回 receiver 的 landed 分支)。
+  // 这些路径的通知责任都依赖被 covered 抑制的分支, 若只按布尔跳过,
+  // 7→9 的落盘变化就无人通知, reaction 永久停留在中间值。因此跳过前必须
+  // 比较「本帧落盘后的实际值」与 notifiedValue: 一致才是真正的重复通知
+  // (G2b 单通知语义); 不一致则按差值补发并更新记录。
+  // covered === true 时 notifiedValue 一定已被赋值 (两者只在
+  // markNotifiedInFlightFrames / markCoveredForReceiverRoot 中成对写入)。
+  notifiedValue: unknown;
 }
 
 export const forwardingSetFrames: ForwardingSetFrame[] = [];
@@ -37,6 +48,7 @@ export function pushForwardingFrame(
     receiver,
     hit: false,
     covered: false,
+    notifiedValue: undefined,
   };
   forwardingSetFrames.push(frame);
   return frame;
@@ -97,15 +109,23 @@ export function markForwardedDefineProperty(target: object, key: PropertyKey): b
  *   的依赖, 已随本次通知触发)。
  * 只按 {target, key} 精确匹配在飞帧 —— 无关链的同名 key 嵌套写入的 target
  * 不同, 天然不会误标 (不会重蹈按 key 全标的覆辙)。
+ * value 是本次通知携带的落盘值: 被标记的帧记录为 notifiedValue, 后续分支
+ * 跳过通知前据此判断「窗口内是否又发生了新的同 key 落盘」(值一致才是真正的
+ * 重复通知, 不一致必须按差值补发, 见 ForwardingSetFrame.notifiedValue 注释)。
  * */
-export function markNotifiedInFlightFrames(target: object, key: PropertyKey): void {
+export function markNotifiedInFlightFrames(
+  target: object,
+  key: PropertyKey,
+  value: unknown
+): void {
   if (forwardingSetFrames.length === 0) {
     return;
   }
   for (const frame of forwardingSetFrames) {
     if (frame.target === target && frame.key === key) {
       frame.covered = true;
-      markCoveredForReceiverRoot(frame.receiver, key);
+      frame.notifiedValue = value;
+      markCoveredForReceiverRoot(frame.receiver, key, value);
     }
   }
 }
@@ -120,7 +140,11 @@ export function markNotifiedInFlightFrames(target: object, key: PropertyKey): vo
  * raw 对象: 只有 target === proxyToRaw.get(receiver) 的帧才是本链的帧。
  * (receiver 非本系统 proxy 时 proxyToRaw.get 返回 undefined, 天然无帧可标。)
  * */
-export function markCoveredForReceiverRoot(receiver: unknown, key: PropertyKey): void {
+export function markCoveredForReceiverRoot(
+  receiver: unknown,
+  key: PropertyKey,
+  value: unknown
+): void {
   const rootTarget = proxyToRaw.get(receiver as object);
   if (rootTarget === undefined) {
     return;
@@ -128,6 +152,7 @@ export function markCoveredForReceiverRoot(receiver: unknown, key: PropertyKey):
   for (const frame of forwardingSetFrames) {
     if (frame.target === rootTarget && frame.key === key) {
       frame.covered = true;
+      frame.notifiedValue = value;
     }
   }
 }

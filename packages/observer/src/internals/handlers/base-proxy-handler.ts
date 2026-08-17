@@ -19,6 +19,7 @@ import {
   queueReactionsForOperation,
   registerRunningReactionForOperation,
 } from "../reaction-runner";
+import { iterationKeyFor } from "../reaction-track";
 import { hasOwnProperty, isObject } from "../utils";
 
 /*
@@ -197,11 +198,52 @@ function set(
     // get trap 的副作用)。通知后把仍在栈上的同 key 外层帧标记为 covered,
     // 最外层 receiver 的兜底 add 据此跳过, 防止链上 reaction 双通知。
     // frame.covered: 窗口内已有同 {target,key} 的嵌套写入通知过 (见
-    // markNotifiedInFlightFrames), 本层 mismatch 通知是重复的, 跳过 (G2b)。
-    if (frame.hit && !frame.covered && hasOwnProperty.call(target, key)) {
+    // markNotifiedInFlightFrames)。落盘值与当时的已通知值一致时, 本层
+    // mismatch 通知是重复的, 跳过 (G2b); 不一致时说明 covered 之后窗口内
+    // 又发生了新的同 key 落盘 (如 setter 在嵌套赋值之后再显式
+    // defineProperty 改值 / 重定义 accessor), 必须按「已通知值→落盘值」
+    // 补发, 否则 reaction 永久停留在中间值 (对抗审查第 4 轮 #1/#3)。
+    if (frame.hit && hasOwnProperty.call(target, key)) {
       const landedValue = (target as Record<PropertyKey, unknown>)[key];
       let notified = false;
-      if (!hadKey) {
+      if (frame.covered) {
+        if (!Object.is(landedValue, frame.notifiedValue)) {
+          if (!hadKey) {
+            // key 相对窗口起点是新增: 保持 add (同时触发 ITERATION_KEY 依赖)
+            queueReactionsForOperation({
+              target,
+              key,
+              value: landedValue,
+              receiver,
+              type: "add",
+            });
+          } else {
+            // observers 最后看到的是 notifiedValue (帧入口的 oldValue 已过期),
+            // 以它为旧值按差值通知
+            queueReactionsForOperation({
+              target,
+              key,
+              value: landedValue,
+              oldValue: frame.notifiedValue,
+              receiver,
+              type: "set",
+            });
+          }
+          frame.notifiedValue = landedValue;
+          notified = true;
+        } else if (!hadKey) {
+          // 落盘值与已通知值一致: {target,key} 依赖已随嵌套通知触发, 跳过;
+          // 但 key 相对本帧窗口是新增, 键集合变化仍需通知迭代依赖
+          // (ownKeys / 数组 length 桶), 否则 Object.keys 观察者漏掉新键
+          queueReactionsForOperation({
+            target,
+            key: iterationKeyFor(target),
+            value: landedValue,
+            receiver,
+            type: "set",
+          });
+        }
+      } else if (!hadKey) {
         // 窗口内本层新增了该 key
         queueReactionsForOperation({
           target,
@@ -225,7 +267,7 @@ function set(
       if (notified) {
         // 只标记本转发链的根帧 (锚定 receiver), 不按 key 名匹配所有外层帧 ——
         // setter 内无关链的同名嵌套写入会误标外层链, 吞掉外层的兜底 add
-        markCoveredForReceiverRoot(receiver, key);
+        markCoveredForReceiverRoot(receiver, key, landedValue);
       }
     }
     return result as boolean;
@@ -236,17 +278,35 @@ function set(
     //   场景B): 发 add;
     // - 没落盘但也没有同 key 的链上层通知过 (frame.covered, 如 setter 把值
     //   写到了别处): 仍按既有语义发兜底 add, 通知依赖 receiver key 的 reactions;
-    // - 链上某层已按落盘状态通知过 (covered): 跳过, 防止同时依赖链上多层
-    //   key 的 reaction 收到两次通知。
+    // - 链上某层已按落盘状态通知过 (covered): 落盘值与已通知值一致时跳过
+    //   (防止同时依赖链上多层 key 的 reaction 收到两次通知); 不一致时说明
+    //   covered 之后窗口内又有新的同 key 落盘, 按「已通知值→落盘值」补发
+    //   (对抗审查第 4 轮 #2: 写入起点在被改层自身时, 根帧 landed 分支同样
+    //   受 covered 约束, 不再对已通知过的同一落盘值重复发 add)。
     if (hasOwnProperty.call(target, key)) {
-      queueReactionsForOperation({
-        target,
-        key,
-        value: (target as Record<PropertyKey, unknown>)[key],
-        receiver,
-        type: "add",
-      });
-      markNotifiedInFlightFrames(target, key);
+      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
+        // 已通知过该确切落盘值, {target,key} 依赖跳过; 但 key 相对本帧窗口
+        // 是新增, 键集合变化仍需通知迭代依赖 (原因见 mismatch 分支注释)
+        queueReactionsForOperation({
+          target,
+          key: iterationKeyFor(target),
+          value: landedValue,
+          receiver,
+          type: "set",
+        });
+      } else {
+        // key 相对窗口起点是新增, 保持 add (含 ITERATION_KEY 依赖),
+        // 携带落盘后的实际值
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          receiver,
+          type: "add",
+        });
+        markNotifiedInFlightFrames(target, key, landedValue);
+      }
     } else if (!frame.covered) {
       // 兜底 add (本链没有落盘, 写到了别处): 不做 markNotifiedInFlightFrames ——
       // 它不代表本 raw 上的落盘状态变化, 嵌套写入的兜底通知不得抑制外层另一次
@@ -260,8 +320,21 @@ function set(
     // 不能与 trap 捕获的旧 length 直接比较 ('5' !== 5 → 同值假通知)。
     // 用赋值后的 target.length (折叠后的新长度) 比较, 并把 canonical
     // 新长度作为通知的 value (下游收缩窗口计算依赖数值化的新长度)。
+    // covered 时与已通知值比较 (原因见上方 landed-add 分支注释)。
     const newLength = target.length;
-    if (!Object.is(newLength, oldValue)) {
+    if (frame.covered && Object.is(newLength, frame.notifiedValue)) {
+      // 已通知过该确切落盘值, 跳过
+    } else if (frame.covered) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue: frame.notifiedValue,
+        receiver,
+        type: "set",
+      });
+      markNotifiedInFlightFrames(target, key, newLength);
+    } else if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -270,7 +343,7 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key);
+      markNotifiedInFlightFrames(target, key, newLength);
     }
   } else {
     // 修改属性: 落盘后重读 target[key] 实际值参与比较。
@@ -279,9 +352,22 @@ function set(
     //   "赋值值 vs 旧值"比较会误判无变化而丢通知, 通知 value 也应携带
     //   实际落盘值 (debuggerReaction 会消费到);
     // - 引擎路由回 receiver 的普通赋值 landed === value, 行为不变;
-    // - 变换型 setter 写回值恰使观察值不变时, 不再发假通知。
+    // - 变换型 setter 写回值恰使观察值不变时, 不再发假通知;
+    // - covered 时与已通知值比较 (原因见上方 landed-add 分支注释)。
     const landedValue = (target as Record<PropertyKey, unknown>)[key];
-    if (!Object.is(landedValue, oldValue)) {
+    if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
+      // 已通知过该确切落盘值, 跳过
+    } else if (frame.covered) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: landedValue,
+        oldValue: frame.notifiedValue,
+        receiver,
+        type: "set",
+      });
+      markNotifiedInFlightFrames(target, key, landedValue);
+    } else if (!Object.is(landedValue, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -290,7 +376,7 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key);
+      markNotifiedInFlightFrames(target, key, landedValue);
     }
   }
   return result as boolean;

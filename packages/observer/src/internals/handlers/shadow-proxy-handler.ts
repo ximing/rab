@@ -8,6 +8,7 @@ import {
   queueReactionsForOperation,
   registerRunningReactionForOperation,
 } from "../reaction-runner";
+import { iterationKeyFor } from "../reaction-track";
 import { hasOwnProperty, isObject } from "../utils";
 import {
   markCoveredForReceiverRoot,
@@ -109,11 +110,49 @@ function set(
     // 且落盘后状态真的变化时才通知, 并把仍在栈上的同 key 外层帧标记为
     // covered (对抗审查第 3 轮 #1b, 原因见 base-proxy-handler 同名处理)。
     // frame.covered: 窗口内已有同 {target,key} 的嵌套写入通知过 (见
-    // markNotifiedInFlightFrames), 本层 mismatch 通知是重复的, 跳过 (G2b)。
-    if (frame.hit && !frame.covered && hasOwnProperty.call(target, key)) {
+    // markNotifiedInFlightFrames)。落盘值与当时的已通知值一致时, 本层
+    // mismatch 通知是重复的, 跳过 (G2b); 不一致时说明 covered 之后窗口内
+    // 又发生了新的同 key 落盘, 按「已通知值→落盘值」补发
+    // (原因见 base-proxy-handler 同名处理)。
+    if (frame.hit && hasOwnProperty.call(target, key)) {
       const landedValue = (target as Record<PropertyKey, unknown>)[key];
       let notified = false;
-      if (!hadKey) {
+      if (frame.covered) {
+        if (!Object.is(landedValue, frame.notifiedValue)) {
+          if (!hadKey) {
+            // key 相对窗口起点是新增: 保持 add (同时触发 ITERATION_KEY 依赖)
+            queueReactionsForOperation({
+              target,
+              key,
+              value: landedValue,
+              receiver,
+              type: "add",
+            });
+          } else {
+            // observers 最后看到的是 notifiedValue, 以它为旧值按差值通知
+            queueReactionsForOperation({
+              target,
+              key,
+              value: landedValue,
+              oldValue: frame.notifiedValue,
+              receiver,
+              type: "set",
+            });
+          }
+          frame.notifiedValue = landedValue;
+          notified = true;
+        } else if (!hadKey) {
+          // 落盘值与已通知值一致: {target,key} 依赖跳过; key 相对本帧窗口
+          // 是新增, 仍需通知迭代依赖 (原因见 base-proxy-handler 同名处理)
+          queueReactionsForOperation({
+            target,
+            key: iterationKeyFor(target),
+            value: landedValue,
+            receiver,
+            type: "set",
+          });
+        }
+      } else if (!hadKey) {
         queueReactionsForOperation({
           target,
           key,
@@ -135,33 +174,59 @@ function set(
       }
       if (notified) {
         // 只标记本转发链的根帧 (锚定 receiver), 原因见 forwarding-frames.ts
-        markCoveredForReceiverRoot(receiver, key);
+        markCoveredForReceiverRoot(receiver, key, landedValue);
       }
     }
     return result as boolean;
   }
   if (!hadKey) {
     // 新增属性: 落盘在 receiver 上 → add; 未落盘且无同 key 链上层通知过
-    // (frame.covered) → 兜底 add; 否则跳过
+    // (frame.covered) → 兜底 add; covered 时落盘值与已通知值一致 → 跳过,
+    // 不一致 (covered 后又有新的同 key 落盘) → 按差值补发
     // (原因见 base-proxy-handler 同名处理)
     if (hasOwnProperty.call(target, key)) {
-      queueReactionsForOperation({
-        target,
-        key,
-        value: (target as Record<PropertyKey, unknown>)[key],
-        receiver,
-        type: "add",
-      });
-      markNotifiedInFlightFrames(target, key);
+      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
+        // 已通知过该确切落盘值, {target,key} 依赖跳过; key 相对本帧窗口
+        // 是新增, 仍需通知迭代依赖 (原因见 base-proxy-handler 同名处理)
+        queueReactionsForOperation({
+          target,
+          key: iterationKeyFor(target),
+          value: landedValue,
+          receiver,
+          type: "set",
+        });
+      } else {
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          receiver,
+          type: "add",
+        });
+        markNotifiedInFlightFrames(target, key, landedValue);
+      }
     } else if (!frame.covered) {
       // 兜底 add 不做 markNotifiedInFlightFrames (原因见 base-proxy-handler 同名分支)
       queueReactionsForOperation({ target, key, value, receiver, type: "add" });
     }
   } else if (Array.isArray(target) && key === "length") {
-    // 数组 length 赋值用折叠后的 target.length 与旧值比较
-    // (原因见 base-proxy-handler 同名处理)
+    // 数组 length 赋值用折叠后的 target.length 与旧值比较;
+    // covered 时与已通知值比较 (原因见 base-proxy-handler 同名处理)
     const newLength = target.length;
-    if (!Object.is(newLength, oldValue)) {
+    if (frame.covered && Object.is(newLength, frame.notifiedValue)) {
+      // 已通知过该确切落盘值, 跳过
+    } else if (frame.covered) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: newLength,
+        oldValue: frame.notifiedValue,
+        receiver,
+        type: "set",
+      });
+      markNotifiedInFlightFrames(target, key, newLength);
+    } else if (!Object.is(newLength, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -170,13 +235,25 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key);
+      markNotifiedInFlightFrames(target, key, newLength);
     }
   } else {
-    // 修改属性: 落盘后重读实际值参与比较
-    // (原因见 base-proxy-handler 同名分支)
+    // 修改属性: 落盘后重读实际值参与比较;
+    // covered 时与已通知值比较 (原因见 base-proxy-handler 同名分支)
     const landedValue = (target as Record<PropertyKey, unknown>)[key];
-    if (!Object.is(landedValue, oldValue)) {
+    if (frame.covered && Object.is(landedValue, frame.notifiedValue)) {
+      // 已通知过该确切落盘值, 跳过
+    } else if (frame.covered) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: landedValue,
+        oldValue: frame.notifiedValue,
+        receiver,
+        type: "set",
+      });
+      markNotifiedInFlightFrames(target, key, landedValue);
+    } else if (!Object.is(landedValue, oldValue)) {
       queueReactionsForOperation({
         target,
         key,
@@ -185,7 +262,7 @@ function set(
         receiver,
         type: "set",
       });
-      markNotifiedInFlightFrames(target, key);
+      markNotifiedInFlightFrames(target, key, landedValue);
     }
   }
   return result as boolean;
