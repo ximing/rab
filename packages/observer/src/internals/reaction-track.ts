@@ -58,6 +58,18 @@ function isDeadRef(storedKey: StoredKey): boolean {
 const connectionStore = new WeakMap<object, ConnectionMap>();
 
 /*
+ * #12: Set → (所属 ConnectionMap, storedKey) 的反查表。
+ * releaseReactionKeyConnection 只有 Set 本身 (reaction.cleaners 存的是 Set
+ * 引用), 空集时需要借此找到并删除所属 Map entry, 否则空 Set 和 entry
+ * 永久残留 (实测 5 万动态 key 约 10MB, ~200B/key)。
+ * WeakMap 弱持有 Set, 不影响其 GC。
+ * */
+const setToOwner = new WeakMap<
+  Set<Reaction>,
+  { map: ConnectionMap; key: StoredKey }
+>();
+
+/*
  * 作用: 用于标记"迭代操作"(如 for...of, forEach),用 Symbol 避免与真实的属性名冲突
  * */
 const ITERATION_KEY = Symbol("iteration key");
@@ -82,7 +94,19 @@ export function iterationKeyFor(target: object): PropertyKey | symbol {
  * */
 export function storeObservable(obj: object): void {
   // 这个Map 将用于存储该 observable 的所有属性与 reactions 的映射 (obj.key -> reaction)
-  connectionStore.set(obj, new Map());
+  // #6: 同一 raw 可能先后被 shadow 与 deep 两种代理初始化,
+  // 不得重置已有连接表, 否则先建立的那一侧依赖会静默丢失。
+  if (!connectionStore.has(obj)) {
+    connectionStore.set(obj, new Map());
+  }
+}
+
+/*
+ * @internal 仅供测试使用的探针: 返回 target 当前有多少个 (key -> reactions) entry。
+ * 用于验证空 entry 是否被正确清理 (#12)。
+ * */
+export function getConnectionsCount(target: object): number {
+  return connectionStore.get(target)?.size ?? 0;
 }
 
 /*
@@ -110,6 +134,11 @@ export function registerReactionForOperation(
   if (!reactionsForKey) {
     reactionsForKey = new Set<Reaction>();
     reactionsForObj.set(wrapKey(actualKey), reactionsForKey);
+    // #12: 记录该 Set 的归属, 供空集时清除 entry 使用
+    setToOwner.set(reactionsForKey, {
+      map: reactionsForObj,
+      key: wrapKey(actualKey),
+    });
   }
 
   if (!reactionsForKey.has(reaction)) {
@@ -252,4 +281,20 @@ function releaseReactionKeyConnection(
   reactionsForKey: Set<Reaction>
 ): void {
   reactionsForKey.delete(this);
+  // #12: Set 已空时把 entry 从所属 ConnectionMap 里删掉, 避免空 entry 永久残留。
+  //
+  // 安全性 (不会出现新旧 Set 分裂漏清理):
+  // - entry 删除后, 后续同 key 再注册会从 Map 查不到 entry, 走新建 Set 的
+  //   分支, reaction.cleaners 推入的是新 Set —— 旧 Set 不会复活;
+  // - Set 变空意味着所有曾注册进它的 reaction 都已被 delete, 而每个
+  //   reaction 的 delete 都发生在 releaseReaction 中 (随后其 cleaners 被
+  //   置空), 因此旧 Set 此后不会再出现在任何 cleaners 里, 对它的再次
+  //   delete 是无害的空操作;
+  // - 下面的恒等防御检查确保 (理论上的) 脱落旧 Set 不会误删后来新注册的 entry。
+  if (reactionsForKey.size === 0) {
+    const owner = setToOwner.get(reactionsForKey);
+    if (owner && owner.map.get(owner.key) === reactionsForKey) {
+      owner.map.delete(owner.key);
+    }
+  }
 }

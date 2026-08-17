@@ -1,4 +1,5 @@
 import { observable as internalObservable } from "./internals/observable";
+import type { ObservableOptions } from "./internals/types";
 
 /**
  * Creates an observable proxy for the given object.
@@ -14,8 +15,17 @@ import { observable as internalObservable } from "./internals/observable";
  * state.count++; // Triggers the observer
  * ```
  */
-export function observable<T extends object>(obj: T): T;
+export function observable<T extends object>(
+  obj: T,
+  options?: ObservableOptions
+): T;
 export function observable<T extends object>(obj?: T): T | object;
-export function observable<T extends object>(obj: T = {} as T): T {
-  return internalObservable(obj);
+export function observable<T extends object>(
+  obj: T = {} as T,
+  options?: ObservableOptions
+): T {
+  // #6: 此前 options 在这个公开包装层被丢弃, observable(raw, options) 的
+  // 自定义 proxyHandlers/collectionHandlers/reactionHandlers 从未生效。
+  // 原样透传给内部实现。
+  return internalObservable(obj, options);
 }
