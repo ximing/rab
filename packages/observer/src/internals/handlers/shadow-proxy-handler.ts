@@ -80,7 +80,8 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作，再触发 reactions，确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧，防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  forwardingSetFrames.push({ target, key });
+  const frame: ForwardingSetFrame = { target, key, hit: false, covered: false };
+  forwardingSetFrames.push(frame);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
@@ -98,11 +99,57 @@ function set(
     receiver !== null &&
     target !== proxyToRaw.get(receiver)
   ) {
+    // 转发 walk 的中间层: 仅在本帧被 defineProperty trap 命中过 (frame.hit)
+    // 且落盘后状态真的变化时才通知, 并把仍在栈上的同 key 外层帧标记为
+    // covered (对抗审查第 3 轮 #1b, 原因见 base-proxy-handler 同名处理)。
+    if (frame.hit && hasOwnProperty.call(target, key)) {
+      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      let notified = false;
+      if (!hadKey) {
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          receiver,
+          type: "add",
+        });
+        notified = true;
+      } else if (landedValue !== oldValue) {
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          oldValue,
+          receiver,
+          type: "set",
+        });
+        notified = true;
+      }
+      if (notified) {
+        for (const outer of forwardingSetFrames) {
+          if (outer.key === key) {
+            outer.covered = true;
+          }
+        }
+      }
+    }
     return result as boolean;
   }
   if (!hadKey) {
-    // 新增属性，会触发依赖 ITERATION_KEY 的 reactions(因为键集合改变了)
-    queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+    // 新增属性: 落盘在 receiver 上 → add; 未落盘且无同 key 链上层通知过
+    // (frame.covered) → 兜底 add; 否则跳过
+    // (原因见 base-proxy-handler 同名处理)
+    if (hasOwnProperty.call(target, key)) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: (target as Record<PropertyKey, unknown>)[key],
+        receiver,
+        type: "add",
+      });
+    } else if (!frame.covered) {
+      queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+    }
   } else if (Array.isArray(target) && key === "length") {
     // 数组 length 赋值用折叠后的 target.length 与旧值比较
     // (原因见 base-proxy-handler 同名处理)
@@ -117,19 +164,20 @@ function set(
         type: "set",
       });
     }
-  } else if (value !== oldValue) {
-    // 修改属性
-    // 已知限制 (归 G3 值比较批次, 原因见 base-proxy-handler 同名分支):
-    // 自有 accessor setter 内对同一 key defineProperty 落盘变换值时,
-    // "赋值值 vs 旧值"比较可能误判无变化而丢通知。
-    queueReactionsForOperation({
-      target,
-      key,
-      value,
-      oldValue,
-      receiver,
-      type: "set",
-    });
+  } else {
+    // 修改属性: 落盘后重读实际值参与比较
+    // (原因见 base-proxy-handler 同名分支)
+    const landedValue = (target as Record<PropertyKey, unknown>)[key];
+    if (landedValue !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: landedValue,
+        oldValue,
+        receiver,
+        type: "set",
+      });
+    }
   }
   return result as boolean;
 }
@@ -183,6 +231,11 @@ function construct(
 interface ForwardingSetFrame {
   target: object;
   key: PropertyKey;
+  // 本帧转发窗口内, defineProperty trap 命中过该帧
+  hit: boolean;
+  // 转发 walk 链上同 key 的某一层已按落盘状态发出通知,
+  // 最外层 receiver 的兜底 add 应跳过 (防止链上 reaction 双通知)
+  covered: boolean;
 }
 const forwardingSetFrames: ForwardingSetFrame[] = [];
 
@@ -196,13 +249,16 @@ function defineProperty(
   descriptor: PropertyDescriptor
 ): boolean {
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
-  //
-  // 已知限制 (对抗审查确认, 归 G3 值比较批次, 详见 base-proxy-handler 同名处理):
-  // 转发窗口内用户对**同一 {target,key}** 的 Object.defineProperty 与引擎路由回的
-  // [[DefineOwnProperty]] 不可区分, 会被当转发透传; 若落盘值与 set trap 捕获的
-  // oldValue 满足 value === oldValue, 通知静默丢失。
-  // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
-  if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
+  // (命中帧标记 hit=true, 命中帧所在层的 set trap 落盘后重读实际值参与比较,
+  //  详见 base-proxy-handler 同名处理)
+  let forwarded = false;
+  for (const frame of forwardingSetFrames) {
+    if (frame.target === target && frame.key === key) {
+      frame.hit = true;
+      forwarded = true;
+    }
+  }
+  if (forwarded) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
@@ -235,10 +291,9 @@ function defineProperty(
         type: "set",
       });
     }
-  } else if (
-    descriptor.value !== undefined &&
-    descriptor.value !== oldValue
-  ) {
+  } else if ("value" in descriptor && descriptor.value !== oldValue) {
+    // 'value' in descriptor 判定数据描述符 (原因见 base-proxy-handler 同名处理):
+    // 显式 { value: undefined } 覆盖旧值是真实变化, 不得静默跳过
     queueReactionsForOperation({
       target,
       key,

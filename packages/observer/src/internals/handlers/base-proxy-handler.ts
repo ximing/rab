@@ -138,7 +138,8 @@ function set(
   const oldValue = (target as Record<PropertyKey, unknown>)[key];
   // 先执行赋值操作, 再触发 reactions, 确保 reactions 看到的是新值
   // 转发期间记录当前 {target, key} 帧, 防止 Reflect.set 路由回 defineProperty trap 造成双重通知
-  forwardingSetFrames.push({ target, key });
+  const frame: ForwardingSetFrame = { target, key, hit: false, covered: false };
+  forwardingSetFrames.push(frame);
   let result: boolean;
   try {
     result = Reflect.set(target, key, value, receiver) as boolean;
@@ -180,11 +181,68 @@ function set(
     receiver !== null &&
     target !== proxyToRaw.get(receiver)
   ) {
+    // 转发 walk 的中间层: 通知责任默认归最外层 receiver 的 set trap。
+    // 例外 (对抗审查第 3 轮 #1b): 原型链 setter 对本层 observable 的同 key
+    // defineProperty 会命中本层转发帧被透传 (防双通知所必需), 本层 set trap
+    // 又因 receiver 不匹配走到这里 —— 若不通知, 本层 reaction 丢通知。
+    // 仅在本帧确实被 defineProperty trap 命中过 (frame.hit, 排除"setter 只改
+    // 外部变量/写 raw 对象"等本层 raw 实际未被动过的场景) 且落盘后状态真的
+    // 变化时才通知; 仅读自有属性, 不沿原型链 (避免 raw 读触发外层 proxy
+    // get trap 的副作用)。通知后把仍在栈上的同 key 外层帧标记为 covered,
+    // 最外层 receiver 的兜底 add 据此跳过, 防止链上 reaction 双通知。
+    if (frame.hit && hasOwnProperty.call(target, key)) {
+      const landedValue = (target as Record<PropertyKey, unknown>)[key];
+      let notified = false;
+      if (!hadKey) {
+        // 窗口内本层新增了该 key
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          receiver,
+          type: "add",
+        });
+        notified = true;
+      } else if (landedValue !== oldValue) {
+        queueReactionsForOperation({
+          target,
+          key,
+          value: landedValue,
+          oldValue,
+          receiver,
+          type: "set",
+        });
+        notified = true;
+      }
+      if (notified) {
+        for (const outer of forwardingSetFrames) {
+          if (outer.key === key) {
+            outer.covered = true;
+          }
+        }
+      }
+    }
     return result as boolean;
   }
   if (!hadKey) {
-    // 新增属性，会触发依赖 ITERATION_KEY 的 reactions(因为键集合改变了)
-    queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+    // 新增属性，会触发依赖 ITERATION_KEY 的 reactions(因为键集合改变了)。
+    // - key 落盘在 receiver 的 raw 上 (引擎路由回 receiver 的普通原型链赋值,
+    //   场景B): 发 add;
+    // - 没落盘但也没有同 key 的链上层通知过 (frame.covered, 如 setter 把值
+    //   写到了别处): 仍按既有语义发兜底 add, 通知依赖 receiver key 的 reactions;
+    // - 链上某层已按落盘状态通知过 (covered): 跳过, 防止同时依赖链上多层
+    //   key 的 reaction 收到两次通知。
+    if (hasOwnProperty.call(target, key)) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: (target as Record<PropertyKey, unknown>)[key],
+        receiver,
+        type: "add",
+      });
+    } else if (!frame.covered) {
+      queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+    }
   } else if (Array.isArray(target) && key === "length") {
     // 数组 length 赋值: 引擎按 ArraySetLength 规则把 value 折叠成
     // canonical number 后生效, 原始 value 可能是字符串 ('5') 或非整数,
@@ -202,20 +260,25 @@ function set(
         type: "set",
       });
     }
-  } else if (value !== oldValue) {
-    // 修改属性
-    // 已知限制 (归 G3 值比较批次): 自有 accessor 的 setter 内若对同一 key
-    // defineProperty 落盘了变换后的值, 这里以"赋值值 vs 旧值"比较可能误判为
-    // 无变化 (且通知时 value 携带原始入参而非实际落盘值, debuggerReaction
-    // 会消费到)。落盘后重读 target[key] 实际值再比较可补偿, 属 G3 范围。
-    queueReactionsForOperation({
-      target,
-      key,
-      value,
-      oldValue,
-      receiver,
-      type: "set",
-    });
+  } else {
+    // 修改属性: 落盘后重读 target[key] 实际值参与比较。
+    // - 自有 accessor 的 setter 内可能对同一 key defineProperty 落盘
+    //   变换后的值 (defineProperty trap 命中转发帧只透传不通知),
+    //   "赋值值 vs 旧值"比较会误判无变化而丢通知, 通知 value 也应携带
+    //   实际落盘值 (debuggerReaction 会消费到);
+    // - 引擎路由回 receiver 的普通赋值 landed === value, 行为不变;
+    // - 变换型 setter 写回值恰使观察值不变时, 不再发假通知。
+    const landedValue = (target as Record<PropertyKey, unknown>)[key];
+    if (landedValue !== oldValue) {
+      queueReactionsForOperation({
+        target,
+        key,
+        value: landedValue,
+        oldValue,
+        receiver,
+        type: "set",
+      });
+    }
   }
   return result as boolean;
 }
@@ -283,6 +346,12 @@ function construct(
 interface ForwardingSetFrame {
   target: object;
   key: PropertyKey;
+  // 本帧转发窗口内, defineProperty trap 命中过该帧 (引擎路由回 receiver 的
+  // [[DefineOwnProperty]], 或原型链 setter 对本层的同 key defineProperty)
+  hit: boolean;
+  // 转发 walk 链上同 key 的某一层已按落盘状态发出通知,
+  // 最外层 receiver 的兜底 add 应跳过 (防止链上 reaction 双通知)
+  covered: boolean;
 }
 const forwardingSetFrames: ForwardingSetFrame[] = [];
 
@@ -298,15 +367,20 @@ function defineProperty(
 ): boolean {
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
   //
-  // 已知限制 (对抗审查确认, 归 G3 值比较批次): 转发窗口内用户对**同一 {target,key}**
-  // 的 Object.defineProperty 与引擎路由回的 [[DefineOwnProperty]] 在 trap 边界不可区分,
-  // 会被当转发透传。若 setter 内 defineProperty 落盘的值与 set trap 捕获的 oldValue
-  // 满足 value === oldValue, set trap 也不通知 → 值已变但 reaction 静默 (丢通知)。
-  // 实测 master (无 defineProperty trap) 与旧布尔实现同场景同样丢通知, 非帧栈方案的回归。
-  // {target,key} 匹配无法进一步收窄 (路由回的 key 必然等于正在写的 key);
-  // 真正的修法在 set trap 侧落盘后重读 target[key] 实际值参与变化比较。
+  // 转发窗口内用户对**同一 {target,key}** 的 Object.defineProperty 与引擎路由回的
+  // [[DefineOwnProperty]] 在 trap 边界不可区分, 同样会被透传。这不再丢通知:
+  // 命中的帧标记 hit=true, 命中帧所在层的 set trap 落盘后重读 target[key]
+  // 实际值参与变化比较 (见 set trap 注释), setter 同 key defineProperty
+  // 变换落盘值时由 set trap 统一通知。
   // 详见 src/__tests__/forwarding-window-documented-limitations.test.ts。
-  if (forwardingSetFrames.some((frame) => frame.target === target && frame.key === key)) {
+  let forwarded = false;
+  for (const frame of forwardingSetFrames) {
+    if (frame.target === target && frame.key === key) {
+      frame.hit = true;
+      forwarded = true;
+    }
+  }
+  if (forwarded) {
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
@@ -344,10 +418,11 @@ function defineProperty(
         type: "set",
       });
     }
-  } else if (
-    descriptor.value !== undefined &&
-    descriptor.value !== oldValue
-  ) {
+  } else if ("value" in descriptor && descriptor.value !== oldValue) {
+    // 用 'value' in descriptor 判定数据描述符而非 value !== undefined:
+    // 显式 { value: undefined } 覆盖旧值是真实变化, 不得静默跳过
+    // (对抗审查第 3 轮 #1c); accessor descriptor 与无 value 的部分 define
+    // 没有 'value' 字段, 仍按现行设计跳过数据值通知。
     queueReactionsForOperation({
       target,
       key,
