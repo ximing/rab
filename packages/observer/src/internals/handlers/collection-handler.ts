@@ -10,6 +10,7 @@ import {
   IteratorResult,
   PatchableIterator,
 } from "../types";
+import { toRawIfProxy } from "../utils";
 
 /*
  * 当你使用 Map 或 Set 的迭代器方法(如 values(), entries(), Symbol.iterator)时,这些方法返回的是一个迭代器对象。
@@ -55,6 +56,8 @@ function patchIterator<T>(
 export const collectionHandlers = {
   // 作用: 拦截 map.has(key) 或 set.has(value) 操作,建立依赖关系。
   has(this: Collection, key: unknown): boolean {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     // this 是 observable(Proxy),需要获取原始的 Map/Set
     const target = proxyToRaw.get(this);
     if (
@@ -78,6 +81,8 @@ export const collectionHandlers = {
     return target.has(key as object);
   },
   get(this: Collection, key: unknown): unknown {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Map || target instanceof WeakMap)) {
       return undefined;
@@ -90,6 +95,8 @@ export const collectionHandlers = {
     return observableChild(target.get(key as object), target);
   },
   add(this: Collection, key: unknown): Collection {
+    // 解包: Set 的 key 就是 value, 存储与通知都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Set || target instanceof WeakSet)) {
       return this;
@@ -110,6 +117,9 @@ export const collectionHandlers = {
     return this;
   },
   set(this: Collection, key: unknown, value: unknown): Collection {
+    // 解包: key 决定存储/依赖身份, value 必须以 raw 落盘 (与 base set trap 对齐)
+    key = toRawIfProxy(key);
+    value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Map || target instanceof WeakMap)) {
       return this;
@@ -144,6 +154,8 @@ export const collectionHandlers = {
     return this;
   },
   delete(this: Collection, key: unknown): boolean {
+    // 解包: 删除与通知都必须使用与存储一致的 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (
       !target ||

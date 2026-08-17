@@ -9,6 +9,7 @@ import type {
   IteratorResult,
   PatchableIterator,
 } from "../types";
+import { toRawIfProxy } from "../utils";
 
 /*
  * 浅层集合处理器 - 用于 Map、Set、WeakMap、WeakSet
@@ -46,6 +47,8 @@ function shadowPatchIterator<T>(
 export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 map.has(key) 或 set.has(value) 操作，建立依赖关系
   has(this: Collection, key: unknown): boolean {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (
       !target ||
@@ -70,6 +73,8 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 map.get(key) 操作，建立依赖关系但不包装返回值
   get(this: Collection, key: unknown): unknown {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Map || target instanceof WeakMap)) {
       return undefined;
@@ -85,6 +90,8 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 set.add(value) 操作
   add(this: Collection, key: unknown): Collection {
+    // 解包: Set 的 key 就是 value, 存储与通知都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Set || target instanceof WeakSet)) {
       return this;
@@ -107,6 +114,9 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 map.set(key, value) 操作
   set(this: Collection, key: unknown, value: unknown): Collection {
+    // 解包: key 决定存储/依赖身份, value 必须以 raw 落盘
+    key = toRawIfProxy(key);
+    value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
     if (!target || !(target instanceof Map || target instanceof WeakMap)) {
       return this;
@@ -143,6 +153,8 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 delete 操作
   delete(this: Collection, key: unknown): boolean {
+    // 解包: 删除与通知都必须使用与存储一致的 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
     if (
       !target ||

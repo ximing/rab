@@ -15,6 +15,27 @@ export function raw<T extends object>(obj: T): T {
 }
 
 /*
+ * 集合方法入参解包 (key / value 通用)。
+ *
+ * collectionHandlers / shadowCollectionHandlers 的 set/add/get/has/delete
+ * 拿到的参数可能是 observable proxy (例如 map.set(state.box, 1) 里 state.box
+ * 是深层包装后的对象)。集合内部按对象身份存取, 且依赖注册 (wrapKey) 按 key
+ * 对象身份缓存 WeakRef —— proxy 与 raw 是两个不同身份:
+ *   - 存 proxy 取 raw: Map/Set 查找直接失灵;
+ *   - 注册用一种身份、通知用另一种: 依赖落在不同 WeakRef 上, 永久漏通知。
+ * 因此入口处统一解包: 是对象且是 observable proxy 时替换为 raw 对象。
+ */
+export function toRawIfProxy<T>(value: T): T {
+  if (isObject(value)) {
+    const rawValue = proxyToRaw.get(value);
+    if (rawValue !== undefined) {
+      return rawValue as T;
+    }
+  }
+  return value;
+}
+
+/*
  * 读取自有属性的**数据**值, 不触发 accessor getter。
  *
  * G3 不变量 (defineProperty trap 于 538b29e 确立, set/deleteProperty trap 对齐):
