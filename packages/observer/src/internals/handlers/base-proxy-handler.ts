@@ -20,7 +20,12 @@ import {
   registerRunningReactionForOperation,
 } from "../reaction-runner";
 import { iterationKeyFor } from "../reaction-track";
-import { hasOwnProperty, isObject, ownDataValue } from "../utils";
+import {
+  hasOwnProperty,
+  isObject,
+  ownDataValue,
+  toRawIfProxy,
+} from "../utils";
 
 /*
  * 存储所有内置的 Symbol(如 Symbol.iterator, Symbol.toStringTag 等)
@@ -137,9 +142,9 @@ function set(
   // 解包后:
   // state2 的原始对象存储的是 state1 的原始对象
   // 而不是 state1 的 Proxy
-  if (isObject(value)) {
-    value = proxyToRaw.get(value) || value;
-  }
+  // toRawIfProxy 守卫为 object || function（函数是一等 observable，
+  // 与集合 trap / observableChild 对齐，G5 审查 issue #6）
+  value = toRawIfProxy(value);
   // 判断是新增属性还是修改属性
   const hadKey = hasOwnProperty.call(target, key);
   // 用于比较值是否真的改变了。

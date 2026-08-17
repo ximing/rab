@@ -9,7 +9,7 @@ import {
   registerRunningReactionForOperation,
 } from "../reaction-runner";
 import { iterationKeyFor } from "../reaction-track";
-import { hasOwnProperty, isObject, ownDataValue } from "../utils";
+import { hasOwnProperty, ownDataValue, toRawIfProxy } from "../utils";
 import {
   markCoveredForReceiverRoot,
   markForwardedDefineProperty,
@@ -79,9 +79,9 @@ function set(
     );
   }
   // 解包 observable 对象，存储原始值
-  if (isObject(value)) {
-    value = proxyToRaw.get(value) || value;
-  }
+  // toRawIfProxy 守卫为 object || function（函数是一等 observable，
+  // 与集合 trap / observableChild 对齐，G5 审查 issue #6）
+  value = toRawIfProxy(value);
   // 判断是新增属性还是修改属性
   const hadKey = hasOwnProperty.call(target, key);
   // 用于比较值是否真的改变了。

@@ -117,7 +117,11 @@ export const collectionHandlers = {
     return this;
   },
   set(this: Collection, key: unknown, value: unknown): Collection {
-    // 解包: key 决定存储/依赖身份, value 必须以 raw 落盘 (与 base set trap 对齐)
+    // 解包: key 决定存储/依赖身份, value 必须以 raw 落盘 (与 base set trap 对齐)。
+    // 注意由此推导的迭代语义: key 以 raw 身份落盘, keys()/entries() 迭代返回的
+    // 是 raw 而非传入的 proxy (value 侧经 observableChild 包装保持 proxy 身份,
+    // key 侧不包装 —— 不对称但与 Vue 3 一致, Vue 也不包装 key;
+    // 见 keys() 处 TODO 与 collection-unwrap-iteration-and-shadow.test.ts 的 pin)。
     key = toRawIfProxy(key);
     value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
@@ -252,6 +256,12 @@ export const collectionHandlers = {
       type: "iterate",
     });
     // TODO: 考虑一下是否需要 patchIterator  对比 vue Reactive Mobx 看一下大家是怎么决策的
+    // 现状（有意的不对称, G5 审查 issue #5 留档）: 集合内部只存 raw 身份,
+    // values()/Symbol.iterator/entries 的 value 半边经 patchIterator 包装为
+    // observable, 而 keys()/entries 的 key 半边直接返回 raw —— 用户在 reaction
+    // 里 [...m.keys()] 后直接读 key 对象属性将不被追踪。与 Vue 3 (reactive 的
+    // key 不包装) 一致; 若未来决定对齐 values 的深度语义, 需另行评估通知面。
+    // 行为由 collection-unwrap-iteration-and-shadow.test.ts:123 pin 住。
     return target.keys() as IterableIterator<unknown>;
   },
   values(this: Collection): IterableIterator<unknown> {
