@@ -56,11 +56,36 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
     "mime": "^2.6.0",
-    "mos-mss": "^1.1.10",
     "node-fetch": "^3.3.2",
     "prettier": "^2.8.8",
     "tsx": "^4.19.4",
     "turbo": "^2.9.14",
     "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@isaacs/brace-expansion": "5.0.1",
+      "fast-uri": "3.1.5",
+      "js-yaml": "4.3.1",
+      "postcss": "8.5.23",
+      "picomatch": "4.0.4",
+      "rollup": ">=4.59.0 <5",
+      "flatted": "3.4.2",
+      "handlebars": "4.7.9",
+      "lodash": "4.18.0",
+      "esbuild": "0.25.11",
+      "ajv": "6.14.0",
+      "yaml": "2.8.0",
+      "ws": "8.21.0",
+      "diff": ">=4.0.4 <5 || >=5",
+      "minimatch@<3.1.4": "3.1.4",
+      "minimatch@>=9.0.0 <9.0.7": "9.0.7",
+      "minimatch@>=10.0.0 <10.2.3": "10.2.3",
+      "yaml@<2.8.3": "2.8.3",
+      "@babel/core@<7.29.6": "7.29.6",
+      "@tootallnate/once@<2.0.1": "2.0.1",
+      "brace-expansion@<1.1.18": "1.1.18",
+      "brace-expansion@>=2.0.0 <2.1.4": "2.1.4"
+    }
   }
 }
