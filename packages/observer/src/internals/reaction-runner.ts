@@ -80,12 +80,28 @@ export function runAsReaction<T extends Function, R>(
     // 因为这次执行可能访问不同的属性,需要重新建立依赖
     releaseReaction(reaction);
 
+    // 是否为该 reaction 的首次执行 (observe 首跑或 lazy 手动首跑)
+    const firstRun = !reaction.everRan;
     try {
       // 将 reaction 推入栈顶,标记为"当前正在运行"
       // 执行原始函数 fn
       // 在执行期间,任何对 observable 属性的访问都会被追踪到这个 reaction  (observable.prop -> reaction)
       reactionStack.push(reaction);
-      return Reflect.apply(fn, context, args) as R;
+      const result = Reflect.apply(fn, context, args) as R;
+      reaction.everRan = true;
+      return result;
+    } catch (error) {
+      if (firstRun) {
+        // 首次执行抛错: reaction 处于"半成品"状态 —— 抛错前注册的部分依赖
+        // 还在 connectionStore 里, 而调用者拿到异常后自然认为它已失败,
+        // 无人再 unobserve 它, 后续每次写入都会复活这个僵尸 reaction。
+        // 首跑失败即自动脱管 (标记 unobserved + 释放全部依赖连接), 再上抛。
+        // 注意与重跑语义的区分: 已成功跑过的 reaction 在后续重跑中抛错
+        // (G4 错误隔离范畴) 保持存活 —— 临时性错误不杀死活着的 reaction。
+        reaction.unobserved = true;
+        releaseReaction(reaction);
+      }
+      throw error;
     } finally {
       // 无论执行成功还是失败,都要将 reaction 从栈中移除
       reactionStack.pop();
