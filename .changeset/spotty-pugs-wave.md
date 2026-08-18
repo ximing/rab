@@ -28,3 +28,5 @@ Fixes reactivity correctness and safety issues in @rabjs/observer:
 - **unobserve 语义明确与对齐（G8）**: README 明确 unobserve 不撤回在途执行——手动调用或已被函数型 scheduler 排期（如 `setTimeout`）的执行仍会落地一次，期间不建立任何新依赖；仅实现 `add` 的对象型 scheduler 不再在 unobserve 时抛 `TypeError`（`ReactionScheduler.delete` 变为可选接口）；在途执行的 unobserved reaction 被压入 reaction 栈，嵌套在运行中 reaction 内手动调用时不再把读取泄漏注册到外层 reaction（外层不再被其从未读过的 key 触发）。
 
 注意: 此前依赖"对 observable 赋值 `__proto__`"或"defineProperty 不触发通知"的代码行为会变化（前者抛错）；shadow 集合依赖"存入 proxy、经 get 返回 proxy 并追踪嵌套变更"的用法需迁移为 deep 集合（见上）。`new Function("return this")` 的 globalObj fallback 按旧 React Native 兼容性要求保留未动。G6 起，同一 raw 对象经 `observable()` 与 `shadowObservable()` 返回的是两个不同 proxy（此前第二次调用会复用第一个的缓存），依赖"两种模式返回同一 proxy"的代码需调整。
+
+- **终审遗留修复 (A 档)**: queue 时 throwing debugger 不再中断同批其余 reaction（错误并入首错收集，且不吞掉调度本身）；`observe()` 首跑抛错自动注销 reaction（不再留下被后续写入复活的"僵尸"依赖——已成功跑过的 reaction 重跑抛错仍保持存活，两语义并存）；README 修正 add-only scheduler 契约矛盾，并文档化 debugger 在途事件、错误隔离、accessor 同值通知、ES2024 Set 方法返回 raw 成员等行为边界。
