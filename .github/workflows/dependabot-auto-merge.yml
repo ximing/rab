@@ -100,7 +100,7 @@ jobs:
 
       - name: Setup pnpm
         if: steps.classify.outputs.eligible == 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.22.0
 
