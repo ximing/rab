@@ -69,7 +69,6 @@
   "dependencies": {
     "@rabjs/observer": "workspace:*",
     "@rabjs/service": "workspace:*",
-    "nanoid": "^5.1.16",
     "use-sync-external-store": "^1.6.0"
   }
 }
