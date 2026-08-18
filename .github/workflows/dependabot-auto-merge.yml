@@ -94,7 +94,7 @@ jobs:
       # ---- 以下仅在 eligible 时执行: 构建 + 核心测试作为合并闸门 ----
       - name: Checkout PR head
         if: steps.classify.outputs.eligible == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
