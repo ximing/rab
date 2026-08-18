@@ -169,10 +169,18 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     });
   });
 
-  await new Promise<void>((resolve) => httpServer.listen(port, resolve));
+  await new Promise<void>((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(port, () => {
+      httpServer.off('error', reject);
+      resolve();
+    });
+  });
+  const addr = httpServer.address();
+  const boundPort = typeof addr === 'object' && addr !== null ? addr.port : port;
 
   return {
-    port,
+    port: boundPort,
     registry,
     dispatcher,
     eventsBus,

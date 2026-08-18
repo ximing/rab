@@ -1,7 +1,6 @@
 import { setupRNDebug, registerHandler, resetRNDebugForTest } from '../setup';
-import { createCommandExecutor } from '../command-executor';
-import { createWsClient } from '../ws-client';
-import type { MinimalWebSocket, WebSocketConstructor } from '../ws-client';
+import type { MinimalWebSocket } from '../ws-client';
+import { waitFor } from './wait-for';
 
 class FakeWebSocket implements MinimalWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -78,7 +77,10 @@ describe('setupRNDebug', () => {
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} }));
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c2', type: 'device.info', payload: {} }));
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c3', type: 'console.getLogs', payload: { limit: 10 } }));
-    await new Promise((r) => setTimeout(r, 100));
+    await waitFor(
+      () => ws.sent.map((s) => JSON.parse(s)).filter((m) => m.kind === 'result').length >= 3,
+      'three command results'
+    );
     const results = ws.sent
       .map((s) => JSON.parse(s))
       .filter((m) => m.kind === 'result');
@@ -92,7 +94,10 @@ describe('setupRNDebug', () => {
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'app.ping', payload: {} }));
-    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(
+      () => ws.sent.some((s) => JSON.parse(s).kind === 'result'),
+      'custom handler result'
+    );
     expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c1',
       status: 'ok',
@@ -107,7 +112,10 @@ describe('setupRNDebug', () => {
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c9', type: 'app.late', payload: {} }));
-    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(
+      () => ws.sent.some((s) => JSON.parse(s).kind === 'result'),
+      'late-registered handler result'
+    );
     expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c9',
       status: 'ok',

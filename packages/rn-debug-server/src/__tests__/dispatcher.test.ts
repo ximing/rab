@@ -1,5 +1,6 @@
 import { createCommandDispatcher } from '../command-dispatcher';
 import type { DeviceRegistry } from '../types';
+import { waitFor } from './wait-for';
 
 function makeRegistry(ids: string[]): DeviceRegistry & { sockets: Map<string, { sent: string[] }> } {
   const sockets = new Map<string, { sent: string[] }>();
@@ -56,13 +57,12 @@ describe('CommandDispatcher', () => {
     const dispatcher = createCommandDispatcher({ registry: reg });
     const p1 = dispatcher.sendCommand('dev-1', { type: 'a' });
     dispatcher.sendCommand('dev-1', { type: 'b' });
-    await new Promise((r) => setTimeout(r, 50));
     expect(reg.sockets.get('dev-1')!.sent).toHaveLength(1);
 
     const first = JSON.parse(reg.sockets.get('dev-1')!.sent[0]);
     dispatcher.handleResult({ kind: 'result', id: first.id, status: 'ok', result: null });
     await p1;
-    await new Promise((r) => setTimeout(r, 20));
+    await waitFor(() => reg.sockets.get('dev-1')!.sent.length === 2, 'second queued command flushed');
     expect(reg.sockets.get('dev-1')!.sent).toHaveLength(2);
   });
 
