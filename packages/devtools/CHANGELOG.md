@@ -1,5 +1,12 @@
 # @rabjs/devtools
 
+## 9.2.1
+
+### Patch Changes
+
+- Updated dependencies [c3db642]
+  - @rabjs/service@9.2.1
+
 ## 9.2.0
 
 ### Minor Changes
