@@ -55,12 +55,12 @@
     "glob": "^11.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "mime": "^2.6.0",
+    "mime": "^4.1.0",
     "node-fetch": "^3.3.2",
     "prettier": "^2.8.8",
-    "tsx": "^4.19.4",
-    "turbo": "^2.9.14",
-    "typescript": "^5.8.3"
+    "tsx": "^4.23.12",
+    "turbo": "^2.10.10",
+    "typescript": "^5.9.3"
   },
   "pnpm": {
     "overrides": {
@@ -73,7 +73,7 @@
       "flatted": "3.4.2",
       "handlebars": "4.7.9",
       "lodash": "4.18.0",
-      "esbuild": "0.25.11",
+      "esbuild": "0.28.2",
       "ajv": "6.14.0",
       "yaml": "2.8.0",
       "ws": "8.21.0",
