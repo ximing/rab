@@ -156,8 +156,8 @@ export function queueReactionsForOperation(operation: Operation): void {
     const length = reactionsArray.length;
     // 优化: 提前检查 reactionStack 是否为空,避免重复调用 has()
     const stackSize = reactionStack.size;
-    // 单个 reaction(或其 scheduler 调用)抛错不得中断同批其余 reaction;
-    // 收集本批第一个错误,全部执行完毕后在变更调用点 rethrow。
+    // 单个 reaction(或其 scheduler 调用 / 其 debugger)抛错不得中断同批其余
+    // reaction; 收集本批第一个错误,全部执行完毕后在变更调用点 rethrow。
     // 异步执行的错误(如 setTimeout 里的 reaction)天然不经过这里。
     let firstError: unknown;
     let hasError = false;
@@ -168,7 +168,6 @@ export function queueReactionsForOperation(operation: Operation): void {
       // 这里把整个链路都排除了，但是可能出现一个问题，就是父节点已经渲染过的组件，如果这个arr有变化，就无法重新渲染了
       // 但是这种属于不正当用法才能出现的case，正常情况下，我们不应该在render中做set操作
       if (stackSize === 0 || !reactionStack.has(reaction)) {
-        debugOperation(reaction, operation);
         /*
          * 根据 reaction 的调度策略,决定如何执行该 reaction。
          * 函数类型 scheduler:
@@ -185,6 +184,16 @@ export function queueReactionsForOperation(operation: Operation): void {
          * observe(fn) // 默认同步执行
          * */
         try {
+          // debugger 单独隔离: throwing debugger 的错误并入首错收集,
+          // 但不得吞掉本 reaction 自身的调度 (scheduler/reaction 仍要执行)
+          try {
+            debugOperation(reaction, operation);
+          } catch (error) {
+            if (!hasError) {
+              hasError = true;
+              firstError = error;
+            }
+          }
           if (typeof reaction.scheduler === "function") {
             reaction.scheduler(reaction);
           } else if (
