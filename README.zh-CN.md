@@ -2,7 +2,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
+[![npm](https://img.shields.io/npm/v/@rabjs/react?label=%40rabjs%2Freact)](https://www.npmjs.com/package/@rabjs/react)
+[![npm downloads](https://img.shields.io/npm/dm/@rabjs/react)](https://www.npmjs.com/package/@rabjs/react)
+[![license](https://img.shields.io/npm/l/@rabjs/react)](./LICENSE)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/@rabjs/react?label=gzip%20size)](https://bundlephobia.com/package/@rabjs/react)
+
 > 一种响应式状态架构，让人类与 AI 代理基于同一可观察状态表面协作。
+
+![rab 演示：代理通过 Web MCP 修改 Service 状态，React UI 同步更新](docs/assets/rab-demo.gif)
 
 ![RAB AI First 架构](docs/assets/ai-first-state.svg)
 
