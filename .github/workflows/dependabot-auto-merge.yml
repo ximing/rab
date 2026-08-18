@@ -1,0 +1,135 @@
+# Dependabot 自动合并: 仅「纯 devDependencies + semver patch/minor」
+#
+# 策略 (与 PR #99 的清理结论一致 —— 2026-08 积压 5 个 PR 全部锁冲突的教训):
+#   自动合并: 所有涉及依赖都只出现在 devDependencies, 且更新类型是
+#             patch / minor / in-range → 先跑构建与核心测试, 绿了才 squash 合并
+#   留给人工: 生产依赖(dependencies/optionalDependencies/peerDependencies)、
+#             major 升级、安全更新(带 vulnerability label 时也留给人工, 因为
+#             需要人评估影响面) —— 只打标签不动
+#
+# 注意: 仓库未配 PR 级必过检查, 本 workflow 是自动合并路径上唯一的验证闸门,
+# 验证失败只评论说明, 绝不合并。
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Conditional auto-merge (dev-only, patch/minor)
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Classify update scope and semver level
+        id: classify
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCIES: ${{ steps.metadata.outputs.dependencies }}
+        run: |
+          set -euo pipefail
+          # 1) semver 级别: patch / minor / in-range 放行; major 留人工
+          case "$UPDATE_TYPE" in
+            semver:patch|semver:minor|in-range) LEVEL_OK=true ;;
+            *) LEVEL_OK=false ;;
+          esac
+
+          # 2) 依赖范围: 每个被更新的包都必须只出现在 devDependencies,
+          #    出现在任何 manifest 的 dependencies/optionalDependencies/peerDependencies 即拦下
+          SCOPE_OK=$(node <<'EOF'
+          const deps = JSON.parse(process.env.DEPENDENCIES || '[]');
+          if (deps.length === 0) { console.log('false'); process.exit(0); }
+          const { execSync } = require('child_process');
+          const glob = require('child_process');
+          let files = [];
+          try {
+            files = execSync('find . -name package.json -not -path "*/node_modules/*" -not -path "./.git/*"', {encoding: 'utf8'}).trim().split('\n');
+          } catch { console.log('false'); process.exit(0); }
+          let allDevOnly = true;
+          for (const dep of deps) {
+            let isDev = false, isProd = false;
+            for (const f of files) {
+              let m;
+              try { m = JSON.parse(require('fs').readFileSync(f, 'utf8')); } catch { continue; }
+              if (m.dependencies && dep.name in m.dependencies) isProd = true;
+              if (m.optionalDependencies && dep.name in m.optionalDependencies) isProd = true;
+              if (m.peerDependencies && dep.name in m.peerDependencies) isProd = true;
+              if (m.devDependencies && dep.name in m.devDependencies) isDev = true;
+            }
+            if (isProd || !isDev) allDevOnly = false;
+          }
+          console.log(allDevOnly ? 'true' : 'false');
+          EOF
+          )
+
+          echo "level-ok=$LEVEL_OK scope-ok=$SCOPE_OK update-type=$UPDATE_TYPE"
+          if [ "$LEVEL_OK" = "true" ] && [ "$SCOPE_OK" = "true" ]; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on non-eligible PRs
+        if: steps.classify.outputs.eligible == 'false'
+        run: |
+          gh pr comment "$PR_URL" --body "自动合并策略跳过该 PR (仅自动合并「纯 devDependencies + patch/minor」)。请人工审阅。" || true
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- 以下仅在 eligible 时执行: 构建 + 核心测试作为合并闸门 ----
+      - name: Checkout PR head
+        if: steps.classify.outputs.eligible == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup pnpm
+        if: steps.classify.outputs.eligible == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Setup Node.js
+        if: steps.classify.outputs.eligible == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.classify.outputs.eligible == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        if: steps.classify.outputs.eligible == 'true'
+        run: pnpm build
+
+      - name: Core test suites
+        if: steps.classify.outputs.eligible == 'true'
+        run: |
+          cd packages/observer && npx jest
+          cd ../react && npx jest
+          cd ../service && npx jest
+
+      - name: Merge (squash)
+        if: steps.classify.outputs.eligible == 'true'
+        run: |
+          gh pr merge "$PR_URL" --squash --delete-branch
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
