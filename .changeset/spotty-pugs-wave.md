@@ -1,5 +1,5 @@
 ---
-"@rabjs/observer": patch
+"@rabjs/observer": minor
 ---
 
 Fixes reactivity correctness and safety issues in @rabjs/observer:
@@ -27,6 +27,13 @@ Fixes reactivity correctness and safety issues in @rabjs/observer:
 - **集合路由与 clear oldValue（G7）**: Map/Set/WeakMap/WeakSet 子类经 tag/instanceof 优先路由到 instrumented collection handler（此前 `class MyMap extends Map` 回落 base handler 抛 "incompatible receiver"，自定义 `Symbol.toStringTag` 同样失灵）；带内部槽的内置对象（Date/RegExp/Promise/ArrayBuffer…，含跨 realm 的 `vm`/iframe 场景）按 tag 黑名单拒绝包装，跨 realm 真实集合正常路由，伪造 toStringTag 的普通对象需通过原生方法 duck-check 否则回落 base handler；用户自定义 Error/Date/RegExp 等子类恢复 base 包装、自有属性不再静默失去响应式；ES2024 Set 方法（`union`/`intersection`/`difference`/`symmetricDifference`/`isSubsetOf` 等）以 raw receiver 转发可正常使用；含 NaN key/value 的 Map/Set 构造不再死循环（替换判定改 `Object.is`）；shadow 集合的子类自定义方法以 proxy 为 receiver 调用（内部 `this.set` 走 trap 通知）；`clear()` 的 oldValue 仅在实际存在 debugger 消费者（如 `@rabjs/react` 的 debuggerReaction）时惰性快照——O(n) 拷贝不再无条件发生，子类/跨 realm 构造器因 clear 可重入注册消费者仍总是快照。
 - **unobserve 语义明确与对齐（G8）**: README 明确 unobserve 不撤回在途执行——手动调用或已被函数型 scheduler 排期（如 `setTimeout`）的执行仍会落地一次，期间不建立任何新依赖；仅实现 `add` 的对象型 scheduler 不再在 unobserve 时抛 `TypeError`（`ReactionScheduler.delete` 变为可选接口）；在途执行的 unobserved reaction 被压入 reaction 栈，嵌套在运行中 reaction 内手动调用时不再把读取泄漏注册到外层 reaction（外层不再被其从未读过的 key 触发）。
 
-注意: 此前依赖"对 observable 赋值 `__proto__`"或"defineProperty 不触发通知"的代码行为会变化（前者抛错）；shadow 集合依赖"存入 proxy、经 get 返回 proxy 并追踪嵌套变更"的用法需迁移为 deep 集合（见上）。`new Function("return this")` 的 globalObj fallback 按旧 React Native 兼容性要求保留未动。G6 起，同一 raw 对象经 `observable()` 与 `shadowObservable()` 返回的是两个不同 proxy（此前第二次调用会复用第一个的缓存），依赖"两种模式返回同一 proxy"的代码需调整。
+注意: 本版本包含若干**行为变更**（详见 PR #91「破坏性变更」小节），建议按 minor 升级对待并回归:
+- 对 observable 赋值 `__proto__` 现在抛 `TypeError`（此前静默改原型）
+- `observe()` 首跑抛错即注销 reaction（此前半成品 reaction 会被后续写入复活）
+- reaction/debugger 抛错不再中断同批，改为全部执行后在变更调用点 rethrow 首错
+- 数组 `length` 收缩、`Object.defineProperty`、集合 key/value 身份语义等通知行为有实质修正
+业务方升级后可运行仓库内契约测试 `npx jest src/__tests__/api` 检测行为差异（见 README「升级与回归」）。
+
+另外: 此前依赖"对 observable 赋值 `__proto__`"或"defineProperty 不触发通知"的代码行为会变化（前者抛错）；shadow 集合依赖"存入 proxy、经 get 返回 proxy 并追踪嵌套变更"的用法需迁移为 deep 集合（见上）。`new Function("return this")` 的 globalObj fallback 按旧 React Native 兼容性要求保留未动。G6 起，同一 raw 对象经 `observable()` 与 `shadowObservable()` 返回的是两个不同 proxy（此前第二次调用会复用第一个的缓存），依赖"两种模式返回同一 proxy"的代码需调整。
 
 - **终审遗留修复 (A 档)**: queue 时 throwing debugger 不再中断同批其余 reaction（错误并入首错收集，且不吞掉调度本身）；`observe()` 首跑抛错自动注销 reaction（不再留下被后续写入复活的"僵尸"依赖——已成功跑过的 reaction 重跑抛错仍保持存活，两语义并存）；README 修正 add-only scheduler 契约矛盾，并文档化 debugger 在途事件、错误隔离、accessor 同值通知、ES2024 Set 方法返回 raw 成员等行为边界。
