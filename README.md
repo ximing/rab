@@ -11,8 +11,6 @@
 
 ![rab demo: an agent mutates Service state via Web MCP while the React UI updates in sync](docs/assets/rab-demo.gif)
 
-![RAB AI First architecture](docs/assets/ai-first-state.svg)
-
 ## Why RAB
 
 Most state-management approaches give the UI, tests, developer tools, and automation separate ways to understand an application. RAB makes the reactive Service state the shared contract instead. A person clicking a button, a test making an assertion, and an agent calling a tool all work against the same named Service instances and their observable state.
@@ -20,6 +18,8 @@ Most state-management approaches give the UI, tests, developer tools, and automa
 This reduces duplicated client, server, and UI mirrors; makes operations inspectable; and gives coding agents stable names and boundaries to reason about. AI First is therefore a state contract, not an AI-specific UI feature.
 
 ## Architecture
+
+![RAB AI First architecture](docs/assets/ai-first-state.svg)
 
 RAB is composed of small layers with one shared state surface:
 

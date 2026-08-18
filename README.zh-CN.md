@@ -11,8 +11,6 @@
 
 ![rab 演示：代理通过 Web MCP 修改 Service 状态，React UI 同步更新](docs/assets/rab-demo.gif)
 
-![RAB AI First 架构](docs/assets/ai-first-state.svg)
-
 ## 为什么选择 RAB
 
 多数状态管理方案为 UI、测试、开发者工具和自动化提供了各自独立的应用理解方式。RAB 则将响应式 Service 状态作为共享契约。无论是用户点击按钮、测试执行断言，还是代理调用工具，都是围绕同一组具名 Service 实例及其可观察状态进行操作。
@@ -20,6 +18,8 @@
 这减少了重复的客户端、服务端和 UI 状态镜像；让操作可被检查；并为编码代理提供稳定的名称和边界以供推理。因此，AI First 是一种状态契约，而非 AI 专用的 UI 功能。
 
 ## 核心架构
+
+![RAB AI First 架构](docs/assets/ai-first-state.svg)
 
 RAB 由多个小型层组成，共享同一个状态表面：
 
