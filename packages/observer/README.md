@@ -50,6 +50,26 @@ unobserve(reaction); // 停止追踪, 之后变更不再触发
 
 - **ES2024 Set 方法（`union`/`intersection`/`difference` 等）返回原始成员**：deep 模式下这些新方法返回的结果集合中元素不经 `observableChild` 包装（与 `values()`/迭代器的深度语义不对称）。旧 React Native JSC 无这些方法，不受影响；需要深度响应式时请用 `values()`/展开等已插桩路径。
 
+## 升级与回归
+
+`src/__tests__/api/` 下是 **API 契约测试层**：按公开导出（`observable` / `shadowObservable` / `observe` / `unobserve` / 数组 / 集合 / `raw` 等工具与 `configure` / README 示例）组织，每个用例钉住一条"业务可以依赖的行为承诺"，而不是内部实现细节。它是升级时的破坏性变更检测层。
+
+**升级 `@rabjs/observer` 后如何借用**：把本仓库拉下来，在 `packages/observer` 下运行
+
+```bash
+npx jest src/__tests__/api
+```
+
+- **全绿** = 本次升级对公开 API 无行为变更，可以放心升级。
+- **有失败** = 存在行为变更。失败的用例名就是破坏性变更清单——逐条对照业务代码确认是否受影响，再查对应的 changeset 了解变更原因与迁移路径。
+
+**规则承诺**：
+
+- 修改 `src/__tests__/api/` 下任何断言都必须在 changeset 中标注（patch 级别除非显式标注 `breaking`）；破坏性变更需在 PR 里说明迁移路径。
+- 引入新行为时，先在契约层补测试、再实现——契约先行，避免"实现定了才发现没钉住"。
+
+**已知限制的钉子**：契约层也钉住了上文"已知限制"中的当前行为（如数组方法的通知次数、accessor 属性同值写入必通知，用例名中引用了 issue 编号 #92 / #93）。如果未来这些行为得到改善，对应契约用例失败是**预期且是好事**——更新断言使其反映新行为，并在 changeset 中注明即可。
+
 ## License
 
 MIT
