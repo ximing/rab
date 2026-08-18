@@ -1,7 +1,7 @@
 {
   "name": "@rabjs/react",
   "version": "9.2.1",
-  "description": "React 响应式状态库集成",
+  "description": "AI-first reactive state for React — observable Service instances shared by UI, tests, DevTools, and AI agents (Web MCP)",
   "main": "lib/cjs/main.js",
   "module": "lib/esm/main.js",
   "types": "lib/esm/main.d.ts",
@@ -22,9 +22,17 @@
   },
   "keywords": [
     "react",
+    "reactjs",
     "reactive",
     "state",
-    "hooks"
+    "state-management",
+    "reactive-state",
+    "mobx",
+    "hooks",
+    "typescript",
+    "ai-agents",
+    "mcp",
+    "model-context-protocol"
   ],
   "author": "ximing",
   "license": "MIT",

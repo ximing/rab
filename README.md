@@ -2,7 +2,14 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
+[![npm](https://img.shields.io/npm/v/@rabjs/react?label=%40rabjs%2Freact)](https://www.npmjs.com/package/@rabjs/react)
+[![npm downloads](https://img.shields.io/npm/dm/@rabjs/react)](https://www.npmjs.com/package/@rabjs/react)
+[![license](https://img.shields.io/npm/l/@rabjs/react)](./LICENSE)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/@rabjs/react?label=gzip%20size)](https://bundlephobia.com/package/@rabjs/react)
+
 > A reactive state architecture where humans and AI agents operate on the same observable state surface.
+
+![rab demo: an agent mutates Service state via Web MCP while the React UI updates in sync](docs/assets/rab-demo.gif)
 
 ![RAB AI First architecture](docs/assets/ai-first-state.svg)
 

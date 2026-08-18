@@ -1,7 +1,7 @@
 {
   "name": "@rabjs/service",
   "version": "9.2.1",
-  "description": "响应式状态库核心",
+  "description": "Observable Service containers, lifecycle, and method models (loading/error) for the rab AI-first state architecture",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
   "types": "lib/main.d.ts",
@@ -24,7 +24,11 @@
   "keywords": [
     "reactive",
     "state",
-    "core"
+    "state-management",
+    "service-container",
+    "ioc",
+    "reactive-state",
+    "mobx"
   ],
   "author": "ximing",
   "license": "MIT",
