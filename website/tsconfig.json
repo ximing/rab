@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    // ES2021.WeakRef: observer 源码用到 WeakRef/FinalizationRegistry 的类型
+    // (运行时有 typeof 守卫, 旧环境安全退化); paths 把 observer src 纳入
+    // 本项目类型检查, lib 必须跟 observer 的 tsconfig 对齐
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "ES2021.WeakRef"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
