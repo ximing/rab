@@ -70,7 +70,14 @@ export function unobserve(reaction: Reaction): void {
     releaseReaction(reaction);
   }
   // unschedule the reaction, if it is scheduled
-  if (typeof reaction.scheduler === "object" && reaction.scheduler !== null) {
+  // 与触发路径的契约对齐: queueReactionsForOperation 对对象型 scheduler 只
+  // 要求 add, unobserve 只在 scheduler 实现了 delete 时才调用它 —— 只按
+  // add 半边契约写的调度对象 (如自定义批量队列) 不应在 unobserve 时抛错。
+  if (
+    typeof reaction.scheduler === "object" &&
+    reaction.scheduler !== null &&
+    typeof reaction.scheduler.delete === "function"
+  ) {
     reaction.scheduler.delete(reaction);
   }
 }

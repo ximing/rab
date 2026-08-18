@@ -1,11 +1,14 @@
 import {
   getHandlers,
   shouldInstrument,
+  isBuiltinCollectionPrototypeMethod,
+  forwardBuiltinCollectionMethod,
 } from "./internals/handlers/collection-handler";
 import { shadowCollectionHandlers } from "./internals/handlers/shadow-collection-handler";
 import { shadowProxyHandler } from "./internals/handlers/shadow-proxy-handler";
 import { proxyToRaw, rawToProxy } from "./internals/proxy-raw-map";
 import { storeObservable } from "./internals/reaction-track";
+import { normalizeCollectionEntries } from "./internals/utils";
 import type { ProxyHandlers } from "./internals/types";
 
 /**
@@ -18,8 +21,17 @@ import type { ProxyHandlers } from "./internals/types";
  * shadowCollectionHandlers 的关键区别是不会对集合中的值进行包装
  *
  * @param obj - 要转换为浅层响应式的对象
- * @param options - 可选的配置选项
  * @returns 浅层响应式代理对象
+ *
+ * **与 `observable(raw)` 共享底层状态的语义**（两轮对抗审查确认，刻意为之）:
+ * - 同一 raw 对象可以同时存在本函数返回的 shadow 代理与 `observable(raw)`
+ *   返回的 deep 代理（缓存按深度模式分桶），但两者共享同一张
+ *   (raw, key) → reactions 连接表：任一代理的写入都会通知在另一个代理上
+ *   建立的 reaction。
+ * - 本函数不接收也不写 options；若同一 raw 存在带
+ *   `reactionHandlers.transformReactions` 的 deep 代理，则**通过本代理写入
+ *   的通知也会经过该 transform**（options 按 raw 键控，见 `observable` 的
+ *   JSDoc）。如需隔离，请使用不同的 raw 对象。
  *
  * @example
  * ```typescript
@@ -83,15 +95,50 @@ function createShadowCollectionProxyHandlers() {
         )[key];
       }
 
-      // 否则，从 target 获取（但不要获取 Map/Set 的原生方法，因为它们需要特殊的 this 绑定）
-      // 对于 Map/Set 的原生方法，我们应该返回 undefined 或抛出错误
-      // 但是为了兼容性，我们返回 undefined
-      return undefined;
+      // 否则，从 target 原生获取 (constructor / toString / Symbol.toStringTag 等)。
+      // 修复: 之前这里返回 undefined, 导致 map.constructor === undefined、
+      // String(map) 抛 TypeError, duck-typing 检测和序列化全挂。
+      const value = Reflect.get(target, key, receiver);
+      // GG7 对抗审查第 2 轮 issue #6: 未知 key 的函数不能一律 bind 到 raw ——
+      // 集合子类的自定义方法 (如 putTwice 内部 this.set) 一旦 bind(raw),
+      // 其变更会走原生 Map.prototype.set, 静默绕过全部 trap (数据变了、
+      // reaction 不通知)。改为以 proxy 为 receiver 调用 (与 deep 模式的
+      // 语义一致): 自定义方法内的 this.set 走 instrumented trap。
+      // GG7 第 3 轮 issue #1/#4 修正: 恰为内置集合原型成员的函数 (ES2024
+      // Set 方法 union/intersection/... 未在 shadowCollectionHandlers 中)
+      // 依赖内部槽位, 以 proxy 为 receiver 会抛 "incompatible receiver"
+      // —— 这类纯只读原生方法以 raw target 为 receiver 转发 (变更类原生
+      // 方法均已 instrumented, 不存在静默绕过)。用户自定义方法不在内置
+      // 原型上, 判定不命中, 保持 proxy receiver。
+      // constructor 除外: 保持 map.constructor === Map 的恒等性。
+      if (
+        typeof value === "function" &&
+        key !== "constructor" &&
+        isBuiltinCollectionPrototypeMethod(key, value)
+      ) {
+        return forwardBuiltinCollectionMethod(
+          target,
+          value as (...args: unknown[]) => unknown
+        );
+      }
+      if (typeof value === "function" && key !== "constructor") {
+        const fn = value as (
+          this: unknown,
+          ...args: unknown[]
+        ) => unknown;
+        return function (this: unknown, ...args: unknown[]): unknown {
+          return Reflect.apply(fn, receiver, args);
+        };
+      }
+      return value;
     },
   };
 }
 
 export function createShadowObservable<T extends object>(obj: T): T {
+  // 集合在包装前已有的 proxy key/value 条目统一归一化为 raw
+  // （不变量『集合内部只持有 raw 身份』，详见 utils.normalizeCollectionEntries）
+  normalizeCollectionEntries(obj);
   // 获取对象类型对应的处理器（对于集合类型会返回 defaultProxyHandlers）
   const handlers = getHandlers(obj);
 

@@ -2,6 +2,7 @@ import { proxyToRaw } from "../proxy-raw-map";
 import {
   registerRunningReactionForOperation,
   queueReactionsForOperation,
+  hasOperationOldValueConsumer,
 } from "../reaction-runner";
 import type {
   Collection,
@@ -9,6 +10,15 @@ import type {
   IteratorResult,
   PatchableIterator,
 } from "../types";
+import { toRawIfProxy } from "../utils";
+import {
+  isAnyCollectionTarget,
+  isMapTarget,
+  isPlainMapOrSetTarget,
+  isSetTarget,
+  isWeakMapTarget,
+  isWeakSetTarget,
+} from "./collection-handler";
 
 /*
  * 浅层集合处理器 - 用于 Map、Set、WeakMap、WeakSet
@@ -19,6 +29,12 @@ import type {
  * 这样可以保持浅层响应式的特性：
  * - 集合本身的操作（add、set、delete、clear）会触发 reactions
  * - 但集合中的嵌套对象不会被转换为 observable
+ *
+ * 注意（浅层语义的明确后果）：set/add 会把传入的 observable proxy 解包为
+ * raw 落盘，get/迭代因此返回 raw 而非存入的 proxy —— 用户经返回值直接变更
+ * 完全绕过 trap，不会被追踪（无任何通知）。需要响应式嵌套值时应使用
+ * deep 集合（collectionHandlers 经 observableChild 命中缓存 proxy，往返
+ * 身份保持）。该行为由 collection-unwrap-iteration-and-shadow.test.ts pin 住。
  * */
 
 /*
@@ -46,16 +62,10 @@ function shadowPatchIterator<T>(
 export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 map.has(key) 或 set.has(value) 操作，建立依赖关系
   has(this: Collection, key: unknown): boolean {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     // 建立 (target.key -> reaction) 的依赖
@@ -70,8 +80,10 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 map.get(key) 操作，建立依赖关系但不包装返回值
   get(this: Collection, key: unknown): unknown {
+    // 解包: 依赖注册与集合查找都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return undefined;
     }
     registerRunningReactionForOperation({
@@ -85,8 +97,10 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 set.add(value) 操作
   add(this: Collection, key: unknown): Collection {
+    // 解包: Set 的 key 就是 value, 存储与通知都必须使用 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Set || target instanceof WeakSet)) {
+    if (!target || !(isSetTarget(target) || isWeakSetTarget(target))) {
       return this;
     }
     const hadKey = (target as Set<unknown> | WeakSet<object>).has(
@@ -107,8 +121,11 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 map.set(key, value) 操作
   set(this: Collection, key: unknown, value: unknown): Collection {
+    // 解包: key 决定存储/依赖身份, value 必须以 raw 落盘
+    key = toRawIfProxy(key);
+    value = toRawIfProxy(value);
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof WeakMap)) {
+    if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return this;
     }
     const hadKey = (
@@ -129,7 +146,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
         value,
         type: "add",
       });
-    } else if (value !== oldValue) {
+    } else if (!Object.is(value, oldValue)) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,
@@ -143,16 +160,10 @@ export const shadowCollectionHandlers: CollectionHandlers = {
 
   // 拦截 delete 操作
   delete(this: Collection, key: unknown): boolean {
+    // 解包: 删除与通知都必须使用与存储一致的 raw 身份
+    key = toRawIfProxy(key);
     const target = proxyToRaw.get(this);
-    if (
-      !target ||
-      !(
-        target instanceof Map ||
-        target instanceof Set ||
-        target instanceof WeakMap ||
-        target instanceof WeakSet
-      )
-    ) {
+    if (!target || !isAnyCollectionTarget(target)) {
       return false;
     }
     const hadKey = (target as Map<unknown, unknown> | Set<unknown>).has
@@ -183,19 +194,31 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 clear 操作
   clear(this: Collection): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     const hadItems = target.size > 0;
-    const oldTarget = target instanceof Map ? new Map(target) : new Set(target);
+    // #10: 同 collectionHandlers.clear —— oldValue 拷贝仅在存在 debugger
+    // 消费者时才做, 语义不变 (clear 前内容拷贝)。
+    // 子类覆写 clear() 的 TOCTOU 窗口 (GG7 第 2 轮 issue #7) 同样保守:
+    // constructor 非 Map/Set 时始终拷贝, 详见 collection-handler.ts 注释。
+    const operation = { target, key: "" as PropertyKey, type: "clear" as const };
+    let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
+    if (
+      hadItems &&
+      (!isPlainMapOrSetTarget(target) ||
+        hasOperationOldValueConsumer(operation))
+    ) {
+      oldTarget = isMapTarget(target)
+        ? new Map(target)
+        : new Set(target);
+    }
     // forward the operation before queueing reactions
     target.clear();
     if (hadItems) {
       queueReactionsForOperation({
-        target,
-        key: "" as PropertyKey,
+        ...operation,
         oldValue: oldTarget,
-        type: "clear",
       });
     }
   },
@@ -211,7 +234,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     thisArg?: unknown
   ): void {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return;
     }
     registerRunningReactionForOperation({
@@ -229,7 +252,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 keys 操作
   keys(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -243,7 +266,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 values 操作
   values(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -263,7 +286,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 entries 操作
   entries(this: Collection): IterableIterator<[unknown, unknown]> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]() as IterableIterator<[unknown, unknown]>;
     }
     registerRunningReactionForOperation({
@@ -281,7 +304,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 Symbol.iterator 操作
   [Symbol.iterator](this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return [][Symbol.iterator]();
     }
     registerRunningReactionForOperation({
@@ -294,7 +317,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     return shadowPatchIterator(
       iterator,
       target,
-      target instanceof Map
+      isMapTarget(target)
     ) as IterableIterator<unknown>;
   },
 
@@ -302,7 +325,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   get size(): number {
     const self = this as unknown as Collection;
     const target = proxyToRaw.get(self);
-    if (!target || !(target instanceof Map || target instanceof Set)) {
+    if (!target || !(isMapTarget(target) || isSetTarget(target))) {
       return 0;
     }
     // 迭代依赖

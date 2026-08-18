@@ -22,6 +22,33 @@ const reactionStack = new Stack<Reaction>();
 let isDebugging = false;
 
 /*
+ * #10: clear() 通知前为 operation.oldValue 做全量拷贝 (new Map(target)) 是
+ * 热路径 O(n) 开销, 而 oldValue 的唯一消费者是 reaction.debugger
+ * (如 @rabjs/react 的 debuggerReaction)。本函数判断一次操作是否会到达
+ * 任何 debugger —— 只有会到达时, clear 才值得付拷贝成本。
+ * */
+export function hasOperationOldValueConsumer(operation: Operation): boolean {
+  // transformReactions 可能向通知集补充带 debugger 的 reaction,
+  // 无法静态判断, 保守视为存在消费者。
+  const options = rawToOptions.get(operation.target);
+  const hasTransformReactions = Boolean(
+    options &&
+      options.reactionHandlers &&
+      options.reactionHandlers.transformReactions
+  );
+  if (hasTransformReactions) {
+    return true;
+  }
+  const reactions = getReactionsForOperation(operation);
+  for (const reaction of reactions) {
+    if (reaction.debugger) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/*
  * 将一个普通函数作为 reaction 执行,并在执行期间建立依赖追踪。
  * */
 export function runAsReaction<T extends Function, R>(
@@ -30,9 +57,19 @@ export function runAsReaction<T extends Function, R>(
   context: unknown,
   args: ArrayLike<unknown>
 ): R | undefined {
-  // 如果 reaction 已经被 unobserve(),直接执行函数,不建立依赖关系
+  // 如果 reaction 已经被 unobserve(),仍执行函数,但不建立任何依赖关系。
+  // 必须把它压入 reactionStack: 若裸执行, 而它又被另一个正在运行的 reaction
+  // 手动调用, 其读取会经 registerRunningReactionForOperation 注册到外层栈顶
+  // reaction 上, 导致存活的外层 reaction 被它从未读过的 key 误触发。
+  // 压栈后读取归属 unobserved reaction 自身 (栈顶), 注册逻辑对其跳过
+  // (见下方 registerRunningReactionForOperation), 顶层与嵌套行为一致。
   if (reaction.unobserved) {
-    return Reflect.apply(fn, context, args) as R;
+    try {
+      reactionStack.push(reaction);
+      return Reflect.apply(fn, context, args) as R;
+    } finally {
+      reactionStack.pop();
+    }
   }
 
   // 检查 reaction 是否已在调用栈中
@@ -43,12 +80,28 @@ export function runAsReaction<T extends Function, R>(
     // 因为这次执行可能访问不同的属性,需要重新建立依赖
     releaseReaction(reaction);
 
+    // 是否为该 reaction 的首次执行 (observe 首跑或 lazy 手动首跑)
+    const firstRun = !reaction.everRan;
     try {
       // 将 reaction 推入栈顶,标记为"当前正在运行"
       // 执行原始函数 fn
       // 在执行期间,任何对 observable 属性的访问都会被追踪到这个 reaction  (observable.prop -> reaction)
       reactionStack.push(reaction);
-      return Reflect.apply(fn, context, args) as R;
+      const result = Reflect.apply(fn, context, args) as R;
+      reaction.everRan = true;
+      return result;
+    } catch (error) {
+      if (firstRun) {
+        // 首次执行抛错: reaction 处于"半成品"状态 —— 抛错前注册的部分依赖
+        // 还在 connectionStore 里, 而调用者拿到异常后自然认为它已失败,
+        // 无人再 unobserve 它, 后续每次写入都会复活这个僵尸 reaction。
+        // 首跑失败即自动脱管 (标记 unobserved + 释放全部依赖连接), 再上抛。
+        // 注意与重跑语义的区分: 已成功跑过的 reaction 在后续重跑中抛错
+        // (G4 错误隔离范畴) 保持存活 —— 临时性错误不杀死活着的 reaction。
+        reaction.unobserved = true;
+        releaseReaction(reaction);
+      }
+      throw error;
     } finally {
       // 无论执行成功还是失败,都要将 reaction 从栈中移除
       reactionStack.pop();
@@ -70,6 +123,13 @@ export function registerRunningReactionForOperation(
   if (runningReaction) {
     // 如果 reaction 有 debugger,记录这次操作
     debugOperation(runningReaction, operation);
+    // reaction 在自身运行中被 unobserve() 后, 不再为其建立新依赖:
+    // unobserve 已调用 releaseReaction 清掉既有连接, 若继续注册,
+    // 后续写入会"复活"已 unobserve 的 reaction, 且这些新连接无人释放
+    // (reaction 已脱管, cleaners 不会再被遍历), entry 永久搁浅。
+    if (runningReaction.unobserved) {
+      return;
+    }
     // 调用 registerReactionForOperation 建立 (target.key -> reaction) 的映射
     // 存储在 connectionStore 中(来自 store.js)
     registerReactionForOperation(runningReaction, operation);
@@ -84,15 +144,22 @@ export function queueReactionsForOperation(operation: Operation): void {
   // iterate and queue every reaction, which is triggered by obj.key mutation
   const { target, key } = operation;
   const reactions = getReactionsForOperation(operation);
-  let reactionsArray = [...reactions];
   // 允许用户通过自定义 handler 过滤或转换 reactions
   // 默认情况下直接返回原数组
   const options = rawToOptions.get(target);
-  if (
+  const hasTransformReactions = Boolean(
     options &&
-    options.reactionHandlers &&
-    options.reactionHandlers.transformReactions
-  ) {
+      options.reactionHandlers &&
+      options.reactionHandlers.transformReactions
+  );
+  // 性能优化: 最常见的写操作是"修改没有任何依赖的属性",
+  // 此时不 spread 空集合、不分配数组, 直接返回。
+  // (配置了 transformReactions 时不早退 —— 自定义 handler 可能从空集补充 reactions)
+  if (reactions.size === 0 && !hasTransformReactions) {
+    return;
+  }
+  let reactionsArray = [...reactions];
+  if (hasTransformReactions && options && options.reactionHandlers) {
     reactionsArray = options.reactionHandlers.transformReactions(
       target,
       key,
@@ -105,6 +172,11 @@ export function queueReactionsForOperation(operation: Operation): void {
     const length = reactionsArray.length;
     // 优化: 提前检查 reactionStack 是否为空,避免重复调用 has()
     const stackSize = reactionStack.size;
+    // 单个 reaction(或其 scheduler 调用 / 其 debugger)抛错不得中断同批其余
+    // reaction; 收集本批第一个错误,全部执行完毕后在变更调用点 rethrow。
+    // 异步执行的错误(如 setTimeout 里的 reaction)天然不经过这里。
+    let firstError: unknown;
+    let hasError = false;
     for (let i = 0; i < length; i++) {
       const reaction = reactionsArray[i];
       // 栈不为空时,需要检查当前的 reaction 是否在栈中，在栈中，就不要重复触发
@@ -112,7 +184,6 @@ export function queueReactionsForOperation(operation: Operation): void {
       // 这里把整个链路都排除了，但是可能出现一个问题，就是父节点已经渲染过的组件，如果这个arr有变化，就无法重新渲染了
       // 但是这种属于不正当用法才能出现的case，正常情况下，我们不应该在render中做set操作
       if (stackSize === 0 || !reactionStack.has(reaction)) {
-        debugOperation(reaction, operation);
         /*
          * 根据 reaction 的调度策略,决定如何执行该 reaction。
          * 函数类型 scheduler:
@@ -128,17 +199,37 @@ export function queueReactionsForOperation(operation: Operation): void {
          * 无 scheduler: 立即同步执行
          * observe(fn) // 默认同步执行
          * */
-        if (typeof reaction.scheduler === "function") {
-          reaction.scheduler(reaction);
-        } else if (
-          typeof reaction.scheduler === "object" &&
-          reaction.scheduler !== null
-        ) {
-          reaction.scheduler.add(reaction);
-        } else {
-          reaction();
+        try {
+          // debugger 单独隔离: throwing debugger 的错误并入首错收集,
+          // 但不得吞掉本 reaction 自身的调度 (scheduler/reaction 仍要执行)
+          try {
+            debugOperation(reaction, operation);
+          } catch (error) {
+            if (!hasError) {
+              hasError = true;
+              firstError = error;
+            }
+          }
+          if (typeof reaction.scheduler === "function") {
+            reaction.scheduler(reaction);
+          } else if (
+            typeof reaction.scheduler === "object" &&
+            reaction.scheduler !== null
+          ) {
+            reaction.scheduler.add(reaction);
+          } else {
+            reaction();
+          }
+        } catch (error) {
+          if (!hasError) {
+            hasError = true;
+            firstError = error;
+          }
         }
       }
+    }
+    if (hasError) {
+      throw firstError;
     }
   }
 }

@@ -16,6 +16,9 @@ export type {
   ReactionScheduler,
   Operation,
   OperationType,
+  // observable(obj, options) 的 options 类型 (第 1 轮审查 issue #3:
+  // 公开签名真实接收 options 后, 消费方需要能按名导入该类型做注解)
+  ObservableOptions,
 } from "./internals/types";
 
 // Re-export utility functions

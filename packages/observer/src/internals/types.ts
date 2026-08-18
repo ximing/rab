@@ -19,13 +19,19 @@ export interface Operation {
 export interface Reaction extends Function {
   cleaners: Set<Reaction>[];
   unobserved?: boolean;
+  // 是否已成功完整执行过至少一次。首次执行 (observe 首跑 / lazy 手动首跑)
+  // 抛错时 reaction 自动脱管 (见 runAsReaction); 已成功跑过的 reaction
+  // 后续重跑抛错则保持存活 (G4 错误隔离语义)。
+  everRan?: boolean;
   scheduler?: ReactionScheduler | Function;
   debugger?: (operation: Operation) => void;
 }
 
 export interface ReactionScheduler {
+  // add 必需: 触发路径 (queueReactionsForOperation) 调用它排队 reaction
   add: (reaction: Reaction) => void;
-  delete: (reaction: Reaction) => void;
+  // delete 可选: 实现了则 unobserve 时被调用以移除尚未冲刷的排队条目
+  delete?: (reaction: Reaction) => void;
 }
 
 export type Collection =

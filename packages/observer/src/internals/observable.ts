@@ -4,8 +4,9 @@ import {
   getHandlers,
   shouldInstrument,
 } from "./handlers/collection-handler";
-import { proxyToRaw, rawToOptions, rawToProxy } from "./proxy-raw-map";
+import { proxyToRaw, rawToOptions, deepRawToProxy } from "./proxy-raw-map";
 import { storeObservable } from "./reaction-track";
+import { normalizeCollectionEntries } from "./utils";
 import type { ObservableOptions, ProxyHandlers } from "./types";
 
 export function observable<T extends object>(
@@ -26,13 +27,17 @@ export function observable<T extends object>(
   }
   // if it already has a cached observable wrapper, return it
   // otherwise create a new observable
-  return (rawToProxy.get(obj) as T) || createObservable(obj, options);
+  // (#6: deep 模式只查 deep 自己的缓存桶, 不与 shadow 模式串扰)
+  return (deepRawToProxy.get(obj) as T) || createObservable(obj, options);
 }
 
 export function createObservable<T extends object>(
   obj: T,
   options?: ObservableOptions
 ): T {
+  // 集合在包装前已有的 proxy key/value 条目统一归一化为 raw
+  // （不变量『集合内部只持有 raw 身份』，详见 utils.normalizeCollectionEntries）
+  normalizeCollectionEntries(obj);
   // Merge handlers, with custom handlers taking precedence
   const handlers = getHandlers(obj) || baseProxyHandler;
   const mergedHandlers: ProxyHandlers = { ...(handlers as ProxyHandlers) };
@@ -53,7 +58,7 @@ export function createObservable<T extends object>(
 
   const observableProxy = new Proxy(obj, mergedHandlers as ProxyHandler<T>);
 
-  rawToProxy.set(obj, observableProxy);
+  deepRawToProxy.set(obj, observableProxy);
   proxyToRaw.set(observableProxy, obj);
 
   if (options) {
