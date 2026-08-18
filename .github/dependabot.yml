@@ -1,0 +1,37 @@
+# Dependabot 配置
+# - npm/pnpm workspace: 根 + 各包目录
+# - 每周一批次, 限制并发 PR 数, 避免锁文件连环冲突
+# - 自动合并策略见 .github/workflows/dependabot-auto-merge.yml:
+#   仅「纯 devDependencies + semver patch/minor」的 PR 验证后自动合并,
+#   生产依赖与 major 升级一律留给人工审阅
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/configs/*"
+      - "/packages/*"
+      - "/examples/*"
+      - "/website"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    # 锁文件合并冲突时自动 rebase (而不是堆一个 rebase PR)
+    rebase-strategy: auto
+
+  # GitHub Actions 版本
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "ci(actions)"
