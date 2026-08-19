@@ -1,5 +1,13 @@
 # @rabjs/react
 
+## 9.3.3
+
+### Patch Changes
+
+- 07db341: web-mcp 支持 Zod 4 原生 `z.toJSONSchema`，并保留 Zod 3 的 `zod-to-json-schema` 回退；react 在测试环境（`IS_REACT_ACT_ENVIRONMENT`）下用 `React.act` 包装 store 通知，消除 React 19 的 act 警告。
+- @rabjs/observer@9.3.3
+  - @rabjs/service@9.3.3
+
 ## 9.3.2
 
 ### Patch Changes

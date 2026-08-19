@@ -1,5 +1,16 @@
 # @rabjs/website
 
+## 9.0.3
+
+### Patch Changes
+
+- Updated dependencies [07db341]
+  - @rabjs/web-mcp@9.3.3
+  - @rabjs/react@9.3.3
+  - @rabjs/devtools@9.3.3
+  - @rabjs/observer@9.3.3
+  - @rabjs/service@9.3.3
+
 ## 9.0.2
 
 ### Patch Changes
