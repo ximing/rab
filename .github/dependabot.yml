@@ -51,6 +51,9 @@ updates:
           - "lint-staged"
           - "eslint"
           - "eslint-*"
+      node-types:
+        patterns:
+          - "@types/node"
 
   # GitHub Actions 版本
   - package-ecosystem: github-actions

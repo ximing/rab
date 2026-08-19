@@ -41,7 +41,7 @@
   "devDependencies": {
     "@rabjs/observer": "workspace:*",
     "@types/jest": "^30.0.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^26.2.0",
     "esbuild": "^0.28.2",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
