@@ -38,9 +38,12 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Write auth to the runner home, never the repo working tree.
+      # Overwriting ./.npmrc before `changeset version` caused the Version PR
+      # to commit the npm token (public repo).
       - name: Configure npm for publish
         run: |
-          printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > .npmrc
+          printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > "$HOME/.npmrc"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
