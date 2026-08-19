@@ -14,5 +14,15 @@ restore_npmrc() {
 }
 trap restore_npmrc EXIT
 
-printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > .npmrc
+# pnpm does not interpolate ${NPM_TOKEN} / ${NODE_AUTH_TOKEN} in .npmrc.
+# setup-node also sets NPM_CONFIG_USERCONFIG to a temp file with an
+# unexpanded ${NODE_AUTH_TOKEN}, which overrides the project file.
+# Write the literal token to both places, matching the v1 action behavior
+# that last published successfully.
+auth="$(printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\nalways-auth=true\n' "$NPM_TOKEN")"
+printf '%s' "$auth" > .npmrc
+if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
+  printf '%s' "$auth" > "$NPM_CONFIG_USERCONFIG"
+fi
+unset NPM_CONFIG_USERCONFIG
 pnpm changeset publish
