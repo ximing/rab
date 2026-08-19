@@ -1,5 +1,13 @@
 # @rabjs/react
 
+## 9.2.2
+
+### Patch Changes
+
+- Updated dependencies [7621c98]
+  - @rabjs/observer@9.3.1
+  - @rabjs/service@9.2.2
+
 ## 9.2.1
 
 ### Patch Changes

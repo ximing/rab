@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/rn-debug-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "RABjs RN 调试服务 - Agent 通过 HTTP 指令调试 React Native 设备",
   "type": "module",
   "main": "lib/main.cjs",
