@@ -25,4 +25,7 @@ if [ -n "${NPM_CONFIG_USERCONFIG:-}" ]; then
   printf '%s' "$auth" > "$NPM_CONFIG_USERCONFIG"
 fi
 unset NPM_CONFIG_USERCONFIG
+echo "NPM_TOKEN_LEN=${#NPM_TOKEN}"
+npm whoami --registry=https://registry.npmjs.org || echo "npm whoami failed"
+pnpm whoami --registry=https://registry.npmjs.org || echo "pnpm whoami failed"
 pnpm changeset publish
