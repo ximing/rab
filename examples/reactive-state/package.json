@@ -13,7 +13,7 @@
     "@ant-design/icons": "^6.3.2",
     "@rabjs/react": "workspace:*",
     "antd": "^6.1.0",
-    "antd-style": "^3.7.1",
+    "antd-style": "^4.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.18.2"
