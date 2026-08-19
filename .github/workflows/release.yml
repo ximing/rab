@@ -38,12 +38,13 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # Write auth to the runner home, never the repo working tree.
-      # Overwriting ./.npmrc before `changeset version` caused the Version PR
-      # to commit the npm token (public repo).
+      # Write auth outside the repo tree. setup-node sets NPM_CONFIG_USERCONFIG
+      # to a temp file that overrides $HOME/.npmrc, so write there when present.
       - name: Configure npm for publish
         run: |
-          printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > "$HOME/.npmrc"
+          target="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          mkdir -p "$(dirname "$target")"
+          printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org\n@rabjs:registry=https://registry.npmjs.org\n' "$NPM_TOKEN" > "$target"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
