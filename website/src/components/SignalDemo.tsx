@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { observer } from "@rabjs/react";
-import { Container } from "@rabjs/service";
-import { CounterService } from "../demos/counter/CounterService";
+import { observer } from '@rabjs/react';
+import { Container } from '@rabjs/service';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { CounterService } from '../demos/counter/CounterService';
 
 /**
  * 首页签名元素：Agent 终端 × 真实状态
@@ -17,11 +18,13 @@ import { CounterService } from "../demos/counter/CounterService";
  * - count 不归零，循环之间状态延续（这也是卖点：状态一直在那里）。
  */
 
-type TermLine = { kind: "call"; text: string; run?: () => void } | { kind: "result"; text: string | (() => string) };
+type TermLine =
+  | { kind: 'call'; text: string; run?: () => void }
+  | { kind: 'result'; text: string | (() => string) };
 
 export function SignalDemo() {
   const container = useMemo(() => {
-    const c = new Container({ name: "hero-signal" });
+    const c = new Container({ name: 'hero-signal' });
     c.register(CounterService);
     return c;
   }, []);
@@ -29,15 +32,23 @@ export function SignalDemo() {
 
   const script = useMemo<TermLine[]>(
     () => [
-      { kind: "call", text: `list_services({})` },
-      { kind: "result", text: `← { services: ["${service.instanceId}"] }` },
-      { kind: "call", text: `execute_action({ action: "increment" })`, run: () => service.increment() },
-      { kind: "result", text: `← { ok: true }` },
-      { kind: "call", text: `execute_action({ action: "increment" })`, run: () => service.increment() },
-      { kind: "result", text: `← { ok: true }` },
-      { kind: "call", text: `get_state({ instanceId: "${service.instanceId}" })` },
+      { kind: 'call', text: `list_services({})` },
+      { kind: 'result', text: `← { services: ["${service.instanceId}"] }` },
+      {
+        kind: 'call',
+        text: `execute_action({ action: "increment" })`,
+        run: () => service.increment(),
+      },
+      { kind: 'result', text: `← { ok: true }` },
+      {
+        kind: 'call',
+        text: `execute_action({ action: "increment" })`,
+        run: () => service.increment(),
+      },
+      { kind: 'result', text: `← { ok: true }` },
+      { kind: 'call', text: `get_state({ instanceId: "${service.instanceId}" })` },
       // 函数形式：该行出现时才读取当前 count，保证与右侧 APP 面板一致
-      { kind: "result", text: () => `← { count: ${service.count} }  # 与右侧始终是同一个值` },
+      { kind: 'result', text: () => `← { count: ${service.count} }  # 与右侧始终是同一个值` },
     ],
     [service]
   );
@@ -47,11 +58,11 @@ export function SignalDemo() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) {
       // 无动画：一次性呈现，并执行所有动作
-      script.forEach((l) => l.kind === "call" && l.run?.());
-      setVisible(script.map((line) => ({ line, typed: -1 })));
+      script.forEach(l => l.kind === 'call' && l.run?.());
+      setVisible(script.map(line => ({ line, typed: -1 })));
       return;
     }
 
@@ -62,9 +73,9 @@ export function SignalDemo() {
     const tick = () => {
       if (cancelled) return;
       const line = script[lineIdx];
-      if (line.kind === "result") {
-        const text = typeof line.text === "function" ? line.text() : line.text;
-        setVisible((v) => [...v, { line: { kind: "result", text }, typed: -1 }]);
+      if (line.kind === 'result') {
+        const text = typeof line.text === 'function' ? line.text() : line.text;
+        setVisible(v => [...v, { line: { kind: 'result', text }, typed: -1 }]);
         lineIdx += 1;
         timerRef.current = setTimeout(tick, lineIdx === script.length ? 0 : 550);
         if (lineIdx === script.length) {
@@ -86,11 +97,11 @@ export function SignalDemo() {
       // 注意：必须先把值装进本帧的 const，再放进 updater ——
       // updater 在渲染时才执行，直接读 charIdx 会读到后续帧被重置的值
       const typedNow = charIdx;
-      setVisible((v) => [...v.filter((e) => e.line !== line), { line, typed: typedNow }]);
+      setVisible(v => [...v.filter(e => e.line !== line), { line, typed: typedNow }]);
       if (charIdx >= line.text.length) {
         line.run?.();
         // 完成：整行显示并去掉光标
-        setVisible((v) => v.map((e) => (e.line === line ? { line, typed: -1 } : e)));
+        setVisible(v => v.map(e => (e.line === line ? { line, typed: -1 } : e)));
         lineIdx += 1;
         charIdx = 0;
         timerRef.current = setTimeout(tick, 380);
@@ -115,7 +126,7 @@ export function SignalDemo() {
         </div>
         <div className="terminal-lines">
           {visible.map(({ line, typed }, i) =>
-            line.kind === "call" ? (
+            line.kind === 'call' ? (
               <div key={i} className="t-call">
                 <span className="t-prompt">› </span>
                 {typed === -1 ? line.text : line.text.slice(0, typed)}
@@ -123,7 +134,7 @@ export function SignalDemo() {
               </div>
             ) : (
               <div key={i} className="t-result">
-                {typeof line.text === "function" ? line.text() : line.text}
+                {typeof line.text === 'function' ? line.text() : line.text}
               </div>
             )
           )}
@@ -158,7 +169,7 @@ const SignalAppView = observer(({ service }: { service: CounterService }) => {
   return (
     <div className="signal-app">
       <span className="app-hint">count</span>
-      <span className={`app-count${bump ? " bump" : ""}`}>{service.count}</span>
+      <span className={`app-count${bump ? ' bump' : ''}`}>{service.count}</span>
       <div className="demo-row">
         <button className="demo-btn" onClick={() => service.decrement()}>
           -1

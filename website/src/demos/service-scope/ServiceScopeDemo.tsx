@@ -5,13 +5,9 @@ import {
   register,
   resolve,
   useService,
-} from "@rabjs/react";
-import {
-  AppService,
-  GlobalService,
-  PageService,
-  PanelService,
-} from "./ServiceScopeServices";
+} from '@rabjs/react';
+
+import { AppService, GlobalService, PageService, PanelService } from './ServiceScopeServices';
 
 const Panel = observer(() => {
   const panel = useService(PanelService);

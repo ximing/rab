@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { bindServices, observer, useService } from "@rabjs/react";
-import { TodoService } from "./TodoService";
+import { bindServices, observer, useService } from '@rabjs/react';
+import { useState } from 'react';
+
+import { TodoService } from './TodoService';
 
 const filters = [
-  { key: "all", label: "全部" },
-  { key: "active", label: "进行中" },
-  { key: "done", label: "已完成" },
+  { key: 'all', label: '全部' },
+  { key: 'active', label: '进行中' },
+  { key: 'done', label: '已完成' },
 ] as const;
 
 /**
@@ -14,11 +15,11 @@ const filters = [
  */
 const Todo = observer(() => {
   const todo = useService(TodoService);
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
 
   const submit = () => {
     todo.add(text);
-    setText("");
+    setText('');
   };
 
   return (
@@ -27,49 +28,41 @@ const Todo = observer(() => {
         <input
           value={text}
           placeholder="要做点什么？"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') submit();
           }}
-          style={{ flex: 1, padding: "6px 10px" }}
+          style={{ flex: 1, padding: '6px 10px' }}
         />
         <button className="demo-btn primary" onClick={submit}>
           添加
         </button>
       </div>
       <div className="demo-row">
-        {filters.map((f) => (
+        {filters.map(f => (
           <button
             key={f.key}
-            className={`demo-btn${todo.filter === f.key ? " primary" : ""}`}
+            className={`demo-btn${todo.filter === f.key ? ' primary' : ''}`}
             onClick={() => todo.setFilter(f.key)}
           >
             {f.label}
           </button>
         ))}
-        <span style={{ color: "var(--text-dim)" }}>
-          剩余 {todo.remaining} 项
-        </span>
+        <span style={{ color: 'var(--text-dim)' }}>剩余 {todo.remaining} 项</span>
       </div>
-      <ul style={{ margin: "12px 0 0", paddingLeft: 20 }}>
-        {todo.filteredTodos.map((t) => (
+      <ul style={{ margin: '12px 0 0', paddingLeft: 20 }}>
+        {todo.filteredTodos.map(t => (
           <li key={t.id} style={{ marginBottom: 6 }}>
-            <label style={{ cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={t.done}
-                onChange={() => todo.toggle(t.id)}
-              />{" "}
+            <label style={{ cursor: 'pointer' }}>
+              <input type="checkbox" checked={t.done} onChange={() => todo.toggle(t.id)} />{' '}
               <span
                 style={
-                  t.done
-                    ? { textDecoration: "line-through", color: "var(--text-dim)" }
-                    : undefined
+                  t.done ? { textDecoration: 'line-through', color: 'var(--text-dim)' } : undefined
                 }
               >
                 {t.title}
               </span>
-            </label>{" "}
+            </label>{' '}
             <button className="demo-btn" onClick={() => todo.remove(t.id)}>
               删除
             </button>

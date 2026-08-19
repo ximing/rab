@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
-import { CodeBlock } from "../components/CodeBlock";
-import { DemoCard } from "../components/DemoCard";
-import { SignalDemo } from "../components/SignalDemo";
-import CounterDemo, { counterDemoCode } from "../demos/counter";
+import { Link } from 'react-router-dom';
+
+import { CodeBlock } from '../components/CodeBlock';
+import { DemoCard } from '../components/DemoCard';
+import { SignalDemo } from '../components/SignalDemo';
+import CounterDemo, { counterDemoCode } from '../demos/counter';
 
 const installCode = `pnpm add @rabjs/service @rabjs/react
 # 可选：调试工具 / AI 桥接
@@ -19,11 +20,12 @@ export default function Home() {
             Reactive State · For Humans &amp; Agents
           </p>
           <h1 className="hero-title">
-            RAB<span className="pulse-dot" />
+            RAB
+            <span className="pulse-dot" />
           </h1>
           <p className="tagline">
-            状态以「服务」为单位组织：<code>@rabjs/service</code> 服务容器 +{" "}
-            <code>@rabjs/observer</code> 观察者 + <code>@rabjs/react</code>{" "}
+            状态以「服务」为单位组织：<code>@rabjs/service</code> 服务容器 +{' '}
+            <code>@rabjs/observer</code> 观察者 + <code>@rabjs/react</code>{' '}
             集成。同一份响应式状态，人点按钮能改，AI 调工具也能改。
           </p>
 
@@ -36,7 +38,7 @@ export default function Home() {
 
       <h2>最小示例</h2>
       <p>
-        一个可运行的计数器：定义 Service，用 <code>observer</code> 包装组件，{" "}
+        一个可运行的计数器：定义 Service，用 <code>observer</code> 包装组件，{' '}
         <code>bindServices</code> 提供容器。
       </p>
       <DemoCard
@@ -51,7 +53,7 @@ export default function Home() {
       <div className="entry-cards">
         <Link
           className="entry-card"
-          style={{ "--card-accent": "var(--human)" } as React.CSSProperties}
+          style={{ '--card-accent': 'var(--human)' } as React.CSSProperties}
           to="/quick-start"
         >
           <p className="eyebrow mb-2">
@@ -71,8 +73,8 @@ export default function Home() {
           </p>
           <h3>AI 用法 →</h3>
           <p>
-            面向 AI 编程的玩法：rab-react / rab-cdp-debug / rab-rn-debug
-            Skill 与 @rabjs/web-mcp，让 AI 直接读写应用状态。
+            面向 AI 编程的玩法：rab-react / rab-cdp-debug / rab-rn-debug Skill 与 @rabjs/web-mcp，让
+            AI 直接读写应用状态。
           </p>
         </Link>
       </div>

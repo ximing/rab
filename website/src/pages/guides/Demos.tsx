@@ -1,8 +1,8 @@
-import { DemoCard } from "../../components/DemoCard";
-import CounterDemo, { counterDemoCode } from "../../demos/counter";
-import TodoDemo, { todoDemoCode } from "../../demos/todo";
-import AsyncUserDemo, { asyncUserDemoCode } from "../../demos/async-user";
-import CollabDemo, { collabDemoCode } from "../../demos/collab";
+import { DemoCard } from '../../components/DemoCard';
+import AsyncUserDemo, { asyncUserDemoCode } from '../../demos/async-user';
+import CollabDemo, { collabDemoCode } from '../../demos/collab';
+import CounterDemo, { counterDemoCode } from '../../demos/counter';
+import TodoDemo, { todoDemoCode } from '../../demos/todo';
 
 /**
  * 在线 Demo 集合（路由 /guides/demos）

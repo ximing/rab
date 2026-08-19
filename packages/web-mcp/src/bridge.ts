@@ -62,7 +62,9 @@ export class McpBridge {
    */
   async mount(container: Container): Promise<void> {
     if (this.mounted) {
-      console.warn('[rs-web-mcp] McpBridge is already mounted. Call unmount() first if you want to re-mount.');
+      console.warn(
+        '[rs-web-mcp] McpBridge is already mounted. Call unmount() first if you want to re-mount.'
+      );
       return;
     }
 
@@ -79,9 +81,11 @@ export class McpBridge {
       // polyfill 加载失败，继续尝试使用原生 navigator.modelContext
     }
 
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+    // navigator.modelContext is a browser API used at runtime
     if (!navigator.modelContext) {
-      console.warn('[rs-web-mcp] navigator.modelContext is not available. WebMCP may not be supported in this environment.');
+      console.warn(
+        '[rs-web-mcp] navigator.modelContext is not available. WebMCP may not be supported in this environment.'
+      );
       return;
     }
 
@@ -124,7 +128,9 @@ export class McpBridge {
    * @param instance Service 实例
    */
   addService(_name: string, _instance: Service): void {
-    console.warn('[rs-web-mcp] addService() is not yet implemented. Use McpRegistry for dynamic service discovery.');
+    console.warn(
+      '[rs-web-mcp] addService() is not yet implemented. Use McpRegistry for dynamic service discovery.'
+    );
   }
 
   /**
@@ -166,7 +172,7 @@ export class McpBridge {
    * { content: [{ type: 'text', text: JSON.stringify(result) }] }
    */
   private registerTool(tool: WebMcpToolDefinition): void {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+    // navigator.modelContext is a browser API used at runtime
     if (!navigator.modelContext) return;
 
     try {
@@ -190,7 +196,7 @@ export class McpBridge {
           };
         },
       };
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+      // navigator.modelContext is a browser API used at runtime
       const handle = navigator.modelContext.registerTool(wrappedTool);
       this.unregisterHandles.push(handle);
     } catch (error: unknown) {

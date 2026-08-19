@@ -66,10 +66,13 @@ export class McpRegistry {
    * 已订阅的 Container 事件监听器，用于精准移除（避免 removeAllListeners 误伤其他代码）
    * 使用 WeakMap 以允许 Container 被 GC 回收时自动释放
    */
-  private containerListeners: WeakMap<Container, {
-    onInstantiated: (instance: Service) => void;
-    onChildAdded: (child: Container) => void;
-  }> = new WeakMap();
+  private containerListeners: WeakMap<
+    Container,
+    {
+      onInstantiated: (instance: Service) => void;
+      onChildAdded: (child: Container) => void;
+    }
+  > = new WeakMap();
 
   /**
    * 所有已订阅的 Container 实例集合（配合 WeakMap 精准取消订阅用）
@@ -138,7 +141,9 @@ export class McpRegistry {
    */
   async mount(): Promise<void> {
     if (this.mounted) {
-      console.warn('[rs-web-mcp] McpRegistry is already mounted. Call unmount() first if you want to re-mount.');
+      console.warn(
+        '[rs-web-mcp] McpRegistry is already mounted. Call unmount() first if you want to re-mount.'
+      );
       return;
     }
 
@@ -153,30 +158,34 @@ export class McpRegistry {
       // polyfill 加载失败，继续尝试使用原生 navigator.modelContext
     }
 
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+    // navigator.modelContext is a browser API used at runtime
     if (!navigator.modelContext) {
-      console.warn('[rs-web-mcp] navigator.modelContext is not available. WebMCP may not be supported in this environment.');
+      console.warn(
+        '[rs-web-mcp] navigator.modelContext is not available. WebMCP may not be supported in this environment.'
+      );
       return;
     }
 
     const rootContainer = getGlobalContainer();
 
     // 构建懒加载 instanceMap 的工厂函数（每次调用时实时遍历）
-    // eslint-disable-next-line unicorn/consistent-function-scoping -- captures `this` context for instance map building
+    // nested helper captures `this` for instance map building
     const getLiveInstanceMap = (): Map<string, Service> => this.buildInstanceMap();
 
     // 注册五个通用 Tools（instanceMap 在每次执行时动态构建，保证实时性）
-    this.registerTool(
-      createListServicesTool(rootContainer)
-    );
+    this.registerTool(createListServicesTool(rootContainer));
 
     this.registerTool({
       name: 'execute_action',
-      description: '执行指定 Service 实例的某个方法。需要先通过 list_services 获取 instanceId。支持可选的 assertAfter 参数，在一次调用内完成"操作 + 断言"',
+      description:
+        '执行指定 Service 实例的某个方法。需要先通过 list_services 获取 instanceId。支持可选的 assertAfter 参数，在一次调用内完成"操作 + 断言"',
       inputSchema: {
         type: 'object',
         properties: {
-          instanceId: { type: 'string', description: 'Service 实例的唯一标识符，通过 list_services 获取' },
+          instanceId: {
+            type: 'string',
+            description: 'Service 实例的唯一标识符，通过 list_services 获取',
+          },
           action: { type: 'string', description: '要执行的方法名' },
           args: { type: 'array', description: '方法参数数组，顺序与方法签名一致', items: {} },
           assertAfter: {
@@ -197,19 +206,37 @@ export class McpRegistry {
         required: ['instanceId', 'action', 'args'],
       },
       execute: (input: unknown) => {
-        const { instanceId, action, args, assertAfter } = input as { instanceId: string; action: string; args: unknown[]; assertAfter?: import('./types').Assertion[] };
-        return executeActionFn(getLiveInstanceMap(), { instanceId, action, args: args ?? [], assertAfter });
+        const { instanceId, action, args, assertAfter } = input as {
+          instanceId: string;
+          action: string;
+          args: unknown[];
+          assertAfter?: import('./types').Assertion[];
+        };
+        return executeActionFn(getLiveInstanceMap(), {
+          instanceId,
+          action,
+          args: args ?? [],
+          assertAfter,
+        });
       },
     });
 
     this.registerTool({
       name: 'get_state',
-      description: '获取指定 Service 实例的状态快照。标量字段返回当前值，复杂对象字段只返回类型摘要（"[Object]"/"[Array(N)]"）以避免大对象序列化 crash。如需验证对象内部，请使用 assert_state + 点分路径。',
+      description:
+        '获取指定 Service 实例的状态快照。标量字段返回当前值，复杂对象字段只返回类型摘要（"[Object]"/"[Array(N)]"）以避免大对象序列化 crash。如需验证对象内部，请使用 assert_state + 点分路径。',
       inputSchema: {
         type: 'object',
         properties: {
-          instanceId: { type: 'string', description: 'Service 实例的唯一标识符，通过 list_services 获取' },
-          keys: { type: 'array', description: '可选，指定要读取的状态属性名列表，不传则返回全部', items: { type: 'string' } },
+          instanceId: {
+            type: 'string',
+            description: 'Service 实例的唯一标识符，通过 list_services 获取',
+          },
+          keys: {
+            type: 'array',
+            description: '可选，指定要读取的状态属性名列表，不传则返回全部',
+            items: { type: 'string' },
+          },
         },
         required: ['instanceId'],
       },
@@ -221,11 +248,15 @@ export class McpRegistry {
 
     this.registerTool({
       name: 'set_state',
-      description: '直接修改指定 Service 实例的状态属性值。仅允许修改已存在的公开状态属性（非函数、非私有）。修改会触发响应式更新，驱动页面重渲染。',
+      description:
+        '直接修改指定 Service 实例的状态属性值。仅允许修改已存在的公开状态属性（非函数、非私有）。修改会触发响应式更新，驱动页面重渲染。',
       inputSchema: {
         type: 'object',
         properties: {
-          instanceId: { type: 'string', description: 'Service 实例的唯一标识符，通过 list_services 获取' },
+          instanceId: {
+            type: 'string',
+            description: 'Service 实例的唯一标识符，通过 list_services 获取',
+          },
           patch: {
             type: 'object',
             description: '要修改的状态键值对，key 为属性名，value 为新值',
@@ -235,18 +266,25 @@ export class McpRegistry {
         required: ['instanceId', 'patch'],
       },
       execute: (input: unknown) => {
-        const { instanceId, patch } = input as { instanceId: string; patch: Record<string, unknown> };
+        const { instanceId, patch } = input as {
+          instanceId: string;
+          patch: Record<string, unknown>;
+        };
         return setStateFn(getLiveInstanceMap(), { instanceId, patch: patch ?? {} });
       },
     });
 
     this.registerTool({
       name: 'assert_state',
-      description: '验证指定 Service 实例的状态是否符合预期。支持批量断言，一次调用返回完整断言报告。断言在浏览器内执行，中间节点不序列化，彻底规避大对象 crash。',
+      description:
+        '验证指定 Service 实例的状态是否符合预期。支持批量断言，一次调用返回完整断言报告。断言在浏览器内执行，中间节点不序列化，彻底规避大对象 crash。',
       inputSchema: {
         type: 'object',
         properties: {
-          instanceId: { type: 'string', description: 'Service 实例的唯一标识符，通过 list_services 获取' },
+          instanceId: {
+            type: 'string',
+            description: 'Service 实例的唯一标识符，通过 list_services 获取',
+          },
           assertions: {
             type: 'array',
             description: '断言列表，一次调用支持多个断言',
@@ -256,8 +294,33 @@ export class McpRegistry {
                 path: { type: 'string', description: '点分路径，支持数组下标（.数字 形式）' },
                 op: {
                   type: 'string',
-                  enum: ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'exists', 'notExists', 'includes', 'notIncludes', 'matches', 'type', 'length', 'lengthGt', 'lengthGte', 'lengthLt', 'lengthLte', 'deepEq', 'between', 'hasKeys', 'matchObject', 'some', 'every'],
-                  description: '断言操作符。between: 闭区间 [lo,hi]；hasKeys: 对象包含指定 key（string 或 string[]）；matchObject: 对象浅层匹配；some/every: 数组元素断言（expected 为 {path,op,expected}）',
+                  enum: [
+                    'eq',
+                    'neq',
+                    'gt',
+                    'gte',
+                    'lt',
+                    'lte',
+                    'exists',
+                    'notExists',
+                    'includes',
+                    'notIncludes',
+                    'matches',
+                    'type',
+                    'length',
+                    'lengthGt',
+                    'lengthGte',
+                    'lengthLt',
+                    'lengthLte',
+                    'deepEq',
+                    'between',
+                    'hasKeys',
+                    'matchObject',
+                    'some',
+                    'every',
+                  ],
+                  description:
+                    '断言操作符。between: 闭区间 [lo,hi]；hasKeys: 对象包含指定 key（string 或 string[]）；matchObject: 对象浅层匹配；some/every: 数组元素断言（expected 为 {path,op,expected}）',
                 },
                 expected: { description: '期望值' },
                 message: { type: 'string', description: '断言说明' },
@@ -270,8 +333,16 @@ export class McpRegistry {
         required: ['instanceId', 'assertions'],
       },
       execute: (input: unknown) => {
-        const { instanceId, assertions, description } = input as { instanceId: string; assertions: import('./types').Assertion[]; description?: string };
-        return assertStateFn(getLiveInstanceMap(), { instanceId, assertions: assertions ?? [], description });
+        const { instanceId, assertions, description } = input as {
+          instanceId: string;
+          assertions: import('./types').Assertion[];
+          description?: string;
+        };
+        return assertStateFn(getLiveInstanceMap(), {
+          instanceId,
+          assertions: assertions ?? [],
+          description,
+        });
       },
     });
 
@@ -309,7 +380,7 @@ export class McpRegistry {
     // 如果已经订阅过该容器，不重复订阅
     if (this.containerListeners.has(container)) return;
 
-    // eslint-disable-next-line unicorn/consistent-function-scoping -- needs access to `this` for registering tools
+    // nested helper needs `this` for registering tools
     const onInstantiated = (instance: Service): void => {
       if (!instance.instanceId) return;
       const prototype = Object.getPrototypeOf(instance);
@@ -426,7 +497,7 @@ export class McpRegistry {
    * { content: [{ type: 'text', text: JSON.stringify(result) }] }
    */
   private registerTool(tool: WebMcpToolDefinition): void {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+    // navigator.modelContext is a browser API used at runtime
     if (!navigator.modelContext) return;
 
     try {
@@ -450,7 +521,7 @@ export class McpRegistry {
           };
         },
       };
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.modelContext is a browser API used at runtime
+      // navigator.modelContext is a browser API used at runtime
       const handle = navigator.modelContext.registerTool(wrappedTool);
       this.unregisterHandles.push(handle);
     } catch (error: unknown) {
@@ -488,10 +559,7 @@ export class McpRegistry {
   /**
    * 为单个 @mcpTool 注解方法注册独立 Tool
    */
-  private registerIndependentMcpTool(
-    instance: Service,
-    meta: McpToolMetadata
-  ): void {
+  private registerIndependentMcpTool(instance: Service, meta: McpToolMetadata): void {
     const serviceClassName = instance.constructor?.name || 'Service';
     const toolName = meta.options.name ?? `${serviceClassName}__${meta.methodName}`;
     const prototype = Object.getPrototypeOf(instance);
@@ -540,9 +608,7 @@ export class McpRegistry {
 /**
  * 根据实时 instanceMap 工厂函数创建三个通用 Tool 定义数组
  */
-export function createGenericTools(
-  rootContainer: Container,
-): WebMcpToolDefinition[] {
+export function createGenericTools(rootContainer: Container): WebMcpToolDefinition[] {
   // 使用懒加载：每次 execute 时重新遍历
   const buildMap = (): Map<string, Service> => {
     const map = new Map<string, Service>();

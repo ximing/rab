@@ -1,16 +1,12 @@
-import { proxyToRaw } from "../proxy-raw-map";
+import { proxyToRaw } from '../proxy-raw-map';
 import {
   registerRunningReactionForOperation,
   queueReactionsForOperation,
   hasOperationOldValueConsumer,
-} from "../reaction-runner";
-import type {
-  Collection,
-  CollectionHandlers,
-  IteratorResult,
-  PatchableIterator,
-} from "../types";
-import { toRawIfProxy } from "../utils";
+} from '../reaction-runner';
+import type { Collection, CollectionHandlers, IteratorResult, PatchableIterator } from '../types';
+import { toRawIfProxy } from '../utils';
+
 import {
   isAnyCollectionTarget,
   isMapTarget,
@@ -18,7 +14,7 @@ import {
   isSetTarget,
   isWeakMapTarget,
   isWeakSetTarget,
-} from "./collection-handler";
+} from './collection-handler';
 
 /*
  * 浅层集合处理器 - 用于 Map、Set、WeakMap、WeakSet
@@ -72,7 +68,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     registerRunningReactionForOperation({
       target,
       key: key as PropertyKey,
-      type: "has",
+      type: 'has',
     });
     // 调用原始 Map/Set 的 has 方法
     return target.has(key as object);
@@ -89,7 +85,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     registerRunningReactionForOperation({
       target,
       key: key as PropertyKey,
-      type: "get",
+      type: 'get',
     });
     // 关键区别：直接返回原始值，不通过 observableChild 包装
     return target.get(key as object);
@@ -103,9 +99,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     if (!target || !(isSetTarget(target) || isWeakSetTarget(target))) {
       return this;
     }
-    const hadKey = (target as Set<unknown> | WeakSet<object>).has(
-      key as object
-    );
+    const hadKey = (target as Set<unknown> | WeakSet<object>).has(key as object);
     // forward the operation before queueing reactions
     (target as Set<unknown> | WeakSet<object>).add(key as object);
     if (!hadKey) {
@@ -113,7 +107,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
         target,
         key: key as PropertyKey,
         value: key,
-        type: "add",
+        type: 'add',
       });
     }
     return this;
@@ -128,23 +122,18 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return this;
     }
-    const hadKey = (
-      target as Map<unknown, unknown> | WeakMap<object, unknown>
-    ).has(key as object);
+    const hadKey = (target as Map<unknown, unknown> | WeakMap<object, unknown>).has(key as object);
     const oldValue = (target as Map<unknown, unknown>).get
       ? (target as Map<unknown, unknown>).get(key)
       : undefined;
     // forward the operation before queueing reactions
-    (target as Map<unknown, unknown> | WeakMap<object, unknown>).set(
-      key as object,
-      value
-    );
+    (target as Map<unknown, unknown> | WeakMap<object, unknown>).set(key as object, value);
     if (!hadKey) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,
         value,
-        type: "add",
+        type: 'add',
       });
     } else if (!Object.is(value, oldValue)) {
       queueReactionsForOperation({
@@ -152,7 +141,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
         key: key as PropertyKey,
         value,
         oldValue,
-        type: "set",
+        type: 'set',
       });
     }
     return this;
@@ -174,18 +163,14 @@ export const shadowCollectionHandlers: CollectionHandlers = {
       : undefined;
     // forward the operation before queueing reactions
     const result = (
-      target as
-        | Map<unknown, unknown>
-        | Set<unknown>
-        | WeakMap<object, unknown>
-        | WeakSet<object>
+      target as Map<unknown, unknown> | Set<unknown> | WeakMap<object, unknown> | WeakSet<object>
     ).delete(key as object);
     if (hadKey) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,
         oldValue,
-        type: "delete",
+        type: 'delete',
       });
     }
     return result;
@@ -202,16 +187,10 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 消费者时才做, 语义不变 (clear 前内容拷贝)。
     // 子类覆写 clear() 的 TOCTOU 窗口 (GG7 第 2 轮 issue #7) 同样保守:
     // constructor 非 Map/Set 时始终拷贝, 详见 collection-handler.ts 注释。
-    const operation = { target, key: "" as PropertyKey, type: "clear" as const };
+    const operation = { target, key: '' as PropertyKey, type: 'clear' as const };
     let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
-    if (
-      hadItems &&
-      (!isPlainMapOrSetTarget(target) ||
-        hasOperationOldValueConsumer(operation))
-    ) {
-      oldTarget = isMapTarget(target)
-        ? new Map(target)
-        : new Set(target);
+    if (hadItems && (!isPlainMapOrSetTarget(target) || hasOperationOldValueConsumer(operation))) {
+      oldTarget = isMapTarget(target) ? new Map(target) : new Set(target);
     }
     // forward the operation before queueing reactions
     target.clear();
@@ -226,11 +205,7 @@ export const shadowCollectionHandlers: CollectionHandlers = {
   // 拦截 forEach 操作
   forEach(
     this: Collection,
-    callback: (
-      value: unknown,
-      key: unknown,
-      map: Map<unknown, unknown>
-    ) => void,
+    callback: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void,
     thisArg?: unknown
   ): void {
     const target = proxyToRaw.get(this);
@@ -239,14 +214,11 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     // 关键区别：不包装回调参数中的值，直接传递原始值
-    (target as Map<unknown, unknown> | Set<unknown>).forEach(
-      callback as any,
-      thisArg
-    );
+    (target as Map<unknown, unknown> | Set<unknown>).forEach(callback as any, thisArg);
   },
 
   // 拦截 keys 操作
@@ -257,8 +229,8 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     return target.keys() as IterableIterator<unknown>;
   },
@@ -271,16 +243,12 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target.values() as PatchableIterator<unknown>;
     // 使用 shadowPatchIterator 不包装返回值
-    return shadowPatchIterator(
-      iterator,
-      target,
-      false
-    ) as IterableIterator<unknown>;
+    return shadowPatchIterator(iterator, target, false) as IterableIterator<unknown>;
   },
 
   // 拦截 entries 操作
@@ -291,14 +259,12 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target.entries() as PatchableIterator<[unknown, unknown]>;
     // 使用 shadowPatchIterator 不包装返回值
-    return shadowPatchIterator(iterator, target, true) as IterableIterator<
-      [unknown, unknown]
-    >;
+    return shadowPatchIterator(iterator, target, true) as IterableIterator<[unknown, unknown]>;
   },
 
   // 拦截 Symbol.iterator 操作
@@ -309,16 +275,12 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target[Symbol.iterator]() as PatchableIterator<unknown>;
     // 使用 shadowPatchIterator 不包装返回值
-    return shadowPatchIterator(
-      iterator,
-      target,
-      isMapTarget(target)
-    ) as IterableIterator<unknown>;
+    return shadowPatchIterator(iterator, target, isMapTarget(target)) as IterableIterator<unknown>;
   },
 
   // 拦截 size 属性访问
@@ -331,8 +293,8 @@ export const shadowCollectionHandlers: CollectionHandlers = {
     // 迭代依赖
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     return target.size;
   },

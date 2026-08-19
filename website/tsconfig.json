@@ -35,11 +35,9 @@
     // 直接指向 monorepo 源码，与 vite.config.ts 的 alias 保持一致，
     // 使站点不依赖各包的 lib/ 构建产物
     "paths": {
-      // packages/react/node_modules 里有自己的 @types/react@18（其 devDep）。
+      // packages/react/node_modules 可能解析到另一份 @types/react。
       // 强制全站（含 packages/*/src 与 jsx-runtime）只解析到网站这一份
-      // @types/react@18，否则同一类型的两份拷贝会互相报「不可赋值」。
-      // 注意：packages/react 源码是按 React 18 类型编写的，网站因此也固定用
-      // @types/react@18（运行时仍是 react@19，peer 范围允许）。
+      // @types/react，否则同一类型的两份拷贝会互相报「不可赋值」。
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"],
       "react-dom": ["./node_modules/@types/react-dom"],

@@ -1,5 +1,6 @@
-import { bindServices, observer, useService } from "@rabjs/react";
-import { GreetingService, SettingsService } from "./CollabServices";
+import { bindServices, observer, useService } from '@rabjs/react';
+
+import { GreetingService, SettingsService } from './CollabServices';
 
 /**
  * 服务协作 live demo —— GreetingService 通过 getter + this.resolve 解析 SettingsService。
@@ -14,21 +15,21 @@ const Collab = observer(() => {
     <div>
       <div className="demo-row">
         <button
-          className={`demo-btn${settings.lang === "zh" ? " primary" : ""}`}
-          onClick={() => settings.setLang("zh")}
+          className={`demo-btn${settings.lang === 'zh' ? ' primary' : ''}`}
+          onClick={() => settings.setLang('zh')}
         >
           中文
         </button>
         <button
-          className={`demo-btn${settings.lang === "en" ? " primary" : ""}`}
-          onClick={() => settings.setLang("en")}
+          className={`demo-btn${settings.lang === 'en' ? ' primary' : ''}`}
+          onClick={() => settings.setLang('en')}
         >
           English
         </button>
         <input
           value={greeting.name}
-          onChange={(e) => greeting.setName(e.target.value)}
-          style={{ padding: "6px 10px" }}
+          onChange={e => greeting.setName(e.target.value)}
+          style={{ padding: '6px 10px' }}
         />
       </div>
       <p style={{ fontSize: 18, marginTop: 12 }}>{greeting.greeting}</p>

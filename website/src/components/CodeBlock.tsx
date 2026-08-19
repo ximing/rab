@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Highlight, themes } from "prism-react-renderer";
+import { Highlight, themes } from 'prism-react-renderer';
+import { useState } from 'react';
 
 /**
  * 代码高亮块（全站统一的代码展示组件）
@@ -22,7 +22,7 @@ export interface CodeBlockProps {
   title?: string;
 }
 
-export function CodeBlock({ children: code, language = "tsx", title }: CodeBlockProps) {
+export function CodeBlock({ children: code, language = 'tsx', title }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -40,7 +40,7 @@ export function CodeBlock({ children: code, language = "tsx", title }: CodeBlock
       <div className="code-block-title">
         <span>{title ?? language}</span>
         <button type="button" className="code-copy" onClick={copy}>
-          {copied ? "已复制" : "复制"}
+          {copied ? '已复制' : '复制'}
         </button>
       </div>
       <Highlight theme={themes.nightOwl} code={code.trim()} language={language}>

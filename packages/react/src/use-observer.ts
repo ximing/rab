@@ -2,27 +2,23 @@
  * useObserver Hook - 核心 Hook，用于在函数组件中追踪 observable 的变化
  * 参考 mobx-react-lite 实现，支持 React 并发模式和严格模式
  */
-import {
-  observe,
-  unobserve,
-  type Reaction,
-  type Operation,
-} from "@rabjs/observer";
-import React from "react";
+import { observe, unobserve, type Reaction, type Operation } from '@rabjs/observer';
+import React from 'react';
 
 // 优先使用 React 18+ 内置的 useSyncExternalStore，降级到 shim
 let useSyncExternalStore: typeof React.useSyncExternalStore;
-if ("useSyncExternalStore" in React) {
+if ('useSyncExternalStore' in React) {
   useSyncExternalStore = (React as any).useSyncExternalStore;
 } else {
   // React 16-17 使用 shim
-  const shim = require("use-sync-external-store/shim");
+  const shim = require('use-sync-external-store/shim');
   useSyncExternalStore = shim.useSyncExternalStore;
 }
 
-import { isUsingStaticRendering } from "./static-rendering";
-import { observerFinalizationRegistry } from "./utils/observer-finalization-registry";
-import { printDebugValue } from "./utils/print-debug-value";
+import { isUsingStaticRendering } from './static-rendering';
+import { notifyReactStore } from './utils/notify-react-store';
+import { observerFinalizationRegistry } from './utils/observer-finalization-registry';
+import { printDebugValue } from './utils/print-debug-value';
 
 /**
  * Observer 管理对象
@@ -63,7 +59,9 @@ function createReaction(adm: ObserverAdministration) {
         // onStoreChange 在组件"mount"之前不可用
         // 如果在初始渲染和 mount 之间状态发生变化，
         // useSyncExternalStore 应该通过检查状态版本并发出更新来处理
-        adm.onStoreChange?.();
+        notifyReactStore(() => {
+          adm.onStoreChange?.();
+        });
       },
       // 透传 debugger 参数
       debugger: adm.debugger,
@@ -87,7 +85,7 @@ export interface UseObserverOptions {
  */
 export function useObserver<T>(
   render: () => T,
-  baseComponentName: string = "observed",
+  baseComponentName: string = 'observed',
   options?: UseObserverOptions
 ): T {
   const admRef = React.useRef<ObserverAdministration | null>(null);

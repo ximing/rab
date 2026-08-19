@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { observer } from "@rabjs/react";
-import {
-  McpBridge,
-  type ModelContextApi,
-  type WebMcpToolDefinition,
-} from "@rabjs/web-mcp";
-import { demoContainer, todoService } from "./WebMcpService";
+import { observer } from '@rabjs/react';
+import { McpBridge, type ModelContextApi, type WebMcpToolDefinition } from '@rabjs/web-mcp';
+import { useEffect, useRef, useState } from 'react';
+
+import { demoContainer, todoService } from './WebMcpService';
 
 /**
  * WebMCP 桥接 live demo
@@ -46,7 +43,7 @@ function installMockModelContext(): MockModelContext | null {
     },
   };
   try {
-    Object.defineProperty(navigator, "modelContext", {
+    Object.defineProperty(navigator, 'modelContext', {
       configurable: true,
       get: () => mock,
     });
@@ -62,7 +59,7 @@ function uninstallMockModelContext() {
 
 /** 应用状态视图：observer 追踪 todos，Agent 的修改同样会驱动这里重渲染 */
 const StateView = observer(() => (
-  <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
+  <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
     {todoService.todos.map((todo, i) => (
       <li key={i}>{todo}</li>
     ))}
@@ -71,13 +68,13 @@ const StateView = observer(() => (
 
 export default function WebMcpDemo() {
   const [toolNames, setToolNames] = useState<string[]>([]);
-  const [toolResult, setToolResult] = useState("");
+  const [toolResult, setToolResult] = useState('');
   const mockRef = useRef<MockModelContext | null>(null);
 
   useEffect(() => {
     const mock = installMockModelContext();
     if (!mock) {
-      setToolResult("当前浏览器的 navigator.modelContext 无法被 mock 遮蔽，live demo 不可用");
+      setToolResult('当前浏览器的 navigator.modelContext 无法被 mock 遮蔽，live demo 不可用');
       return;
     }
     mockRef.current = mock;
@@ -110,7 +107,7 @@ export default function WebMcpDemo() {
 
   return (
     <div>
-      <p style={{ margin: "0 0 4px", color: "var(--text-dim)" }}>
+      <p style={{ margin: '0 0 4px', color: 'var(--text-dim)' }}>
         应用状态（instanceId: <code>{instanceId}</code>）
       </p>
       <StateView />
@@ -123,35 +120,30 @@ export default function WebMcpDemo() {
         </button>
       </div>
 
-      <p style={{ margin: "0 0 4px", color: "var(--text-dim)" }}>
+      <p style={{ margin: '0 0 4px', color: 'var(--text-dim)' }}>
         已注册到 navigator.modelContext 的工具：
       </p>
       <div className="demo-row" style={{ marginBottom: 12 }}>
-        {toolNames.map((name) => (
+        {toolNames.map(name => (
           <code key={name}>{name}</code>
         ))}
       </div>
 
-      <p style={{ margin: "0 0 4px", color: "var(--text-dim)" }}>
-        模拟 Agent 调用：
-      </p>
+      <p style={{ margin: '0 0 4px', color: 'var(--text-dim)' }}>模拟 Agent 调用：</p>
       <div className="demo-row" style={{ marginBottom: 12 }}>
-        <button className="demo-btn" onClick={() => callTool("list_services", {})}>
+        <button className="demo-btn" onClick={() => callTool('list_services', {})}>
           list_services
         </button>
-        <button
-          className="demo-btn"
-          onClick={() => callTool("get_state", { instanceId })}
-        >
+        <button className="demo-btn" onClick={() => callTool('get_state', { instanceId })}>
           get_state
         </button>
         <button
           className="demo-btn primary"
           onClick={() =>
-            callTool("execute_action", {
+            callTool('execute_action', {
               instanceId,
-              action: "add",
-              args: ["来自 AI Agent 的待办"],
+              action: 'add',
+              args: ['来自 AI Agent 的待办'],
             })
           }
         >
@@ -159,7 +151,7 @@ export default function WebMcpDemo() {
         </button>
         <button
           className="demo-btn"
-          onClick={() => callTool("TodoService__clear", { instanceId, args: [] })}
+          onClick={() => callTool('TodoService__clear', { instanceId, args: [] })}
         >
           TodoService__clear
         </button>
@@ -170,12 +162,12 @@ export default function WebMcpDemo() {
           style={{
             margin: 0,
             padding: 12,
-            background: "var(--code-bg)",
-            border: "1px solid var(--border)",
+            background: 'var(--code-bg)',
+            border: '1px solid var(--border)',
             borderRadius: 8,
             fontSize: 12.5,
             maxHeight: 260,
-            overflow: "auto",
+            overflow: 'auto',
           }}
         >
           {toolResult}

@@ -24,6 +24,13 @@ updates:
       prefix-development: "chore(deps-dev)"
     # 锁文件合并冲突时自动 rebase (而不是堆一个 rebase PR)
     rebase-strategy: auto
+    # typescript majors are the native compiler (no JS API). Dual-install is
+    # managed in package.json (@typescript/native + typescript6 alias).
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@typescript/native"
+        update-types: ["version-update:semver-major"]
     groups:
       typescript:
         patterns:

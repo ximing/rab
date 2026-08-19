@@ -79,12 +79,19 @@ function metadataToJsonSchema(target: object, methodName: string): Record<string
       const key = `arg${index}`;
       let jsonType: string = 'string';
 
-      // eslint-disable-next-line unicorn/prefer-switch -- mixed type checks (value + typeof) are not ideal for switch
+      // mixed type checks (value + typeof) are not ideal for switch
       if (type === String) jsonType = 'string';
       else if (type === Number) jsonType = 'number';
       else if (type === Boolean) jsonType = 'boolean';
       else if (type === Array) jsonType = 'array';
-      else if (type === Object || (typeof type === 'function' && type !== String && type !== Number && type !== Boolean && type !== Array)) {
+      else if (
+        type === Object ||
+        (typeof type === 'function' &&
+          type !== String &&
+          type !== Number &&
+          type !== Boolean &&
+          type !== Array)
+      ) {
         jsonType = 'object';
       }
 

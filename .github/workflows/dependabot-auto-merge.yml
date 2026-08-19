@@ -7,7 +7,7 @@
 #             major 升级、安全更新(带 vulnerability label 时也留给人工, 因为
 #             需要人评估影响面) —— 只打标签不动
 #
-# 注意: 仓库未配 PR 级必过检查, 本 workflow 是自动合并路径上唯一的验证闸门,
+# PR 级必过检查见 ci.yml。本 workflow 只负责「纯 dev patch/minor」自动合并,
 # 验证失败只评论说明, 绝不合并。
 name: Dependabot auto-merge
 

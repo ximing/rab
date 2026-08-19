@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { setupWindowRootContainer } from "@rabjs/devtools";
-import type { RSRootContainerHandle } from "@rabjs/devtools";
+import { setupWindowRootContainer } from '@rabjs/devtools';
+import type { RSRootContainerHandle } from '@rabjs/devtools';
+import { useState } from 'react';
 
 /**
  * DevTools live demo —— 列出当前页面容器树里所有已实例化的 Service。
@@ -12,7 +12,7 @@ import type { RSRootContainerHandle } from "@rabjs/devtools";
  */
 setupWindowRootContainer();
 
-type ServiceRow = ReturnType<RSRootContainerHandle["listServices"]>[number];
+type ServiceRow = ReturnType<RSRootContainerHandle['listServices']>[number];
 
 export default function DevtoolsDemo() {
   const [rows, setRows] = useState<ServiceRow[] | null>(null);
@@ -30,19 +30,16 @@ export default function DevtoolsDemo() {
       </div>
       {rows ? (
         rows.length > 0 ? (
-          <ul style={{ margin: "12px 0 0", paddingLeft: 20 }}>
-            {rows.map((row) => (
+          <ul style={{ margin: '12px 0 0', paddingLeft: 20 }}>
+            {rows.map(row => (
               <li key={row.instanceId} style={{ marginBottom: 6 }}>
                 <code>{row.instanceId}</code>
-                <span style={{ color: "var(--text-dim)" }}>
-                  {" "}
-                  —— 容器 {row.containerName}
-                </span>
+                <span style={{ color: 'var(--text-dim)' }}> —— 容器 {row.containerName}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p style={{ color: "var(--text-dim)", marginTop: 12 }}>
+          <p style={{ color: 'var(--text-dim)', marginTop: 12 }}>
             还没有已实例化的 Service。先去「在线 Demo」点几下，再回来刷新。
           </p>
         )

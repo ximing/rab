@@ -1,5 +1,6 @@
-import { bindServices, observer, useService } from "@rabjs/react";
-import { UserService } from "./UserService";
+import { bindServices, observer, useService } from '@rabjs/react';
+
+import { UserService } from './UserService';
 
 /**
  * 异步加载 live demo —— async 方法（默认就是 Action 语义）+ $model loading/error。
@@ -27,8 +28,8 @@ const User = observer(() => {
           加载不存在的用户
         </button>
       </div>
-      {loading ? <p style={{ color: "var(--text-dim)" }}>加载中…</p> : null}
-      {error ? <p style={{ color: "#e06c75" }}>出错了：{error.message}</p> : null}
+      {loading ? <p style={{ color: 'var(--text-dim)' }}>加载中…</p> : null}
+      {error ? <p style={{ color: '#e06c75' }}>出错了：{error.message}</p> : null}
       {!loading && user.profile ? (
         <p>
           {user.profile.name}（id: {user.profile.id}）—— {user.profile.bio}

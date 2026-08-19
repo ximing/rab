@@ -5,9 +5,9 @@
  * 目的：确保响应式系统能够正确批处理多个状态变化，避免不必要的重新渲染
  */
 
-import React, { useState } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { observer, useLocalObservable, observable } from "../../main";
+import React, { act, useState } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { observer, useLocalObservable, observable } from '../../main';
 
 // ============ 测试工具 ============
 
@@ -32,12 +32,12 @@ class RenderCounter {
 
 // ============ 测试用例 ============
 
-describe("多次状态修改渲染次数", () => {
-  it("应该在同一个函数中多次修改 state 时只渲染一次", async () => {
+describe('多次状态修改渲染次数', () => {
+  it('应该在同一个函数中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       count: 0,
-      name: "test",
+      name: 'test',
       value: 0,
     });
 
@@ -57,29 +57,31 @@ describe("多次状态修改渲染次数", () => {
 
     // 初始渲染
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("count")).toHaveTextContent("0");
-    expect(screen.getByTestId("name")).toHaveTextContent("test");
-    expect(screen.getByTestId("value")).toHaveTextContent("0");
+    expect(screen.getByTestId('count')).toHaveTextContent('0');
+    expect(screen.getByTestId('name')).toHaveTextContent('test');
+    expect(screen.getByTestId('value')).toHaveTextContent('0');
 
     // 在同一个函数中多次修改 state
     const updateState = () => {
       state.count = 1;
-      state.name = "updated";
+      state.name = 'updated';
       state.value = 100;
     };
 
-    updateState();
+    act(() => {
+      updateState();
+    });
 
     // 应该只渲染一次（批处理）
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("count")).toHaveTextContent("1");
-      expect(screen.getByTestId("name")).toHaveTextContent("updated");
-      expect(screen.getByTestId("value")).toHaveTextContent("100");
+      expect(screen.getByTestId('count')).toHaveTextContent('1');
+      expect(screen.getByTestId('name')).toHaveTextContent('updated');
+      expect(screen.getByTestId('value')).toHaveTextContent('100');
     });
   });
 
-  it("应该在事件处理器中多次修改 state 时只渲染一次", async () => {
+  it('应该在事件处理器中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       a: 0,
@@ -112,20 +114,20 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("values")).toHaveTextContent("0-0-0");
+    expect(screen.getByTestId('values')).toHaveTextContent('0-0-0');
 
     // 点击按钮触发多个状态修改
-    const button = screen.getByTestId("update-btn");
+    const button = screen.getByTestId('update-btn');
     fireEvent.click(button);
 
     // 应该只渲染一次
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("values")).toHaveTextContent("1-1-1");
+      expect(screen.getByTestId('values')).toHaveTextContent('1-1-1');
     });
   });
 
-  it("应该在异步函数中多次修改 state 时正确渲染", async () => {
+  it('应该在异步函数中多次修改 state 时正确渲染', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       step1: false,
@@ -141,7 +143,7 @@ describe("多次状态修改渲染次数", () => {
         state.loading = true;
 
         // 模拟异步操作
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         state.step1 = true;
         state.step2 = true;
@@ -151,10 +153,9 @@ describe("多次状态修改渲染次数", () => {
 
       return (
         <div>
-          <div data-testid="status">{state.loading ? "loading" : "done"}</div>
+          <div data-testid="status">{state.loading ? 'loading' : 'done'}</div>
           <div data-testid="steps">
-            {state.step1 ? "✓" : "✗"}-{state.step2 ? "✓" : "✗"}-
-            {state.step3 ? "✓" : "✗"}
+            {state.step1 ? '✓' : '✗'}-{state.step2 ? '✓' : '✗'}-{state.step3 ? '✓' : '✗'}
           </div>
           <button onClick={handleAsyncUpdate} data-testid="async-btn">
             Async Update
@@ -167,29 +168,29 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("status")).toHaveTextContent("done");
+    expect(screen.getByTestId('status')).toHaveTextContent('done');
 
-    const button = screen.getByTestId("async-btn");
+    const button = screen.getByTestId('async-btn');
     fireEvent.click(button);
 
     // 等待 loading 状态更新
     await waitFor(() => {
-      expect(screen.getByTestId("status")).toHaveTextContent("loading");
+      expect(screen.getByTestId('status')).toHaveTextContent('loading');
     });
 
     const renderCountAfterLoading = renderCounter.getCount();
 
     // 等待异步操作完成
     await waitFor(() => {
-      expect(screen.getByTestId("status")).toHaveTextContent("done");
-      expect(screen.getByTestId("steps")).toHaveTextContent("✓-✓-✓");
+      expect(screen.getByTestId('status')).toHaveTextContent('done');
+      expect(screen.getByTestId('steps')).toHaveTextContent('✓-✓-✓');
     });
 
     // 应该有两次额外的渲染：一次是 loading=true，一次是最终状态
     expect(renderCounter.getCount()).toBe(renderCountAfterLoading + 1);
   });
 
-  it("应该在循环中多次修改 state 时只渲染一次", async () => {
+  it('应该在循环中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       items: [0, 0, 0, 0, 0],
@@ -210,7 +211,7 @@ describe("多次状态修改渲染次数", () => {
 
       return (
         <div>
-          <div data-testid="items">{state.items.join(",")}</div>
+          <div data-testid="items">{state.items.join(',')}</div>
           <div data-testid="total">{state.total}</div>
           <button onClick={handleBatchUpdate} data-testid="batch-btn">
             Batch Update
@@ -223,21 +224,21 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("items")).toHaveTextContent("0,0,0,0,0");
-    expect(screen.getByTestId("total")).toHaveTextContent("0");
+    expect(screen.getByTestId('items')).toHaveTextContent('0,0,0,0,0');
+    expect(screen.getByTestId('total')).toHaveTextContent('0');
 
-    const button = screen.getByTestId("batch-btn");
+    const button = screen.getByTestId('batch-btn');
     fireEvent.click(button);
 
     // 应该只渲染一次
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("items")).toHaveTextContent("1,2,3,4,5");
-      expect(screen.getByTestId("total")).toHaveTextContent("15");
+      expect(screen.getByTestId('items')).toHaveTextContent('1,2,3,4,5');
+      expect(screen.getByTestId('total')).toHaveTextContent('15');
     });
   });
 
-  it("应该在 useLocalObservable 中多次修改 state 时只渲染一次", async () => {
+  it('应该在 useLocalObservable 中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
 
     const TestComponent = observer(() => {
@@ -271,27 +272,27 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("coords")).toHaveTextContent("0,0,0");
+    expect(screen.getByTestId('coords')).toHaveTextContent('0,0,0');
 
-    const button = screen.getByTestId("update-coords");
+    const button = screen.getByTestId('update-coords');
     fireEvent.click(button);
 
     // 应该只渲染一次
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("coords")).toHaveTextContent("10,20,30");
+      expect(screen.getByTestId('coords')).toHaveTextContent('10,20,30');
     });
   });
 
-  it("应该在嵌套对象修改时只渲染一次", async () => {
+  it('应该在嵌套对象修改时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       user: {
-        name: "John",
+        name: 'John',
         age: 30,
         address: {
-          city: "Beijing",
-          country: "China",
+          city: 'Beijing',
+          country: 'China',
         },
       },
     });
@@ -300,10 +301,10 @@ describe("多次状态修改渲染次数", () => {
       renderCounter.increment();
 
       const handleUpdate = () => {
-        state.user.name = "Jane";
+        state.user.name = 'Jane';
         state.user.age = 25;
-        state.user.address.city = "Shanghai";
-        state.user.address.country = "China";
+        state.user.address.city = 'Shanghai';
+        state.user.address.country = 'China';
       };
 
       return (
@@ -322,28 +323,24 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("user-info")).toHaveTextContent(
-      "John, 30, Beijing"
-    );
+    expect(screen.getByTestId('user-info')).toHaveTextContent('John, 30, Beijing');
 
-    const button = screen.getByTestId("update-user");
+    const button = screen.getByTestId('update-user');
     fireEvent.click(button);
 
     // 应该只渲染一次
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("user-info")).toHaveTextContent(
-        "Jane, 25, Shanghai"
-      );
+      expect(screen.getByTestId('user-info')).toHaveTextContent('Jane, 25, Shanghai');
     });
   });
 
-  it("应该在多个 observer 组件中正确处理多次修改", async () => {
+  it('应该在多个 observer 组件中正确处理多次修改', async () => {
     const renderCounter1 = new RenderCounter();
     const renderCounter2 = new RenderCounter();
     const state = observable({
       count: 0,
-      name: "test",
+      name: 'test',
     });
 
     const Component1 = observer(() => {
@@ -359,7 +356,7 @@ describe("多次状态修改渲染次数", () => {
     const TestComponent = () => {
       const handleUpdate = () => {
         state.count = 1;
-        state.name = "updated";
+        state.name = 'updated';
       };
 
       return (
@@ -378,22 +375,22 @@ describe("多次状态修改渲染次数", () => {
     expect(renderCounter1.getCount()).toBe(1);
     expect(renderCounter2.getCount()).toBe(1);
 
-    const button = screen.getByTestId("update-btn");
+    const button = screen.getByTestId('update-btn');
     fireEvent.click(button);
 
     // 两个组件都应该只渲染一次
     await waitFor(() => {
       expect(renderCounter1.getCount()).toBe(2);
       expect(renderCounter2.getCount()).toBe(2);
-      expect(screen.getByTestId("comp1")).toHaveTextContent("1");
-      expect(screen.getByTestId("comp2")).toHaveTextContent("updated");
+      expect(screen.getByTestId('comp1')).toHaveTextContent('1');
+      expect(screen.getByTestId('comp2')).toHaveTextContent('updated');
     });
   });
 
-  it("应该在条件分支中多次修改 state 时只渲染一次", async () => {
+  it('应该在条件分支中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
-      mode: "simple",
+      mode: 'simple',
       a: 0,
       b: 0,
       c: 0,
@@ -403,7 +400,7 @@ describe("多次状态修改渲染次数", () => {
       renderCounter.increment();
 
       const handleUpdate = () => {
-        if (state.mode === "simple") {
+        if (state.mode === 'simple') {
           state.a = 1;
           state.b = 2;
         } else {
@@ -423,9 +420,7 @@ describe("多次状态修改渲染次数", () => {
             Update
           </button>
           <button
-            onClick={() =>
-              (state.mode = state.mode === "simple" ? "complex" : "simple")
-            }
+            onClick={() => (state.mode = state.mode === 'simple' ? 'complex' : 'simple')}
             data-testid="toggle-mode"
           >
             Toggle Mode
@@ -440,22 +435,22 @@ describe("多次状态修改渲染次数", () => {
     expect(renderCounter.getCount()).toBe(1);
 
     // 第一次更新（simple 模式）
-    let button = screen.getByTestId("update-btn");
+    let button = screen.getByTestId('update-btn');
     fireEvent.click(button);
 
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("values")).toHaveTextContent("1-2-0");
+      expect(screen.getByTestId('values')).toHaveTextContent('1-2-0');
     });
 
     const renderCountAfterFirstUpdate = renderCounter.getCount();
 
     // 切换模式
-    const toggleBtn = screen.getByTestId("toggle-mode");
+    const toggleBtn = screen.getByTestId('toggle-mode');
     fireEvent.click(toggleBtn);
 
     await waitFor(() => {
-      expect(screen.getByTestId("mode")).toHaveTextContent("complex");
+      expect(screen.getByTestId('mode')).toHaveTextContent('complex');
     });
 
     const renderCountAfterToggle = renderCounter.getCount();
@@ -463,18 +458,18 @@ describe("多次状态修改渲染次数", () => {
     expect(renderCountAfterToggle).toBe(renderCountAfterFirstUpdate + 1);
 
     // 第二次更新（complex 模式）
-    button = screen.getByTestId("update-btn");
+    button = screen.getByTestId('update-btn');
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByTestId("values")).toHaveTextContent("10-20-30");
+      expect(screen.getByTestId('values')).toHaveTextContent('10-20-30');
     });
 
     // 应该只有一次额外的渲染
     expect(renderCounter.getCount()).toBe(renderCountAfterToggle + 1);
   });
 
-  it("应该在数组操作中多次修改 state 时只渲染一次", async () => {
+  it('应该在数组操作中多次修改 state 时只渲染一次', async () => {
     const renderCounter = new RenderCounter();
     const state = observable({
       items: [1, 2, 3],
@@ -494,7 +489,7 @@ describe("多次状态修改渲染次数", () => {
 
       return (
         <div>
-          <div data-testid="items">{state.items.join(",")}</div>
+          <div data-testid="items">{state.items.join(',')}</div>
           <div data-testid="count">{state.count}</div>
           <button onClick={handleBatchOperation} data-testid="batch-btn">
             Batch Operation
@@ -507,17 +502,17 @@ describe("多次状态修改渲染次数", () => {
     render(<TestComponent />);
 
     expect(renderCounter.getCount()).toBe(1);
-    expect(screen.getByTestId("items")).toHaveTextContent("1,2,3");
-    expect(screen.getByTestId("count")).toHaveTextContent("0");
+    expect(screen.getByTestId('items')).toHaveTextContent('1,2,3');
+    expect(screen.getByTestId('count')).toHaveTextContent('0');
 
-    const button = screen.getByTestId("batch-btn");
+    const button = screen.getByTestId('batch-btn');
     fireEvent.click(button);
 
     // 应该只渲染一次
     await waitFor(() => {
       expect(renderCounter.getCount()).toBe(2);
-      expect(screen.getByTestId("items")).toHaveTextContent("10,2,3,4,5");
-      expect(screen.getByTestId("count")).toHaveTextContent("5");
+      expect(screen.getByTestId('items')).toHaveTextContent('10,2,3,4,5');
+      expect(screen.getByTestId('count')).toHaveTextContent('5');
     });
   });
 });

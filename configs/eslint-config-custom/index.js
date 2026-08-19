@@ -1,11 +1,11 @@
 /**
- * ESLint 9 Flat Config
+ * ESLint flat config
  * 支持 TypeScript、React、Vue 项目
  */
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import eslintConfigPrettier from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
+import { importX } from 'eslint-plugin-import-x';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
@@ -61,7 +61,7 @@ export default [
       '@typescript-eslint': typescriptEslint,
       react: react,
       'react-hooks': reactHooks,
-      import: importPlugin,
+      'import-x': importX,
     },
     settings: {
       react: {
@@ -84,9 +84,13 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       ...reactHooks.configs.recommended.rules,
+      // React Compiler rules from hooks 7 are too strict for docs/demos.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/refs': 'off',
 
       // Import 规则
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],

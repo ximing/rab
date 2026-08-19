@@ -17,8 +17,8 @@
     "build": "tsx build.config.ts",
     "dev": "tsx build.config.ts --watch",
     "clean": "rm -rf lib build dist coverage",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
