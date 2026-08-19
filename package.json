@@ -20,27 +20,31 @@
     "build": "turbo run build",
     "build:website": "pnpm --filter @rabjs/website build",
     "dev": "turbo run dev",
-    "lint": "echo lint",
+    "lint": "eslint . --quiet",
     "test": "echo test",
     "lint:turbo": "turbo run lint",
     "test:turbo": "turbo run test",
     "clean": "./scripts/clean.sh",
     "clean:node-modules": "./scripts/clean-node-modules.sh",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "lint:error": "eslint . --ext .ts,.tsx --quiet",
-    "lint:error:fix": "eslint . --ext .ts,.tsx --quiet --fix",
+    "lint:fix": "eslint . --fix",
+    "lint:error": "eslint . --quiet",
+    "lint:error:fix": "eslint . --quiet --fix",
     "prepare": "husky",
     "changeset": "changeset",
     "changeset:sync-fixed": "node scripts/sync-changeset-fixed.cjs",
     "changeset:check-fixed": "node scripts/sync-changeset-fixed.cjs --check",
     "changeset:version": "./scripts/version-packages.sh",
     "publish:check": "node scripts/publish-check.cjs",
+    "publish:npm": "./scripts/publish-npm.sh",
     "publish:nmp": "./scripts/publish-npm.sh"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,tsx}": "eslint --fix --quiet"
   },
   "packageManager": "pnpm@10.22.0",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.22.1"
   },
   "dependencies": {
     "@changesets/cli": "^3.0.0",
@@ -49,12 +53,12 @@
     "@types/less": "^3.0.8",
     "@types/node": "^20.19.15",
     "dotenv": "^16.4.7",
-    "eslint": "^9.17.0",
+    "eslint": "^10.8.1",
     "eslint-config-custom": "workspace:*",
     "form-data": "^4.0.6",
     "glob": "^13.0.6",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.6",
+    "lint-staged": "^17.3.0",
     "mime": "^4.1.0",
     "node-fetch": "^3.3.2",
     "prettier": "^2.8.8",
@@ -76,7 +80,7 @@
       "lodash": "4.18.0",
       "esbuild": "0.28.2",
       "ajv@<6.14.0": "6.14.0",
-      "ws": "8.21.3",
+      "ws@<8.21.3": "8.21.3",
       "diff": ">=4.0.4 <5 || >=5",
       "minimatch@<3.1.4": "3.1.4",
       "minimatch@>=9.0.0 <9.0.7": "9.0.7",
@@ -85,7 +89,10 @@
       "@babel/core@<7.29.6": "7.29.6",
       "@tootallnate/once@<2.0.1": "2.0.1",
       "brace-expansion@<1.1.18": "1.1.18",
-      "brace-expansion@>=2.0.0 <2.1.4": "2.1.4"
+      "brace-expansion@>=2.0.0 <2.1.4": "2.1.4",
+      "@typescript-eslint/eslint-plugin>typescript": "npm:@typescript/typescript6@6.0.2",
+      "@typescript-eslint/parser>typescript": "npm:@typescript/typescript6@6.0.2",
+      "@typescript-eslint/typescript-estree>typescript": "npm:@typescript/typescript6@6.0.2"
     }
   }
 }

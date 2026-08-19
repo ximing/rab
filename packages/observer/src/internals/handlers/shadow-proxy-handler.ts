@@ -3,20 +3,21 @@
  * 只在根级别提供响应式能力，不会对嵌套对象进行深层转换
  * 属性的值会被原样存储和暴露，不会自动包装为 observable
  * */
-import { proxyToRaw } from "../proxy-raw-map";
+import { proxyToRaw } from '../proxy-raw-map';
 import {
   queueReactionsForOperation,
   registerRunningReactionForOperation,
-} from "../reaction-runner";
-import { iterationKeyFor } from "../reaction-track";
-import { hasOwnProperty, ownDataValue, toRawIfProxy } from "../utils";
+} from '../reaction-runner';
+import { iterationKeyFor } from '../reaction-track';
+import { hasOwnProperty, ownDataValue, toRawIfProxy } from '../utils';
+
 import {
   markCoveredForReceiverRoot,
   markForwardedDefineProperty,
   markNotifiedInFlightFrames,
   popForwardingFrame,
   pushForwardingFrame,
-} from "./forwarding-frames";
+} from './forwarding-frames';
 
 /*
  * 存储所有内置的 Symbol(如 Symbol.iterator, Symbol.toStringTag 等)
@@ -27,23 +28,23 @@ import {
  * */
 const wellKnownSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
-    .map((key) => Symbol[key as keyof SymbolConstructor])
-    .filter((value) => typeof value === "symbol")
+    .map(key => Symbol[key as keyof SymbolConstructor])
+    .filter(value => typeof value === 'symbol')
 );
 
 // 拦截属性读取操作，建立依赖关系但不进行深层包装
 function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   // 调用 Reflect.get(target, key, receiver) 获取原始值
   const result = Reflect.get(target, key, receiver);
-  if (typeof key === "symbol" && wellKnownSymbols.has(key)) {
+  if (typeof key === 'symbol' && wellKnownSymbols.has(key)) {
     return result;
   }
   // '__proto__' 直接返回原始原型 (原因见 base-proxy-handler 同名处理)
-  if (key === "__proto__") {
+  if (key === '__proto__') {
     return result;
   }
   // 如果当前有 reaction 在运行，建立 (target.key -> reaction) 的依赖
-  registerRunningReactionForOperation({ target, key, receiver, type: "get" });
+  registerRunningReactionForOperation({ target, key, receiver, type: 'get' });
 
   // 关键区别：不进行深层包装，直接返回原始值
   // 这样嵌套对象不会被转换为 observable
@@ -55,25 +56,20 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
 // 作用: 拦截 in 操作符，建立依赖关系。
 function has(target: object, key: PropertyKey): boolean {
   const result = Reflect.has(target, key);
-  registerRunningReactionForOperation({ target, key, type: "has" });
+  registerRunningReactionForOperation({ target, key, type: 'has' });
   return result as boolean;
 }
 
 // 拦截对象键的枚举操作，建立迭代依赖。
 function ownKeys(target: object): PropertyKey[] {
-  registerRunningReactionForOperation({ target, key: "", type: "iterate" });
+  registerRunningReactionForOperation({ target, key: '', type: 'iterate' });
   return Reflect.ownKeys(target);
 }
 
 // 拦截属性设置操作，检测变化并触发 reactions。
-function set(
-  target: object,
-  key: PropertyKey,
-  value: unknown,
-  receiver: unknown
-): boolean {
+function set(target: object, key: PropertyKey, value: unknown, receiver: unknown): boolean {
   // 拒绝对 '__proto__' 的赋值 (原因见 base-proxy-handler 同名处理)
-  if (key === "__proto__") {
+  if (key === '__proto__') {
     throw new TypeError(
       "Cannot set '__proto__' on an observable object. Use Object.create() before wrapping, or set a regular property instead."
     );
@@ -104,11 +100,7 @@ function set(
     return result;
   }
   // 如果操作的目标不是原始接收器，则不要 queue reactions
-  if (
-    typeof receiver === "object" &&
-    receiver !== null &&
-    target !== proxyToRaw.get(receiver)
-  ) {
+  if (typeof receiver === 'object' && receiver !== null && target !== proxyToRaw.get(receiver)) {
     // 转发 walk 的中间层: 仅在本帧被 defineProperty trap 命中过 (frame.hit)
     // 且落盘后状态真的变化时才通知, 并把仍在栈上的同 key 外层帧标记为
     // covered (对抗审查第 3 轮 #1b, 原因见 base-proxy-handler 同名处理)。
@@ -130,7 +122,7 @@ function set(
               key,
               value: landedValue,
               receiver,
-              type: "add",
+              type: 'add',
             });
           } else {
             // observers 最后看到的是 notifiedValue, 以它为旧值按差值通知
@@ -140,7 +132,7 @@ function set(
               value: landedValue,
               oldValue: frame.notifiedValue,
               receiver,
-              type: "set",
+              type: 'set',
             });
           }
           frame.notifiedValue = landedValue;
@@ -153,7 +145,7 @@ function set(
             key: iterationKeyFor(target),
             value: landedValue,
             receiver,
-            type: "set",
+            type: 'set',
           });
         }
       } else if (!hadKey) {
@@ -162,7 +154,7 @@ function set(
           key,
           value: landedValue,
           receiver,
-          type: "add",
+          type: 'add',
         });
         notified = true;
       } else if (!Object.is(landedValue, oldValue)) {
@@ -172,7 +164,7 @@ function set(
           value: landedValue,
           oldValue,
           receiver,
-          type: "set",
+          type: 'set',
         });
         notified = true;
       }
@@ -199,7 +191,7 @@ function set(
           key: iterationKeyFor(target),
           value: landedValue,
           receiver,
-          type: "set",
+          type: 'set',
         });
       } else {
         // 先标记后通知 (对抗审查第 2 轮 #3/#4, 原因见 base-proxy-handler
@@ -211,14 +203,14 @@ function set(
           key,
           value: landedValue,
           receiver,
-          type: "add",
+          type: 'add',
         });
       }
     } else if (!frame.covered) {
       // 兜底 add 不做 markNotifiedInFlightFrames (原因见 base-proxy-handler 同名分支)
-      queueReactionsForOperation({ target, key, value, receiver, type: "add" });
+      queueReactionsForOperation({ target, key, value, receiver, type: 'add' });
     }
-  } else if (Array.isArray(target) && key === "length") {
+  } else if (Array.isArray(target) && key === 'length') {
     // 数组 length 赋值用折叠后的 target.length 与旧值比较;
     // covered 时与已通知值比较 (原因见 base-proxy-handler 同名处理)
     const newLength = target.length;
@@ -233,7 +225,7 @@ function set(
         value: newLength,
         oldValue: frame.notifiedValue,
         receiver,
-        type: "set",
+        type: 'set',
       });
     } else if (!Object.is(newLength, oldValue)) {
       // 先标记后通知 (原因见上方 landed-add 分支注释)
@@ -244,7 +236,7 @@ function set(
         value: newLength,
         oldValue,
         receiver,
-        type: "set",
+        type: 'set',
       });
     }
   } else {
@@ -264,7 +256,7 @@ function set(
         value: landedValue,
         oldValue: frame.notifiedValue,
         receiver,
-        type: "set",
+        type: 'set',
       });
     } else if (!Object.is(landedValue, oldValue)) {
       // 先标记后通知 (原因见上方 landed-add 分支注释)
@@ -275,7 +267,7 @@ function set(
         value: landedValue,
         oldValue,
         receiver,
-        type: "set",
+        type: 'set',
       });
     }
   }
@@ -299,31 +291,23 @@ function deleteProperty(target: object, key: PropertyKey): boolean {
   // Reflect.deleteProperty 返回 false: 删除未生效, 不得发通知
   // (与 set trap 的 !result 守卫对齐)
   if (hadKey && result) {
-    queueReactionsForOperation({ target, key, oldValue, type: "delete" });
+    queueReactionsForOperation({ target, key, oldValue, type: 'delete' });
   }
   return result as boolean;
 }
 
 // 拦截 new 操作符，返回响应式的实例。
 // 注意：这里不使用 shadowObservable 包装，保持浅层特性
-function construct(
-  target: object,
-  args: ArrayLike<unknown>,
-  newTarget: unknown
-): object {
+function construct(target: object, args: ArrayLike<unknown>, newTarget: unknown): object {
   let nt = newTarget;
   if (
-    typeof newTarget === "object" &&
+    typeof newTarget === 'object' &&
     newTarget !== null && // 确保 instance instanceof Child 为 true
     proxyToRaw.has(newTarget)
   ) {
     nt = proxyToRaw.get(newTarget);
   }
-  const result = Reflect.construct(
-    target as Function,
-    Array.from(args),
-    nt as Function
-  );
+  const result = Reflect.construct(target as Function, Array.from(args), nt as Function);
   // 不进行包装，直接返回原始结果
   return result as object;
 }
@@ -338,11 +322,7 @@ function construct(
  * 拦截 Object.defineProperty (与 base-proxy-handler 的实现一致,
  * shadow 模式同样需要防止 defineProperty 绕过 set trap 静默失效)。
  * */
-function defineProperty(
-  target: object,
-  key: PropertyKey,
-  descriptor: PropertyDescriptor
-): boolean {
+function defineProperty(target: object, key: PropertyKey, descriptor: PropertyDescriptor): boolean {
   // 来自 set trap 的 Reflect.set 转发 (且 target 与 key 都与本帧转发一致): 只透传, 通知由 set trap 负责
   // (命中帧标记 hit=true, 命中帧所在层的 set trap 落盘后重读实际值参与比较,
   //  详见 base-proxy-handler 同名处理)
@@ -351,17 +331,12 @@ function defineProperty(
     return Reflect.defineProperty(target, key, descriptor);
   }
   const hadKey = hasOwnProperty.call(target, key);
-  const oldDescriptor = hadKey
-    ? Reflect.getOwnPropertyDescriptor(target, key)
-    : undefined;
+  const oldDescriptor = hadKey ? Reflect.getOwnPropertyDescriptor(target, key) : undefined;
   // 旧值捕获**不得调用 accessor getter** (G3 对抗审查 #2/#4, 原因见
   // base-proxy-handler 同名处理): getter 可能抛错或有副作用。
-  const oldIsAccessor =
-    oldDescriptor !== undefined && !("value" in oldDescriptor);
+  const oldIsAccessor = oldDescriptor !== undefined && !('value' in oldDescriptor);
   const oldValue =
-    hadKey && !oldIsAccessor
-      ? (target as Record<PropertyKey, unknown>)[key]
-      : undefined;
+    hadKey && !oldIsAccessor ? (target as Record<PropertyKey, unknown>)[key] : undefined;
   const result = Reflect.defineProperty(target, key, descriptor);
   if (!result) {
     return false;
@@ -371,9 +346,9 @@ function defineProperty(
       target,
       key,
       value: descriptor.value,
-      type: "add",
+      type: 'add',
     });
-  } else if (Array.isArray(target) && key === "length") {
+  } else if (Array.isArray(target) && key === 'length') {
     // 与 set trap 一致: 数组 length 用折叠后的 target.length 与旧值比较
     const newLength = target.length;
     if (!Object.is(newLength, oldValue)) {
@@ -382,10 +357,10 @@ function defineProperty(
         key,
         value: newLength,
         oldValue,
-        type: "set",
+        type: 'set',
       });
     }
-  } else if ("value" in descriptor) {
+  } else if ('value' in descriptor) {
     // 数据描述符: Object.is 判值变化; 旧属性是 accessor 时种类翻转必通知
     // (原因见 base-proxy-handler 同名处理)
     if (oldIsAccessor || !Object.is(descriptor.value, oldValue)) {
@@ -394,33 +369,26 @@ function defineProperty(
         key,
         value: descriptor.value,
         oldValue,
-        type: "set",
+        type: 'set',
       });
     }
-  } else if ("get" in descriptor || "set" in descriptor) {
+  } else if ('get' in descriptor || 'set' in descriptor) {
     // accessor 描述符: 种类翻转或 get/set 身份变化必通知。
     // 身份比较前按旧描述符补全部分描述符 (spec: 省略的分量保持旧值),
     // 通知不携带新值、不调用新 getter
     // (原因见 base-proxy-handler 同名处理)
-    const oldWasData =
-      oldDescriptor === undefined || "value" in oldDescriptor;
+    const oldWasData = oldDescriptor === undefined || 'value' in oldDescriptor;
     const accessorChanged =
       !oldWasData &&
-      (!Object.is(
-        "get" in descriptor ? descriptor.get : oldDescriptor!.get,
-        oldDescriptor!.get
-      ) ||
-        !Object.is(
-          "set" in descriptor ? descriptor.set : oldDescriptor!.set,
-          oldDescriptor!.set
-        ));
+      (!Object.is('get' in descriptor ? descriptor.get : oldDescriptor!.get, oldDescriptor!.get) ||
+        !Object.is('set' in descriptor ? descriptor.set : oldDescriptor!.set, oldDescriptor!.set));
     if (oldWasData || accessorChanged) {
       queueReactionsForOperation({
         target,
         key,
         value: undefined,
         oldValue,
-        type: "set",
+        type: 'set',
       });
     }
   }
@@ -428,13 +396,12 @@ function defineProperty(
   // (原因见 base-proxy-handler 同名处理)
   if (
     hadKey &&
-    oldDescriptor!.enumerable !==
-      (descriptor.enumerable ?? oldDescriptor!.enumerable)
+    oldDescriptor!.enumerable !== (descriptor.enumerable ?? oldDescriptor!.enumerable)
   ) {
     queueReactionsForOperation({
       target,
       key: iterationKeyFor(target),
-      type: "set",
+      type: 'set',
     });
   }
   return result;

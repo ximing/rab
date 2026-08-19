@@ -1,18 +1,16 @@
-import { HashRouter, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
-import Home from "./pages/Home";
-
-import QuickStart from "./pages/guides/QuickStart";
-import Demos from "./pages/guides/Demos";
-import Service from "./pages/guides/Service";
-import ObserverPage from "./pages/guides/ObserverPage";
-import Devtools from "./pages/guides/Devtools";
-
-import AiOverview from "./pages/ai/AiOverview";
-import SkillRabReact from "./pages/ai/SkillRabReact";
-import SkillCdpDebug from "./pages/ai/SkillCdpDebug";
-import SkillRnDebug from "./pages/ai/SkillRnDebug";
-import WebMcp from "./pages/ai/WebMcp";
+import AiOverview from './pages/ai/AiOverview';
+import SkillCdpDebug from './pages/ai/SkillCdpDebug';
+import SkillRabReact from './pages/ai/SkillRabReact';
+import SkillRnDebug from './pages/ai/SkillRnDebug';
+import WebMcp from './pages/ai/WebMcp';
+import Demos from './pages/guides/Demos';
+import Devtools from './pages/guides/Devtools';
+import ObserverPage from './pages/guides/ObserverPage';
+import QuickStart from './pages/guides/QuickStart';
+import Service from './pages/guides/Service';
+import Home from './pages/Home';
 
 /**
  * 路由约定
@@ -29,19 +27,19 @@ import WebMcp from "./pages/ai/WebMcp";
  */
 
 const guideNav = [
-  { to: "/quick-start", label: "快速开始" },
-  { to: "/guides/demos", label: "在线 Demo" },
-  { to: "/guides/service", label: "Service 服务容器" },
-  { to: "/guides/observer", label: "Observer 观察者" },
-  { to: "/guides/devtools", label: "DevTools 调试" },
+  { to: '/quick-start', label: '快速开始' },
+  { to: '/guides/demos', label: '在线 Demo' },
+  { to: '/guides/service', label: 'Service 服务容器' },
+  { to: '/guides/observer', label: 'Observer 观察者' },
+  { to: '/guides/devtools', label: 'DevTools 调试' },
 ];
 
 const aiNav = [
-  { to: "/ai", label: "AI 用法总览" },
-  { to: "/ai/skill-rab-react", label: "rab-react Skill" },
-  { to: "/ai/skill-cdp-debug", label: "rab-cdp-debug Skill" },
-  { to: "/ai/skill-rn-debug", label: "rab-rn-debug Skill" },
-  { to: "/ai/web-mcp", label: "@rabjs/web-mcp" },
+  { to: '/ai', label: 'AI 用法总览' },
+  { to: '/ai/skill-rab-react', label: 'rab-react Skill' },
+  { to: '/ai/skill-cdp-debug', label: 'rab-cdp-debug Skill' },
+  { to: '/ai/skill-rn-debug', label: 'rab-rn-debug Skill' },
+  { to: '/ai/web-mcp', label: '@rabjs/web-mcp' },
 ];
 
 interface NavItem {
@@ -56,29 +54,29 @@ function NavGroup({
 }: {
   title: string;
   items: NavItem[];
-  accent: "agent" | "human";
+  accent: 'agent' | 'human';
 }) {
-  const tick = accent === "agent" ? "bg-agent" : "bg-human";
-  const activeText = accent === "agent" ? "text-agent" : "text-human";
-  const activeBg = accent === "agent" ? "bg-agent/10" : "bg-human/10";
+  const tick = accent === 'agent' ? 'bg-agent' : 'bg-human';
+  const activeText = accent === 'agent' ? 'text-agent' : 'text-human';
+  const activeBg = accent === 'agent' ? 'bg-agent/10' : 'bg-human/10';
   return (
     <div className="mb-7">
       <p className="eyebrow mb-2 px-3 flex items-center">
         <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${tick}`} />
         {title}
       </p>
-      {items.map((item) => (
+      {items.map(item => (
         <NavLink
           key={item.to}
           to={item.to}
-          end={item.to === "/ai"}
+          end={item.to === '/ai'}
           className={({ isActive }) =>
             [
-              "block px-3 py-1.5 rounded-lg text-[13.5px] transition-colors no-underline",
+              'block px-3 py-1.5 rounded-lg text-[13.5px] transition-colors no-underline',
               isActive
                 ? `${activeBg} ${activeText} font-medium`
-                : "text-fg/85 hover:bg-card hover:no-underline",
-            ].join(" ")
+                : 'text-fg/85 hover:bg-card hover:no-underline',
+            ].join(' ')
           }
         >
           {item.label}
@@ -98,9 +96,7 @@ export default function App() {
             className="flex items-center gap-2.5 px-3 mb-8 text-fg hover:no-underline"
           >
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-agent animate-[signal-pulse_2.2s_ease-in-out_infinite]" />
-            <span className="text-[19px] font-bold tracking-tight font-display">
-              RAB
-            </span>
+            <span className="text-[19px] font-bold tracking-tight font-display">RAB</span>
             <span className="font-mono text-[10px] text-dim border border-line rounded px-1.5 py-px mt-0.5">
               v9
             </span>

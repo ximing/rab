@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
-import { CodeBlock } from "./CodeBlock";
+import type { ReactNode } from 'react';
+
+import { CodeBlock } from './CodeBlock';
 
 /**
  * Demo 容器（全站统一的 live demo 展示组件）

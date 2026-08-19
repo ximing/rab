@@ -1,4 +1,5 @@
 import { createServer as createHttpServer, type Server as HttpServer } from 'http';
+
 import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
 import { createCommandDispatcher, type CommandDispatcher } from './command-dispatcher';
@@ -29,10 +30,13 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   const eventsBus = createEventsBus();
   const dispatcher = createCommandDispatcher({
     registry,
-    onEvent: (event) => eventsBus.publish(event),
+    onEvent: event => eventsBus.publish(event),
   });
 
-  async function handleRequest(req: import('http').IncomingMessage, res: import('http').ServerResponse) {
+  async function handleRequest(
+    req: import('http').IncomingMessage,
+    res: import('http').ServerResponse
+  ) {
     const url = req.url ?? '';
 
     if (req.method === 'GET' && (url === '/' || url.startsWith('/index'))) {
@@ -71,7 +75,12 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
       }
       if (devices.length > 1) {
         res.writeHead(409, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'multiple devices, specify deviceId', devices: devices.map((d) => d.deviceId) }));
+        res.end(
+          JSON.stringify({
+            error: 'multiple devices, specify deviceId',
+            devices: devices.map(d => d.deviceId),
+          })
+        );
         return;
       }
       const input = (await readJson(req)) as CommandInput;
@@ -114,9 +123,9 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   httpServer.on('upgrade', (req, socket, head) => {
     const url = req.url ?? '';
     if (url.startsWith('/device')) {
-      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+      wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
     } else if (url.startsWith('/events')) {
-      wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.handleUpgrade(req, socket, head, ws => {
         eventsBus.subscribe(ws);
       });
     } else {
@@ -127,7 +136,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   wss.on('connection', (ws: WsSocket) => {
     let registeredId: string | undefined;
 
-    ws.on('message', (raw) => {
+    ws.on('message', raw => {
       let msg: DeviceToServerMessage;
       try {
         msg = JSON.parse(String(raw)) as DeviceToServerMessage;
@@ -137,8 +146,18 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
       if (msg.kind === 'register') {
         registeredId = msg.deviceId;
         const connectedAt = Date.now();
-        registry.add({ deviceId: msg.deviceId, ws, info: msg.info, connectedAt, lastSeen: connectedAt });
-        eventsBus.publish({ kind: 'device', action: 'connected', device: { deviceId: msg.deviceId, ...msg.info, connectedAt, lastSeen: connectedAt } });
+        registry.add({
+          deviceId: msg.deviceId,
+          ws,
+          info: msg.info,
+          connectedAt,
+          lastSeen: connectedAt,
+        });
+        eventsBus.publish({
+          kind: 'device',
+          action: 'connected',
+          device: { deviceId: msg.deviceId, ...msg.info, connectedAt, lastSeen: connectedAt },
+        });
       } else if (msg.kind === 'ping') {
         if (registeredId) registry.touch(registeredId);
         ws.send(JSON.stringify({ kind: 'pong' }));
@@ -162,7 +181,12 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
           eventsBus.publish({
             kind: 'device',
             action: 'disconnected',
-            device: { deviceId: registeredId, ...info.info, connectedAt: info.connectedAt, lastSeen: info.lastSeen },
+            device: {
+              deviceId: registeredId,
+              ...info.info,
+              connectedAt: info.connectedAt,
+              lastSeen: info.lastSeen,
+            },
           });
         }
       }
@@ -185,7 +209,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     dispatcher,
     eventsBus,
     close() {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         for (const client of wss.clients) client.terminate();
         wss.close();
         httpServer.close(() => resolve());

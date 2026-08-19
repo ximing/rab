@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { observable, observe, unobserve } from "@rabjs/observer";
+import { observable, observe, unobserve } from '@rabjs/observer';
+import { useEffect, useState } from 'react';
 
 /**
  * Observer 独立用法 live demo —— 不经过 Service，也不经过 React state。
@@ -9,17 +9,14 @@ import { observable, observe, unobserve } from "@rabjs/observer";
  * - 之后任何依赖变化都会重新触发 reaction；
  * - 组件卸载时 unobserve 释放依赖连接，不再触发。
  */
-const state = observable({ count: 0, text: "hello" });
+const state = observable({ count: 0, text: 'hello' });
 
 export default function ObserverLogDemo() {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
     const reaction = observe(() => {
-      setLogs((prev) => [
-        ...prev,
-        `reaction 触发：count=${state.count}, text=${state.text}`,
-      ]);
+      setLogs(prev => [...prev, `reaction 触发：count=${state.count}, text=${state.text}`]);
     });
     return () => unobserve(reaction);
   }, []);
@@ -38,7 +35,7 @@ export default function ObserverLogDemo() {
         <button
           className="demo-btn"
           onClick={() => {
-            state.text = state.text === "hello" ? "rab" : "hello";
+            state.text = state.text === 'hello' ? 'rab' : 'hello';
           }}
         >
           切换 text
@@ -47,11 +44,11 @@ export default function ObserverLogDemo() {
           清空日志
         </button>
       </div>
-      <p style={{ color: "var(--text-dim)", marginTop: 12 }}>
+      <p style={{ color: 'var(--text-dim)', marginTop: 12 }}>
         当前值：count={state.count}, text={state.text}
         （这行不是 observer 组件，不会自动刷新，看日志即可）
       </p>
-      <ul style={{ margin: "12px 0 0", paddingLeft: 20, color: "var(--text-dim)" }}>
+      <ul style={{ margin: '12px 0 0', paddingLeft: 20, color: 'var(--text-dim)' }}>
         {logs.map((line, i) => (
           <li key={i}>{line}</li>
         ))}

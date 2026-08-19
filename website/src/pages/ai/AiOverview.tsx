@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { CodeBlock } from "../../components/CodeBlock";
+import { Link } from 'react-router-dom';
+
+import { CodeBlock } from '../../components/CodeBlock';
 
 const claudeCodeSetupCode = `/plugin marketplace add ximing/rab
 /plugin install rab@rab`;
@@ -50,9 +51,8 @@ export default function AiOverview() {
     <div>
       <h1>AI 用法总览</h1>
       <p>
-        RAB 的状态集中在 Service 容器里：可枚举（每个实例有唯一的{" "}
-        <code>instanceId</code>）、可遍历（容器树）、可桥接。基于这个特点，
-        RAB 为 AI 编程提供两个方向的能力。
+        RAB 的状态集中在 Service 容器里：可枚举（每个实例有唯一的 <code>instanceId</code>
+        ）、可遍历（容器树）、可桥接。基于这个特点， RAB 为 AI 编程提供两个方向的能力。
       </p>
 
       <h2>方向一：Agent Skills —— 让 AI 懂 RAB</h2>
@@ -61,29 +61,26 @@ export default function AiOverview() {
       </p>
       <ul>
         <li>
-          <strong>rab-react</strong>：教 AI 助手按 <code>@rabjs/react</code>{" "}
-          的正确约定写代码（<code>observer</code> / <code>useService</code> /{" "}
-          <code>bindServices</code> / Service 生命周期等），避免编造 API、
-          踩解构 observable 之类的坑。
+          <strong>rab-react</strong>：教 AI 助手按 <code>@rabjs/react</code> 的正确约定写代码（
+          <code>observer</code> / <code>useService</code> / <code>bindServices</code> / Service
+          生命周期等），避免编造 API、 踩解构 observable 之类的坑。
         </li>
         <li>
-          <strong>rab-cdp-debug</strong>：教 AI 助手通过 Chrome DevTools MCP 的{" "}
-          <code>evaluate_script</code> 连接运行中的 rab 应用，枚举、读取、调用
-          并断言页面里的 Service 实例，完成逻辑验证。
+          <strong>rab-cdp-debug</strong>：教 AI 助手通过 Chrome DevTools MCP 的{' '}
+          <code>evaluate_script</code> 连接运行中的 rab 应用，枚举、读取、调用 并断言页面里的
+          Service 实例，完成逻辑验证。
         </li>
         <li>
-          <strong>rab-rn-debug</strong>：教 AI 助手通过{" "}
-          <code>@rabjs/rn-debug-server</code> 桥接调试真机上的 React Native
-          应用：启动本地服务、给设备下发结构化指令、等待执行结果。
+          <strong>rab-rn-debug</strong>：教 AI 助手通过 <code>@rabjs/rn-debug-server</code>{' '}
+          桥接调试真机上的 React Native 应用：启动本地服务、给设备下发结构化指令、等待执行结果。
         </li>
       </ul>
 
       <h2>安装 Skills（支持各编程工具）</h2>
       <p>
         这些 skill 是纯 <code>SKILL.md</code> 文档，零运行时依赖，同一份文件
-        在各编程工具中通用。仓库内置了各工具的插件清单
-        （<code>.claude-plugin/</code>、<code>.codex-plugin/</code>、
-        <code>.cursor-plugin/</code>、<code>.kimi-plugin/</code>、
+        在各编程工具中通用。仓库内置了各工具的插件清单 （<code>.claude-plugin/</code>、
+        <code>.codex-plugin/</code>、<code>.cursor-plugin/</code>、<code>.kimi-plugin/</code>、
         <code>.opencode/</code> 等），按你使用的工具选择安装方式；同时使用
         多个工具时，需要分别为每个工具安装。
       </p>
@@ -130,12 +127,13 @@ export default function AiOverview() {
 
       <h2>方向二：@rabjs/web-mcp —— 让 AI 操作应用状态</h2>
       <p>
-        <code>@rabjs/web-mcp</code> 在运行时把 Service 系统桥接成标准的 WebMCP
-        工具（注册到 <code>navigator.modelContext</code>）。浏览器里的 AI
-        Agent 可以发现页面里所有已激活的 Service 实例，读状态、改状态、调方法、
-        跑断言——改动走响应式系统，页面照常更新。
+        <code>@rabjs/web-mcp</code> 在运行时把 Service 系统桥接成标准的 WebMCP 工具（注册到{' '}
+        <code>navigator.modelContext</code>）。浏览器里的 AI Agent 可以发现页面里所有已激活的
+        Service 实例，读状态、改状态、调方法、 跑断言——改动走响应式系统，页面照常更新。
       </p>
-      <CodeBlock language="bash" title="安装与初始化">{webMcpSetupCode}</CodeBlock>
+      <CodeBlock language="bash" title="安装与初始化">
+        {webMcpSetupCode}
+      </CodeBlock>
 
       <h2>建议的上手顺序</h2>
       <ol>
@@ -144,18 +142,16 @@ export default function AiOverview() {
           ，让 AI 帮你把 RAB 代码写对；
         </li>
         <li>
-          应用接入 <code>@rabjs/devtools</code> 后，用{" "}
-          <Link to="/ai/skill-cdp-debug">rab-cdp-debug Skill</Link>{" "}
-          让 AI 连上运行中的页面做验证和调试；
+          应用接入 <code>@rabjs/devtools</code> 后，用{' '}
+          <Link to="/ai/skill-cdp-debug">rab-cdp-debug Skill</Link> 让 AI
+          连上运行中的页面做验证和调试；
         </li>
         <li>
-          开发 React Native 应用时，用{" "}
-          <Link to="/ai/skill-rn-debug">rab-rn-debug Skill</Link>{" "}
-          让 AI 直接调试真机上的应用；
+          开发 React Native 应用时，用 <Link to="/ai/skill-rn-debug">rab-rn-debug Skill</Link> 让 AI
+          直接调试真机上的应用；
         </li>
         <li>
-          需要浏览器内 Agent 自主操作应用时，再接入{" "}
-          <Link to="/ai/web-mcp">@rabjs/web-mcp</Link>。
+          需要浏览器内 Agent 自主操作应用时，再接入 <Link to="/ai/web-mcp">@rabjs/web-mcp</Link>。
         </li>
       </ol>
 

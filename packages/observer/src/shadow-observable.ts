@@ -3,13 +3,13 @@ import {
   shouldInstrument,
   isBuiltinCollectionPrototypeMethod,
   forwardBuiltinCollectionMethod,
-} from "./internals/handlers/collection-handler";
-import { shadowCollectionHandlers } from "./internals/handlers/shadow-collection-handler";
-import { shadowProxyHandler } from "./internals/handlers/shadow-proxy-handler";
-import { proxyToRaw, rawToProxy } from "./internals/proxy-raw-map";
-import { storeObservable } from "./internals/reaction-track";
-import { normalizeCollectionEntries } from "./internals/utils";
-import type { ProxyHandlers } from "./internals/types";
+} from './internals/handlers/collection-handler';
+import { shadowCollectionHandlers } from './internals/handlers/shadow-collection-handler';
+import { shadowProxyHandler } from './internals/handlers/shadow-proxy-handler';
+import { proxyToRaw, rawToProxy } from './internals/proxy-raw-map';
+import { storeObservable } from './internals/reaction-track';
+import type { ProxyHandlers } from './internals/types';
+import { normalizeCollectionEntries } from './internals/utils';
 
 /**
  * 创建一个浅层响应式代理对象
@@ -81,18 +81,13 @@ function createShadowCollectionProxyHandlers() {
       ) {
         // 直接返回 shadowCollectionHandlers 中的属性
         // 对于 getter（如 size），需要使用 Reflect.get 来正确调用 getter
-        const descriptor = Object.getOwnPropertyDescriptor(
-          shadowCollectionHandlers,
-          key
-        );
+        const descriptor = Object.getOwnPropertyDescriptor(shadowCollectionHandlers, key);
         if (descriptor && descriptor.get) {
           // 这是一个 getter，需要使用 Reflect.get 来调用它，并传入 receiver 作为 this
           return Reflect.get(shadowCollectionHandlers, key, receiver);
         }
         // 这是一个普通属性或方法，直接返回
-        return (
-          shadowCollectionHandlers as unknown as Record<PropertyKey, unknown>
-        )[key];
+        return (shadowCollectionHandlers as unknown as Record<PropertyKey, unknown>)[key];
       }
 
       // 否则，从 target 原生获取 (constructor / toString / Symbol.toStringTag 等)。
@@ -112,20 +107,14 @@ function createShadowCollectionProxyHandlers() {
       // 原型上, 判定不命中, 保持 proxy receiver。
       // constructor 除外: 保持 map.constructor === Map 的恒等性。
       if (
-        typeof value === "function" &&
-        key !== "constructor" &&
+        typeof value === 'function' &&
+        key !== 'constructor' &&
         isBuiltinCollectionPrototypeMethod(key, value)
       ) {
-        return forwardBuiltinCollectionMethod(
-          target,
-          value as (...args: unknown[]) => unknown
-        );
+        return forwardBuiltinCollectionMethod(target, value as (...args: unknown[]) => unknown);
       }
-      if (typeof value === "function" && key !== "constructor") {
-        const fn = value as (
-          this: unknown,
-          ...args: unknown[]
-        ) => unknown;
+      if (typeof value === 'function' && key !== 'constructor') {
+        const fn = value as (this: unknown, ...args: unknown[]) => unknown;
         return function (this: unknown, ...args: unknown[]): unknown {
           return Reflect.apply(fn, receiver, args);
         };

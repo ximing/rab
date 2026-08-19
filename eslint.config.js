@@ -1,6 +1,5 @@
 /**
- * ESLint 9 Flat Config
- * 根目录配置文件
+ * 根目录 ESLint flat config
  */
 import customConfig from 'eslint-config-custom';
 
@@ -19,6 +18,7 @@ export default [
       '**/jiemo/**',
       '**/.ob/**',
       '**/templates/**',
+      'examples/**',
       '**/__tests__/**',
       '**/*.test.ts',
       '**/*.test.tsx',
@@ -67,9 +67,7 @@ export default [
       // 禁用 TypeScript ESLint 中不适用于 CommonJS 的规则
       '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/no-require-imports': 'off',
-      'import/no-commonjs': 'off',
-      // 允许 require 和 module.exports
-      'unicorn/prefer-module': 'off',
+      'import-x/no-commonjs': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       'no-console': 'off',
     },

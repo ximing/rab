@@ -1,5 +1,6 @@
-import { bindServices, observer, useService } from "@rabjs/react";
-import { CounterService } from "./CounterService";
+import { bindServices, observer, useService } from '@rabjs/react';
+
+import { CounterService } from './CounterService';
 
 /**
  * 计数器 live demo —— 首页和 Demo 集合页共用。
