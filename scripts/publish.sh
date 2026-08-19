@@ -16,7 +16,7 @@ git add .
 git commit -m "chore: version packages"
 
 # 6. 发布
-pnpm run publish:mnmp
+pnpm run publish:npm
 
 # 7. 推送到远程
 git push origin master --follow-tags
