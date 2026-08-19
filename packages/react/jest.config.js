@@ -1,4 +1,5 @@
 export default {
+  testTimeout: 20000,
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],

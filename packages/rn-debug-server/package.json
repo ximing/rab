@@ -36,17 +36,17 @@
   "author": "ximing",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.16.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@types/jest": "^29.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.5.10",
     "esbuild": "^0.28.2",
-    "jest": "^29.0.0",
-    "ts-jest": "^29.0.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.12",
     "tsconfig": "workspace:*",
-    "tsx": "^4.0.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   },
   "files": [
