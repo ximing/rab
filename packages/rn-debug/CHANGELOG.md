@@ -1,5 +1,13 @@
 # @rabjs/rn-debug
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [7621c98]
+  - @rabjs/service@9.2.2
+  - @rabjs/shared@9.2.1
+
 ## 0.2.1
 
 ### Patch Changes

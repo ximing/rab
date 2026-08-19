@@ -1,5 +1,11 @@
 # @rabjs/rn-debug-server
 
+## 0.2.1
+
+### Patch Changes
+
+- 7621c98: esbuild 0.28 with es2020 targets; rn-debug-server reports the actual listen port
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,14 @@
 # @rabjs/devtools
 
+## 9.2.2
+
+### Patch Changes
+
+- 7621c98: esbuild 0.28 with es2020 targets; rn-debug-server reports the actual listen port
+- Updated dependencies [7621c98]
+  - @rabjs/service@9.2.2
+  - @rabjs/shared@9.2.1
+
 ## 9.2.1
 
 ### Patch Changes

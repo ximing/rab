@@ -1,5 +1,11 @@
 # @rabjs/observer
 
+## 9.3.1
+
+### Patch Changes
+
+- 7621c98: esbuild 0.28 with es2020 targets; rn-debug-server reports the actual listen port
+
 ## 9.3.0
 
 ### Minor Changes
