@@ -1,5 +1,12 @@
 # reactive-state
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [07db341]
+  - @rabjs/react@9.3.3
+
 ## 0.0.2
 
 ### Patch Changes

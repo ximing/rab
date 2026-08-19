@@ -1,5 +1,12 @@
 # @rabjs/devtools
 
+## 9.3.3
+
+### Patch Changes
+
+- @rabjs/service@9.3.3
+  - @rabjs/shared@9.3.3
+
 ## 9.3.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/web-mcp",
-  "version": "9.3.2",
+  "version": "9.3.3",
   "description": "Web MCP 集成 - 将 @rabjs/service 的 Service 系统与 WebMCP 协议桥接",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
