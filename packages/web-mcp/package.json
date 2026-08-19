@@ -56,7 +56,7 @@
     "tsconfig": "workspace:*",
     "tsx": "^4.23.12",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "zod": "^3.22.0"
+    "zod": "^4.4.3"
   },
   "files": [
     "lib/**/*",

@@ -116,6 +116,36 @@ function metadataToJsonSchema(target: object, methodName: string): Record<string
  * @param target 类原型（用于 metadata 推断）
  * @param methodName 方法名（用于 metadata 推断）
  */
+function zodSchemaToJson(schema: unknown): Record<string, unknown> | null {
+  if (!schema || typeof schema !== 'object') return null;
+
+  // Zod 4：原生 z.toJSONSchema。用 `_zod` 区分 3 / 4（见 Zod library-authors 文档）。
+  if ('_zod' in schema) {
+    try {
+      const zod = require('zod') as {
+        toJSONSchema?: (
+          s: unknown,
+          opts?: { unrepresentable?: 'throw' | 'any' }
+        ) => Record<string, unknown>;
+      };
+      if (typeof zod.toJSONSchema === 'function') {
+        return zod.toJSONSchema(schema, { unrepresentable: 'any' });
+      }
+    } catch {
+      // 继续走 Zod 3 回退
+    }
+  }
+
+  try {
+    const { zodToJsonSchema } = require('zod-to-json-schema') as {
+      zodToJsonSchema: (s: unknown, options?: unknown) => Record<string, unknown>;
+    };
+    return zodToJsonSchema(schema);
+  } catch {
+    return null;
+  }
+}
+
 export function resolveSchema(
   options: McpToolOptions,
   target: object,
@@ -123,15 +153,8 @@ export function resolveSchema(
 ): Record<string, unknown> {
   // 方案一：Zod inputSchema（最高优先级）
   if (options.inputSchema) {
-    try {
-      // 动态 require zod-to-json-schema，避免在不需要 Zod 时加载
-      const { zodToJsonSchema } = require('zod-to-json-schema') as {
-        zodToJsonSchema: (schema: unknown, options?: unknown) => Record<string, unknown>;
-      };
-      return zodToJsonSchema(options.inputSchema) as Record<string, unknown>;
-    } catch {
-      // zod-to-json-schema 不可用时降级
-    }
+    const json = zodSchemaToJson(options.inputSchema);
+    if (json) return json;
   }
 
   // 方案二：简化 params 数组

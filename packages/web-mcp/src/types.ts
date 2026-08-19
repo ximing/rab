@@ -3,7 +3,7 @@
  */
 
 import type { Assertion, AssertionResult } from '@rabjs/shared';
-import type { ZodTuple, ZodTypeAny } from 'zod';
+import type { ZodType } from 'zod';
 
 // ─────────────────────────────────────────────
 // 断言相关类型：从 @rabjs/shared re-export
@@ -42,10 +42,11 @@ export interface McpToolOptions {
   /** 自定义 Tool 名，默认为 {ServiceName}__{methodName} */
   name?: string;
   /**
-   * 方案一：传入 Zod Tuple，按位置描述函数参数（推荐，类型安全）
+   * 方案一：传入 Zod Schema（推荐 z.tuple，按位置描述函数参数）
    * 语义等同 Function.apply(instance, args)
+   * 运行时同时接受 Zod 3 / 4。
    */
-  inputSchema?: ZodTuple<[ZodTypeAny, ...ZodTypeAny[]]> | ZodTuple<[], null>;
+  inputSchema?: ZodType;
   /**
    * 方案二：简化参数描述数组（快速书写，无 Zod 校验）
    * 每个元素对应一个位置参数
@@ -178,10 +179,13 @@ export interface GetStateResult {
   /** 状态快照 */
   state: Record<string, unknown>;
   /** 方法的 loading/error 状态 */
-  model: Record<string, {
-    loading: boolean;
-    error: string | null;
-  }>;
+  model: Record<
+    string,
+    {
+      loading: boolean;
+      error: string | null;
+    }
+  >;
 }
 
 // ─────────────────────────────────────────────

@@ -32,9 +32,10 @@ describe('resolveSchema', () => {
       };
 
       const result = resolveSchema(options, proto, methodName);
-      // 应包含 JSON Schema 结构
-      expect(result).toBeDefined();
-      expect(typeof result).toBe('object');
+      expect(result['type']).toBe('array');
+      const items = (result['prefixItems'] ?? result['items']) as Array<Record<string, unknown>>;
+      expect(items[0]).toMatchObject({ type: 'string', description: '商品 ID' });
+      expect(items[1]).toMatchObject({ type: 'integer', minimum: 1, description: '数量' });
     });
   });
 
@@ -62,9 +63,7 @@ describe('resolveSchema', () => {
     });
 
     it('没有 required 字段时，schema 中不含 required', () => {
-      const params: ParamDescriptor[] = [
-        { type: 'string', description: '可选参数' },
-      ];
+      const params: ParamDescriptor[] = [{ type: 'string', description: '可选参数' }];
 
       const options: McpToolOptions = {
         description: '测试方法',
@@ -182,7 +181,9 @@ describe('resolveSchema', () => {
 
     it('Reflect.getMetadata 抛出异常时降级为 {}', () => {
       const mockReflect = {
-        getMetadata: jest.fn().mockImplementation(() => { throw new Error('reflect error'); }),
+        getMetadata: jest.fn().mockImplementation(() => {
+          throw new Error('reflect error');
+        }),
       };
       (globalThis as any).Reflect = mockReflect;
 
