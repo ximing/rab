@@ -43,7 +43,7 @@
   },
   "packageManager": "pnpm@10.22.0",
   "engines": {
-    "node": ">=22.22.1"
+    "node": ">=26"
   },
   "dependencies": {
     "@changesets/cli": "^3.0.0",

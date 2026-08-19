@@ -6,14 +6,11 @@
  * 2. getService 正确性：通过 instanceId 能拿到正确的 Service 实例
  * 3. getContainer 正确性：通过 containerName 能拿到正确的 Container 实例
  * 4. listServices 正确性：多层嵌套容器时能遍历到所有已实例化的 Service
- * 5. SSR 安全：无 window 环境（Node.js）时 setupWindowRootContainer 不挂载且不报错
+ * 5. SSR 安全见 root-container-handle.ssr.test.ts（真实 Node 环境）
  */
 
 import { Service, getGlobalContainer, Container } from '@rabjs/service';
-import {
-  createRSRootContainerHandle,
-  setupWindowRootContainer,
-} from '../root-container-handle';
+import { createRSRootContainerHandle, setupWindowRootContainer } from '../root-container-handle';
 
 // 测试用 Service
 class CartService extends Service {}
@@ -117,7 +114,7 @@ describe('root-container-handle', () => {
       const handle = createRSRootContainerHandle();
       const list = handle.listServices();
 
-      const found = list.find((item) => item.instanceId === svc.instanceId);
+      const found = list.find(item => item.instanceId === svc.instanceId);
       expect(found).toBeDefined();
       expect(found!.instance).toBe(svc); // 必须是同一内存引用
       expect(found!.containerName).toBe('ListServicesTest');
@@ -137,7 +134,7 @@ describe('root-container-handle', () => {
       const handle = createRSRootContainerHandle();
       const list = handle.listServices();
 
-      const instanceIds = list.map((item) => item.instanceId);
+      const instanceIds = list.map(item => item.instanceId);
       expect(instanceIds).toContain(cartSvc.instanceId);
       expect(instanceIds).toContain(productSvc.instanceId);
     });
@@ -151,7 +148,7 @@ describe('root-container-handle', () => {
       const list = handle.listServices();
 
       // 获取 ListUnresolved 容器中的 Service 列表，应为空
-      const fromThisContainer = list.filter((item) => item.containerName === 'ListUnresolved');
+      const fromThisContainer = list.filter(item => item.containerName === 'ListUnresolved');
       expect(fromThisContainer).toHaveLength(0);
     });
 
@@ -161,7 +158,7 @@ describe('root-container-handle', () => {
       const svc = container.resolve(UserService);
 
       const handle = createRSRootContainerHandle();
-      const found = handle.listServices().find((item) => item.instance === svc);
+      const found = handle.listServices().find(item => item.instance === svc);
       expect(found).toBeDefined();
 
       // 修改通过 listServices 获取的 instance 应该与原对象一致
@@ -178,7 +175,7 @@ describe('root-container-handle', () => {
       const handle = createRSRootContainerHandle();
       const list = handle.listServices();
 
-      const found = list.find((item) => item.containerName === 'ListStringIdTest');
+      const found = list.find(item => item.containerName === 'ListStringIdTest');
       expect(found).toBeDefined();
       expect(found!.identifierLabel).toBe('myStringService');
     });
@@ -194,7 +191,7 @@ describe('root-container-handle', () => {
       const handle = createRSRootContainerHandle();
       const list = handle.listServices();
 
-      const found = list.find((item) => item.containerName === 'ListAnonTest');
+      const found = list.find(item => item.containerName === 'ListAnonTest');
       expect(found).toBeDefined();
       expect(found!.identifierLabel).toBe('AnonymousService');
     });
@@ -220,20 +217,6 @@ describe('root-container-handle', () => {
       expect(typeof handle.getService).toBe('function');
       expect(typeof handle.getContainer).toBe('function');
       expect(typeof handle.listServices).toBe('function');
-    });
-  });
-
-  // ============================================================
-  // 6. SSR 安全（无 window 环境）
-  // ============================================================
-  describe('SSR 安全（无 window 环境）', () => {
-    it('window 不存在时，setupWindowRootContainer 不报错且不挂载', () => {
-      const originalWindow = global.window;
-      // @ts-expect-error 模拟 Node.js SSR 环境（无 window）
-      delete global.window;
-      expect(() => setupWindowRootContainer()).not.toThrow();
-      // 恢复 window
-      global.window = originalWindow;
     });
   });
 });
