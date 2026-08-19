@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.1.0",
+    "@ant-design/icons": "^6.3.2",
     "@rabjs/react": "workspace:*",
     "antd": "^6.1.0",
     "antd-style": "^3.7.1",
