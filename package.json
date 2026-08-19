@@ -40,10 +40,10 @@
   },
   "packageManager": "pnpm@10.22.0",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.11.0"
   },
   "dependencies": {
-    "@changesets/cli": "^2.29.5",
+    "@changesets/cli": "^3.0.0",
     "@commitlint/cli": "^17.6.5",
     "@commitlint/config-conventional": "^17.6.5",
     "@types/less": "^3.0.8",
