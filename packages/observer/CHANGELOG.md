@@ -1,5 +1,11 @@
 # @rabjs/observer
 
+## 9.3.2
+
+### Patch Changes
+
+- unify all @rabjs packages to a single 9.3.2 version; future bumps stay in lockstep via changesets fixed
+
 ## 9.3.1
 
 ### Patch Changes

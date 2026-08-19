@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/devtools",
-  "version": "9.2.2",
+  "version": "9.3.2",
   "description": "RABjs 开发调试工具，通过 CDP 协议暴露容器树状态",
   "main": "lib/main.cjs",
   "module": "lib/main.js",

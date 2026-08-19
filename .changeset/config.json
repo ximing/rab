@@ -2,7 +2,18 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@rabjs/devtools",
+      "@rabjs/observer",
+      "@rabjs/react",
+      "@rabjs/rn-debug",
+      "@rabjs/rn-debug-server",
+      "@rabjs/service",
+      "@rabjs/shared",
+      "@rabjs/web-mcp"
+    ]
+  ],
   "linked": [],
   "access": "restricted",
   "baseBranch": "master",

@@ -1,5 +1,11 @@
 # @rabjs/shared
 
+## 9.3.2
+
+### Patch Changes
+
+- unify all @rabjs packages to a single 9.3.2 version; future bumps stay in lockstep via changesets fixed
+
 ## 9.2.1
 
 ### Patch Changes
