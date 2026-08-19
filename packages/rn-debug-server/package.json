@@ -47,7 +47,7 @@
     "ts-jest": "^29.4.12",
     "tsconfig": "workspace:*",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "files": [
     "lib/**/*",

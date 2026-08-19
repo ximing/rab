@@ -6,7 +6,7 @@
     "target": "ES2019",
     "lib": ["ES2019"],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
 
     "declaration": true,
     "declarationMap": true,
