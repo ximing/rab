@@ -24,6 +24,26 @@ updates:
       prefix-development: "chore(deps-dev)"
     # 锁文件合并冲突时自动 rebase (而不是堆一个 rebase PR)
     rebase-strategy: auto
+    groups:
+      typescript:
+        patterns:
+          - "typescript"
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+      build-tools:
+        patterns:
+          - "esbuild"
+          - "vite"
+          - "@vitejs/*"
+          - "tsx"
+          - "turbo"
+      test-lint:
+        patterns:
+          - "globals"
+          - "@testing-library/*"
+          - "lint-staged"
+          - "eslint"
+          - "eslint-*"
 
   # GitHub Actions 版本
   - package-ecosystem: github-actions

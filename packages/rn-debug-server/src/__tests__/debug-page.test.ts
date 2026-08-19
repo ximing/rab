@@ -1,10 +1,11 @@
 import { createDebugServer } from '../server';
+import { httpFetch } from './wait-for';
 
 describe('debug page', () => {
   it('GET / 返回 HTML 且包含关键面板', async () => {
-    const server = await createDebugServer({ port: 9234 });
+    const server = await createDebugServer({ port: 0 });
     try {
-      const res = await fetch('http://127.0.0.1:9234/');
+      const res = await httpFetch(`http://127.0.0.1:${server.port}/`);
       expect(res.status).toBe(200);
       expect(res.headers.get('content-type')).toContain('text/html');
       const html = await res.text();
@@ -18,9 +19,9 @@ describe('debug page', () => {
   });
 
   it('页面所有 innerHTML 插值经 escapeHtml 转义（XSS 回归）', async () => {
-    const server = await createDebugServer({ port: 9234 });
+    const server = await createDebugServer({ port: 0 });
     try {
-      const res = await fetch('http://127.0.0.1:9234/');
+      const res = await httpFetch(`http://127.0.0.1:${server.port}/`);
       const html = await res.text();
 
       // 存在转义函数，且覆盖 & < > " ' 五类字符
@@ -36,9 +37,9 @@ describe('debug page', () => {
   });
 
   it('renderDevices/renderCommand 的设备控制字符串与 JSON.stringify 输出均经 escapeHtml', async () => {
-    const server = await createDebugServer({ port: 9234 });
+    const server = await createDebugServer({ port: 0 });
     try {
-      const res = await fetch('http://127.0.0.1:9234/');
+      const res = await httpFetch(`http://127.0.0.1:${server.port}/`);
       const html = await res.text();
       const script = html.slice(html.indexOf('<script>'));
 

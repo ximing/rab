@@ -6,6 +6,7 @@
 import { createDebugServer } from '../../../rn-debug-server/src/server';
 import { setupRNDebug, resetRNDebugForTest } from '../setup';
 import type { MinimalWebSocket } from '../ws-client';
+import { httpFetch } from './wait-for';
 
 // Node 环境 WS 实现（ws 包）
 import WS from 'ws';
@@ -29,8 +30,7 @@ class NodeWebSocketAdapter implements MinimalWebSocket {
   }
 }
 
-const PORT = 9236;
-const BASE = `http://127.0.0.1:${PORT}`;
+
 
 async function waitFor(predicate: () => Promise<boolean>, timeoutMs = 5000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -69,19 +69,20 @@ describe('e2e: SDK ⇄ server', () => {
   });
 
   it('register → rab.listServices → 结果回到 HTTP 响应', async () => {
-    const server = await createDebugServer({ port: PORT });
+    const server = await createDebugServer({ port: 0 });
+    const base = `http://127.0.0.1:${server.port}`;
     try {
-      const session = setupRNDebug({ host: '127.0.0.1', port: PORT, appName: 'E2E' });
+      const session = setupRNDebug({ host: '127.0.0.1', port: server.port, appName: 'E2E' });
       expect(session).toBeDefined();
 
       // 等设备注册
       await waitFor(async () => {
-        const devices = (await fetch(`${BASE}/api/devices`).then((r) => r.json())) as unknown[];
+        const devices = (await httpFetch(`${base}/api/devices`).then((r) => r.json())) as unknown[];
         return devices.length === 1;
       });
       expect(session!.isConnected()).toBe(true);
 
-      const body = (await fetch(`${BASE}/api/commands`, {
+      const body = (await httpFetch(`${base}/api/commands`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'rab.listServices', payload: {} }),
