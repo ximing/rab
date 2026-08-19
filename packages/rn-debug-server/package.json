@@ -36,7 +36,7 @@
   "author": "ximing",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.16.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
