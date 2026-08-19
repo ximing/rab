@@ -18,9 +18,9 @@ pnpm build
 echo "🔍 执行发布前检查..."
 node scripts/publish-check.cjs
 
-# 发布（跳过 prepublishOnly 钩子，因为已经构建过了）
+# 发布。Changesets v3 不再接受 --ignore-scripts；各包也没有 prepublishOnly。
 echo "📦 发布包..."
-pnpm changeset publish --ignore-scripts
+pnpm changeset publish
 
 echo "✅ 发布完成！"
 
