@@ -103,8 +103,8 @@ export function observer<P extends object, TRef = {}>(
   };
 
   // 继承原始名称和 displayName，参考 https://github.com/mobxjs/mobx/issues/3438
-  (observerComponent as React.FunctionComponent).displayName =
-    baseComponent.displayName;
+  // React 19 的 FunctionComponent 不再声明 contextTypes，这里用 any 保留运行时兼容。
+  (observerComponent as any).displayName = baseComponent.displayName;
 
   if (isFunctionNameConfigurable) {
     Object.defineProperty(observerComponent, "name", {
@@ -116,9 +116,7 @@ export function observer<P extends object, TRef = {}>(
 
   // 支持旧版 context：contextTypes 必须在 memo 之前应用
   if ((baseComponent as any).contextTypes) {
-    (observerComponent as React.FunctionComponent).contextTypes = (
-      baseComponent as any
-    ).contextTypes;
+    (observerComponent as any).contextTypes = (baseComponent as any).contextTypes;
 
     if (process.env.NODE_ENV !== "production" && warnLegacyContextTypes) {
       warnLegacyContextTypes = false;
@@ -130,22 +128,20 @@ export function observer<P extends object, TRef = {}>(
 
   // 总是使用 forwardRef 包装，以支持 ref 转发
   // forwardRef 必须在 memo 之前应用
-  // forwardRef(observer(cmp)) 会抛出：
-  // "forwardRef 需要一个渲染函数，但收到了一个 `memo` 组件。请使用 memo(forwardRef(...)) 而不是 forwardRef(memo(...))"
-  observerComponent = forwardRef(observerComponent);
+  // React 19 的 ReactNode 包含 Promise，与 ForwardRefRenderFunction 返回值不完全兼容，
+  // 运行时行为不变，这里收窄类型以便通过检查。
+  const forwarded = forwardRef(
+    observerComponent as React.ForwardRefRenderFunction<TRef, any>
+  );
+  const memoized = memo(forwarded);
 
-  // memo；我们对 props 的深度更新不感兴趣；
-  // 我们假设如果深度对象发生变化，
-  // 这是在 observables 中，无论如何都会被追踪
-  observerComponent = memo(observerComponent);
-
-  copyStaticProperties(baseComponent, observerComponent);
+  copyStaticProperties(baseComponent, memoized);
 
   // 标记组件已被 observer 包裹
-  (observerComponent as any)[IS_REACTIVE_COMPONENT] = true;
+  (memoized as any)[IS_REACTIVE_COMPONENT] = true;
 
   if (process.env.NODE_ENV !== "production") {
-    Object.defineProperty(observerComponent, "contextTypes", {
+    Object.defineProperty(memoized, "contextTypes", {
       set() {
         throw new Error(
           `[@rabjs/react] \`${
@@ -159,7 +155,7 @@ export function observer<P extends object, TRef = {}>(
     });
   }
 
-  return observerComponent;
+  return memoized;
 }
 
 // 基于 https://github.com/mridgway/hoist-non-react-statics/blob/master/src/index.js
