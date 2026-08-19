@@ -36,8 +36,7 @@
     "changeset:check-fixed": "node scripts/sync-changeset-fixed.cjs --check",
     "changeset:version": "./scripts/version-packages.sh",
     "publish:check": "node scripts/publish-check.cjs",
-    "publish:npm": "./scripts/publish-npm.sh",
-    "publish:nmp": "./scripts/publish-npm.sh"
+    "publish:npm": "./scripts/publish-npm.sh"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx}": "eslint --fix --quiet"
