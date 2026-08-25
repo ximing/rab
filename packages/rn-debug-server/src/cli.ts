@@ -35,7 +35,7 @@ async function main() {
   process.on('SIGTERM', shutdown);
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('启动失败:', err);
   process.exit(1);
 });

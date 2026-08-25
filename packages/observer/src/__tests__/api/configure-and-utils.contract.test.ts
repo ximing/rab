@@ -22,15 +22,15 @@ import {
   resetGlobalConfig,
   isObservable,
   raw,
-} from "../../main";
+} from '../../main';
 
 // 全局配置是跨用例共享的进程状态，任何用例结束后必须还原为默认值
 afterEach(() => {
   resetGlobalConfig();
 });
 
-describe("configure() — 全局默认 scheduler", () => {
-  it("未配置全局 scheduler 时（默认路径）：observe(fn) 立即同步执行一次，依赖变更后同步重跑（不经任何排期）", () => {
+describe('configure() — 全局默认 scheduler', () => {
+  it('未配置全局 scheduler 时（默认路径）：observe(fn) 立即同步执行一次，依赖变更后同步重跑（不经任何排期）', () => {
     const state = observable({ count: 0 });
     let runs = 0;
 
@@ -51,7 +51,7 @@ describe("configure() — 全局默认 scheduler", () => {
     unobserve(reaction);
   });
 
-  it("configure({ scheduler }) 后：未指定局部 scheduler 的 reaction，依赖变更时交给全局 scheduler 排期（首跑仍同步立即执行）", () => {
+  it('configure({ scheduler }) 后：未指定局部 scheduler 的 reaction，依赖变更时交给全局 scheduler 排期（首跑仍同步立即执行）', () => {
     const queued: Array<() => void> = [];
     configure({
       scheduler: (reaction: any) => {
@@ -83,7 +83,7 @@ describe("configure() — 全局默认 scheduler", () => {
     unobserve(reaction);
   });
 
-  it("局部 scheduler 优先于全局 scheduler：observe(fn, { scheduler }) 指定了局部调度时，全局默认完全不参与", () => {
+  it('局部 scheduler 优先于全局 scheduler：observe(fn, { scheduler }) 指定了局部调度时，全局默认完全不参与', () => {
     const globalQueue: Array<() => void> = [];
     const localQueue: Array<() => void> = [];
     configure({
@@ -116,7 +116,7 @@ describe("configure() — 全局默认 scheduler", () => {
     unobserve(reaction);
   });
 
-  it("configure 支持对象型 scheduler（如 Set）作为全局默认：变更时 reaction 被 add 进对象，取出执行后生效", () => {
+  it('configure 支持对象型 scheduler（如 Set）作为全局默认：变更时 reaction 被 add 进对象，取出执行后生效', () => {
     const schedulerSet = new Set<any>();
     configure({ scheduler: schedulerSet });
 
@@ -135,7 +135,7 @@ describe("configure() — 全局默认 scheduler", () => {
     expect(runs).toBe(1);
     expect(schedulerSet.size).toBe(1);
 
-    Array.from(schedulerSet).forEach((r) => r());
+    Array.from(schedulerSet).forEach(r => r());
     expect(runs).toBe(2);
 
     unobserve(reaction);
@@ -168,7 +168,7 @@ describe("configure() — 全局默认 scheduler", () => {
     unobserve(reaction);
   });
 
-  it("重新 configure 只影响之后创建的 reaction：已创建 reaction 的 scheduler 是创建时的快照", () => {
+  it('重新 configure 只影响之后创建的 reaction：已创建 reaction 的 scheduler 是创建时的快照', () => {
     const queue1: Array<() => void> = [];
     const queue2: Array<() => void> = [];
     configure({
@@ -208,8 +208,8 @@ describe("configure() — 全局默认 scheduler", () => {
   });
 });
 
-describe("resetGlobalConfig() — 恢复全局默认", () => {
-  it("reset 后新建的 reaction 回到同步默认：不再被任何 scheduler 排期，变更立即重跑", () => {
+describe('resetGlobalConfig() — 恢复全局默认', () => {
+  it('reset 后新建的 reaction 回到同步默认：不再被任何 scheduler 排期，变更立即重跑', () => {
     const queued: Array<() => void> = [];
     configure({
       scheduler: (r: any) => queued.push(r as unknown as () => void),
@@ -233,7 +233,7 @@ describe("resetGlobalConfig() — 恢复全局默认", () => {
     unobserve(reaction);
   });
 
-  it("reset 不影响已创建 reaction 的 scheduler 快照：reset 前创建的 reaction 仍走当时的全局 scheduler", () => {
+  it('reset 不影响已创建 reaction 的 scheduler 快照：reset 前创建的 reaction 仍走当时的全局 scheduler', () => {
     const queued: Array<() => void> = [];
     configure({
       scheduler: (r: any) => queued.push(r as unknown as () => void),
@@ -262,7 +262,7 @@ describe("resetGlobalConfig() — 恢复全局默认", () => {
     // 新 reaction：reset 后走同步默认
     expect(newRuns).toBe(2);
 
-    queued.splice(0).forEach((r) => r());
+    queued.splice(0).forEach(r => r());
     expect(oldRuns).toBe(2);
 
     unobserve(oldReaction);
@@ -270,20 +270,20 @@ describe("resetGlobalConfig() — 恢复全局默认", () => {
   });
 });
 
-describe("isObservable() — 可观察身份判定", () => {
-  it("observable() 包装后的对象与数组 proxy 判定为 true", () => {
+describe('isObservable() — 可观察身份判定', () => {
+  it('observable() 包装后的对象与数组 proxy 判定为 true', () => {
     expect(isObservable(observable({ a: 1 }))).toBe(true);
     expect(isObservable(observable([1, 2, 3]))).toBe(true);
   });
 
-  it("observable() 包装后的集合 proxy（Map/Set/WeakMap/WeakSet）判定为 true", () => {
+  it('observable() 包装后的集合 proxy（Map/Set/WeakMap/WeakSet）判定为 true', () => {
     expect(isObservable(observable(new Map()))).toBe(true);
     expect(isObservable(observable(new Set()))).toBe(true);
     expect(isObservable(observable(new WeakMap()))).toBe(true);
     expect(isObservable(observable(new WeakSet()))).toBe(true);
   });
 
-  it("observable(fn) 返回的函数 proxy 判定为 true（函数是一等 observable）", () => {
+  it('observable(fn) 返回的函数 proxy 判定为 true（函数是一等 observable）', () => {
     const fn = function (x: number) {
       return x;
     };
@@ -291,7 +291,7 @@ describe("isObservable() — 可观察身份判定", () => {
     expect(isObservable(observedFn)).toBe(true);
   });
 
-  it("普通对象、数组、类实例（未被 observable 包装）判定为 false", () => {
+  it('普通对象、数组、类实例（未被 observable 包装）判定为 false', () => {
     class Foo {
       bar = 1;
     }
@@ -302,24 +302,24 @@ describe("isObservable() — 可观察身份判定", () => {
     expect(isObservable(function () {})).toBe(false);
   });
 
-  it("observable 的原始对象（raw 侧）判定为 false：只有 proxy 侧是 observable", () => {
+  it('observable 的原始对象（raw 侧）判定为 false：只有 proxy 侧是 observable', () => {
     const obj = { a: 1 };
     const proxy = observable(obj);
     expect(isObservable(proxy)).toBe(true);
     expect(isObservable(obj)).toBe(false);
   });
 
-  it("非对象输入（null/undefined/数字/字符串）判定为 false 而不是抛错", () => {
+  it('非对象输入（null/undefined/数字/字符串）判定为 false 而不是抛错', () => {
     expect(isObservable(null)).toBe(false);
     expect(isObservable(undefined)).toBe(false);
     expect(isObservable(42)).toBe(false);
-    expect(isObservable("text")).toBe(false);
+    expect(isObservable('text')).toBe(false);
     expect(isObservable(true)).toBe(false);
   });
 });
 
-describe("raw() — 取回原始对象", () => {
-  it("raw(proxy) 返回包装前的原始对象，且多次调用恒等同一对象", () => {
+describe('raw() — 取回原始对象', () => {
+  it('raw(proxy) 返回包装前的原始对象，且多次调用恒等同一对象', () => {
     const obj = { a: 1 };
     const proxy = observable(obj);
 
@@ -327,7 +327,7 @@ describe("raw() — 取回原始对象", () => {
     expect(raw(proxy)).toBe(raw(proxy));
   });
 
-  it("raw() 对 Map/Set proxy 返回原始集合实例（保留 instanceof 判定）", () => {
+  it('raw() 对 Map/Set proxy 返回原始集合实例（保留 instanceof 判定）', () => {
     const map = new Map();
     const set = new Set();
     const mapProxy = observable(map);
@@ -339,7 +339,7 @@ describe("raw() — 取回原始对象", () => {
     expect(raw(setProxy) instanceof Set).toBe(true);
   });
 
-  it("raw() 对 deep 模式的嵌套子 proxy 同样生效：返回嵌套层的原始对象", () => {
+  it('raw() 对 deep 模式的嵌套子 proxy 同样生效：返回嵌套层的原始对象', () => {
     const inner = { value: 1 };
     const proxy = observable({ inner });
     const innerProxy = proxy.inner;
@@ -348,7 +348,7 @@ describe("raw() — 取回原始对象", () => {
     expect(raw(innerProxy)).toBe(inner);
   });
 
-  it("raw() 对非 observable 输入原样返回：普通对象恒等，且幂等", () => {
+  it('raw() 对非 observable 输入原样返回：普通对象恒等，且幂等', () => {
     const plain = { a: 1 };
     const plainArr = [1, 2];
 
@@ -363,7 +363,7 @@ describe("raw() — 取回原始对象", () => {
     expect(isObservable(raw(proxy))).toBe(false);
   });
 
-  it("raw(fnProxy) 返回原始函数（observable(fn) 的函数 proxy 同样可解包）", () => {
+  it('raw(fnProxy) 返回原始函数（observable(fn) 的函数 proxy 同样可解包）', () => {
     const fn = function () {
       return 1;
     };
@@ -372,8 +372,8 @@ describe("raw() — 取回原始对象", () => {
   });
 });
 
-describe("raw(this) 私有字段 workaround（README「已知限制」小节）", () => {
-  it("限制（当前行为，README 已知限制）：包装含 #field 的类实例后，经 proxy 调用访问私有字段的方法抛 TypeError", () => {
+describe('raw(this) 私有字段 workaround（README「已知限制」小节）', () => {
+  it('限制（当前行为，README 已知限制）：包装含 #field 的类实例后，经 proxy 调用访问私有字段的方法抛 TypeError', () => {
     class Counter {
       #count = 0;
       increment() {
@@ -387,7 +387,7 @@ describe("raw(this) 私有字段 workaround（README「已知限制」小节）"
     expect(() => observed.increment()).toThrow(TypeError);
   });
 
-  it("官方 workaround（README 已知限制）：方法内部用 raw(this) 取回原始实例后访问私有字段可用", () => {
+  it('官方 workaround（README 已知限制）：方法内部用 raw(this) 取回原始实例后访问私有字段可用', () => {
     class Counter {
       #count = 0;
       incrementViaRaw() {
@@ -405,8 +405,8 @@ describe("raw(this) 私有字段 workaround（README「已知限制」小节）"
   });
 });
 
-describe("reaction 作为函数调用（契约地图缺口补钉）", () => {
-  it("observe(fn) 返回的 reaction 作为函数调用时，透传 fn 的返回值", () => {
+describe('reaction 作为函数调用（契约地图缺口补钉）', () => {
+  it('observe(fn) 返回的 reaction 作为函数调用时，透传 fn 的返回值', () => {
     const state = observable({ count: 0 });
     const reaction = observe(() => {
       state.count;

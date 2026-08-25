@@ -108,7 +108,7 @@ interface EventListenerRecord {
   originalHandler: (...args: any[]) => void;
   subscribedHandler: (...args: any[]) => void;
   once: boolean;
-  source: "manual" | "decorator";
+  source: 'manual' | 'decorator';
   active: boolean;
 }
 ```
@@ -118,7 +118,7 @@ interface EventListenerRecord {
 建议使用 `Symbol` 挂在 service 实例上，避免与业务字段冲突：
 
 ```typescript
-const EVENT_LISTENER_REGISTRY = Symbol("rs-service:event-listener-registry");
+const EVENT_LISTENER_REGISTRY = Symbol('rs-service:event-listener-registry');
 ```
 
 这样可以避免继续使用字符串字段名（例如 `__boundEventHandlers`）暴露实现细节，也能降低业务代码误覆盖的风险。
@@ -219,7 +219,7 @@ bindTrackedEventListener(service, {
   scope,
   once: isOnce,
   container,
-  source: "decorator",
+  source: 'decorator',
 });
 ```
 
@@ -254,8 +254,8 @@ bindTrackedEventListener(service, {
 
 ```typescript
 const handler = () => {};
-service.on("x", handler);
-service.off("x", handler);
+service.on('x', handler);
+service.off('x', handler);
 ```
 
 ### 3. `once` 已触发后的记录

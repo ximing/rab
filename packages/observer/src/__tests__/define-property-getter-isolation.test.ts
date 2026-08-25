@@ -11,14 +11,14 @@
  *      (副作用型/lazy-memo getter 会被提前执行; 抛错型 getter 会让
  *      "已成功落盘的重定义"向用户抛 TypeError 且通知丢失)。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op, 不通知", () => {
-  test("base: 只重定义相同的 get (省略 set, 旧 set 保留) 不通知", () => {
+describe('#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op, 不通知', () => {
+  test('base: 只重定义相同的 get (省略 set, 旧 set 保留) 不通知', () => {
     const raw: Record<string, unknown> = {};
     const g1 = (): number => 1;
     const s1 = function (_v: number): void {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get: g1,
       set: s1,
       configurable: true,
@@ -32,15 +32,15 @@ describe("#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op,
     expect(seen).toEqual([1]);
 
     // spec: 省略的 set 保持 s1, 属性完全没变 → no-op
-    Object.defineProperty(obj, "x", { get: g1 });
+    Object.defineProperty(obj, 'x', { get: g1 });
     expect(seen).toEqual([1]);
   });
 
-  test("base: 只重定义相同的 set (省略 get, 旧 get 保留) 不通知", () => {
+  test('base: 只重定义相同的 set (省略 get, 旧 get 保留) 不通知', () => {
     const raw: Record<string, unknown> = {};
     const g1 = (): number => 1;
     const s1 = function (_v: number): void {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get: g1,
       set: s1,
       configurable: true,
@@ -53,15 +53,15 @@ describe("#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op,
     });
     expect(seen).toEqual([1]);
 
-    Object.defineProperty(obj, "x", { set: s1 });
+    Object.defineProperty(obj, 'x', { set: s1 });
     expect(seen).toEqual([1]);
   });
 
-  test("shadow: 只重定义相同的 get 或相同的 set 均不通知", () => {
+  test('shadow: 只重定义相同的 get 或相同的 set 均不通知', () => {
     const raw: Record<string, unknown> = {};
     const g1 = (): number => 1;
     const s1 = function (_v: number): void {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get: g1,
       set: s1,
       configurable: true,
@@ -74,18 +74,18 @@ describe("#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op,
     });
     expect(seen).toEqual([1]);
 
-    Object.defineProperty(obj, "x", { get: g1 });
+    Object.defineProperty(obj, 'x', { get: g1 });
     expect(seen).toEqual([1]);
-    Object.defineProperty(obj, "x", { set: s1 });
+    Object.defineProperty(obj, 'x', { set: s1 });
     expect(seen).toEqual([1]);
   });
 
-  test("对照: 部分 define 换成不同的 set 分量 (get 不变) 仍要通知", () => {
+  test('对照: 部分 define 换成不同的 set 分量 (get 不变) 仍要通知', () => {
     const raw: Record<string, unknown> = {};
     const g1 = (): number => 1;
     const s1 = function (_v: number): void {};
     const s2 = function (_v: number): void {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get: g1,
       set: s1,
       configurable: true,
@@ -98,16 +98,16 @@ describe("#1 部分 accessor 描述符重定义: 相同分量补全后是 no-op,
     });
     expect(seen).toEqual([1]);
 
-    Object.defineProperty(obj, "x", { set: s2 });
+    Object.defineProperty(obj, 'x', { set: s2 });
     expect(seen).toEqual([1, 1]);
   });
 });
 
-describe("#4 trap 不得调用新定义的 getter", () => {
-  test("base: defineProperty 后新 getter 调用次数为 0", () => {
+describe('#4 trap 不得调用新定义的 getter', () => {
+  test('base: defineProperty 后新 getter 调用次数为 0', () => {
     const obj = observable({ x: 1 }) as { x: number };
     let calls = 0;
-    Object.defineProperty(obj, "x", {
+    Object.defineProperty(obj, 'x', {
       get() {
         calls++;
         return 999;
@@ -119,10 +119,10 @@ describe("#4 trap 不得调用新定义的 getter", () => {
     expect(calls).toBe(1); // 只有显式读取这一次
   });
 
-  test("shadow: defineProperty 后新 getter 调用次数为 0", () => {
+  test('shadow: defineProperty 后新 getter 调用次数为 0', () => {
     const obj = shadowObservable({ x: 1 }) as { x: number };
     let calls = 0;
-    Object.defineProperty(obj, "x", {
+    Object.defineProperty(obj, 'x', {
       get() {
         calls++;
         return 999;
@@ -135,8 +135,8 @@ describe("#4 trap 不得调用新定义的 getter", () => {
   });
 });
 
-describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
-  test("base: 新 getter 抛错 → 重定义成功、不向 defineProperty 调用方抛错、reaction 仍被通知", () => {
+describe('#2 trap 内 getter 抛错不得破坏重定义与通知', () => {
+  test('base: 新 getter 抛错 → 重定义成功、不向 defineProperty 调用方抛错、reaction 仍被通知', () => {
     const obj = observable({ x: 1 }) as { x: number };
     const seen: unknown[] = [];
     observe(() => {
@@ -149,22 +149,20 @@ describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
     expect(seen).toEqual([1]);
 
     expect(() => {
-      Object.defineProperty(obj, "x", {
+      Object.defineProperty(obj, 'x', {
         get() {
-          throw new Error("boom");
+          throw new Error('boom');
         },
         configurable: true,
       });
     }).not.toThrow();
 
     // 属性已翻转为 accessor, 且 reaction 收到了通知 (重跑读到抛错 getter)
-    expect(typeof Object.getOwnPropertyDescriptor(obj, "x")?.get).toBe(
-      "function"
-    );
-    expect(seen).toEqual([1, "err:boom"]);
+    expect(typeof Object.getOwnPropertyDescriptor(obj, 'x')?.get).toBe('function');
+    expect(seen).toEqual([1, 'err:boom']);
   });
 
-  test("shadow: 新 getter 抛错 → 重定义成功、reaction 仍被通知", () => {
+  test('shadow: 新 getter 抛错 → 重定义成功、reaction 仍被通知', () => {
     const obj = shadowObservable({ x: 1 }) as { x: number };
     const seen: unknown[] = [];
     observe(() => {
@@ -177,21 +175,21 @@ describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
     expect(seen).toEqual([1]);
 
     expect(() => {
-      Object.defineProperty(obj, "x", {
+      Object.defineProperty(obj, 'x', {
         get() {
-          throw new Error("boom");
+          throw new Error('boom');
         },
         configurable: true,
       });
     }).not.toThrow();
-    expect(seen).toEqual([1, "err:boom"]);
+    expect(seen).toEqual([1, 'err:boom']);
   });
 
-  test("base: 旧 getter 抛错 → 重定义为数据属性照常生效, obj.x 可读", () => {
+  test('base: 旧 getter 抛错 → 重定义为数据属性照常生效, obj.x 可读', () => {
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get() {
-        throw new Error("old-boom");
+        throw new Error('old-boom');
       },
       configurable: true,
       enumerable: true,
@@ -199,7 +197,7 @@ describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
     const obj = observable(raw) as { x: number };
 
     expect(() => {
-      Object.defineProperty(obj, "x", {
+      Object.defineProperty(obj, 'x', {
         value: 42,
         writable: true,
         configurable: true,
@@ -208,11 +206,11 @@ describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
     expect(obj.x).toBe(42);
   });
 
-  test("shadow: 旧 getter 抛错 → 重定义为数据属性照常生效", () => {
+  test('shadow: 旧 getter 抛错 → 重定义为数据属性照常生效', () => {
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       get() {
-        throw new Error("old-boom");
+        throw new Error('old-boom');
       },
       configurable: true,
       enumerable: true,
@@ -220,7 +218,7 @@ describe("#2 trap 内 getter 抛错不得破坏重定义与通知", () => {
     const obj = shadowObservable(raw) as { x: number };
 
     expect(() => {
-      Object.defineProperty(obj, "x", {
+      Object.defineProperty(obj, 'x', {
         value: 42,
         writable: true,
         configurable: true,

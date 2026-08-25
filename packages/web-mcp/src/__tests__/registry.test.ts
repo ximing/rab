@@ -181,14 +181,18 @@ describe('McpRegistry', () => {
       await registry.mount();
 
       expect(registry.isMounted()).toBe(false);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('navigator.modelContext is not available'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('navigator.modelContext is not available')
+      );
       warnSpy.mockRestore();
     });
 
     it('扫描 @mcpTool 注解并注册独立 Tool', async () => {
       class ProductService {
         @mcpTool({ description: '搜索商品' })
-        searchProducts(_keyword: string) { return []; }
+        searchProducts(_keyword: string) {
+          return [];
+        }
       }
 
       const instance = Object.create(ProductService.prototype) as Service;
@@ -231,7 +235,12 @@ describe('McpRegistry', () => {
       });
 
       const container = mockContainer('root', [
-        { identifier: 'TestService', factory: class {} as any, scope: 'singleton' as any, instance },
+        {
+          identifier: 'TestService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
 
       mockGetGlobalContainer.mockReturnValue(container);
@@ -244,11 +253,11 @@ describe('McpRegistry', () => {
 
       expect(executeActionTool).toBeDefined();
 
-      const mcpResult = await executeActionTool!.execute({
+      const mcpResult = (await executeActionTool!.execute({
         instanceId: 'TestService#0',
         action: 'doTask',
         args: [],
-      }) as { content: Array<{ type: string; text: string }> };
+      })) as { content: Array<{ type: string; text: string }> };
 
       // registerTool 会包装返回值为 MCP 标准格式
       const result = JSON.parse(mcpResult.content[0]!.text) as { result: unknown };
@@ -259,7 +268,12 @@ describe('McpRegistry', () => {
       const instance = makeMockInstance('DataService#0', { count: 99 });
 
       const container = mockContainer('root', [
-        { identifier: 'DataService', factory: class {} as any, scope: 'singleton' as any, instance },
+        {
+          identifier: 'DataService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
 
       mockGetGlobalContainer.mockReturnValue(container);
@@ -272,7 +286,9 @@ describe('McpRegistry', () => {
 
       expect(getStateTool).toBeDefined();
 
-      const mcpResult = await getStateTool!.execute({ instanceId: 'DataService#0' }) as { content: Array<{ type: string; text: string }> };
+      const mcpResult = (await getStateTool!.execute({ instanceId: 'DataService#0' })) as {
+        content: Array<{ type: string; text: string }>;
+      };
       // registerTool 会包装返回值为 MCP 标准格式
       const result = JSON.parse(mcpResult.content[0]!.text) as { state: Record<string, unknown> };
       expect(result.state['count']).toBe(99);
@@ -281,7 +297,9 @@ describe('McpRegistry', () => {
     it('@mcpTool 独立 Tool 的 execute 函数可以执行方法', async () => {
       class SumService {
         @mcpTool({ description: '求和' })
-        sum(a: number, b: number) { return a + b; }
+        sum(a: number, b: number) {
+          return a + b;
+        }
       }
 
       const instance = Object.create(SumService.prototype) as Service;
@@ -305,10 +323,10 @@ describe('McpRegistry', () => {
 
       expect(sumTool).toBeDefined();
 
-      const mcpResult = await sumTool!.execute({
+      const mcpResult = (await sumTool!.execute({
         instanceId: 'SumService#0',
         args: [3, 4],
-      }) as { content: Array<{ type: string; text: string }> };
+      })) as { content: Array<{ type: string; text: string }> };
 
       // registerTool 会包装返回值为 MCP 标准格式
       const result = JSON.parse(mcpResult.content[0]!.text) as { result: unknown };
@@ -319,7 +337,12 @@ describe('McpRegistry', () => {
       const instance = makeMockInstance('StoreService#0', { score: 0 });
 
       const container = mockContainer('root', [
-        { identifier: 'StoreService', factory: class {} as any, scope: 'singleton' as any, instance },
+        {
+          identifier: 'StoreService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
 
       mockGetGlobalContainer.mockReturnValue(container);
@@ -331,13 +354,16 @@ describe('McpRegistry', () => {
 
       expect(setStateTool).toBeDefined();
 
-      const mcpResult = await setStateTool!.execute({
+      const mcpResult = (await setStateTool!.execute({
         instanceId: 'StoreService#0',
         patch: { score: 99 },
-      }) as { content: Array<{ type: string; text: string }> };
+      })) as { content: Array<{ type: string; text: string }> };
 
       // registerTool 会包装返回值为 MCP 标准格式
-      const result = JSON.parse(mcpResult.content[0]!.text) as { success: boolean; updated: string[] };
+      const result = JSON.parse(mcpResult.content[0]!.text) as {
+        success: boolean;
+        updated: string[];
+      };
       expect(result.success).toBe(true);
       expect(result.updated).toContain('score');
       expect((instance as any).score).toBe(99);
@@ -346,14 +372,21 @@ describe('McpRegistry', () => {
     it('registerMcpToolsFromContainer 递归遍历子容器中的 @mcpTool', async () => {
       class ChildService {
         @mcpTool({ description: '子容器方法' })
-        childAction() { return 'child'; }
+        childAction() {
+          return 'child';
+        }
       }
 
       const instance = Object.create(ChildService.prototype) as Service;
       (instance as any)['instanceId'] = 'ChildService#0';
 
       const childContainer = mockContainer('child', [
-        { identifier: ChildService, factory: ChildService as any, scope: 'singleton' as any, instance },
+        {
+          identifier: ChildService,
+          factory: ChildService as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
       const rootContainer = mockContainer('root', [], [childContainer]);
 
@@ -404,12 +437,24 @@ describe('McpRegistry', () => {
       const instance2 = makeMockInstance('ServiceB#0');
 
       const childContainer = mockContainer('child', [
-        { identifier: 'ServiceB', factory: class {} as any, scope: 'singleton' as any, instance: instance2 },
+        {
+          identifier: 'ServiceB',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance: instance2,
+        },
       ]);
 
       const rootContainer = mockContainer(
         'root',
-        [{ identifier: 'ServiceA', factory: class {} as any, scope: 'singleton' as any, instance: instance1 }],
+        [
+          {
+            identifier: 'ServiceA',
+            factory: class {} as any,
+            scope: 'singleton' as any,
+            instance: instance1,
+          },
+        ],
         [childContainer]
       );
 
@@ -423,9 +468,14 @@ describe('McpRegistry', () => {
     });
 
     it('没有 instanceId 的实例不加入 map', () => {
-      const instance = { /* 无 instanceId */ } as unknown as Service;
+      const instance = {/* 无 instanceId */} as unknown as Service;
       const container = mockContainer('root', [
-        { identifier: 'SomeService', factory: class {} as any, scope: 'singleton' as any, instance },
+        {
+          identifier: 'SomeService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
 
       mockGetGlobalContainer.mockReturnValue(container);
@@ -467,7 +517,12 @@ describe('createGenericTools', () => {
       ping: () => 'pong',
     } as unknown as Service;
     const childContainer = mockContainer('child', [
-      { identifier: 'ChildSvc', factory: class {} as any, scope: 'singleton' as any, instance: childInstance },
+      {
+        identifier: 'ChildSvc',
+        factory: class {} as any,
+        scope: 'singleton' as any,
+        instance: childInstance,
+      },
     ]);
     const rootContainer = mockContainer('root', [], [childContainer]);
 
@@ -475,11 +530,11 @@ describe('createGenericTools', () => {
     const executeActionTool = tools.find(t => t.name === 'execute_action');
     expect(executeActionTool).toBeDefined();
 
-    const result = await executeActionTool!.execute({
+    const result = (await executeActionTool!.execute({
       instanceId: 'ChildSvc#0',
       action: 'ping',
       args: [],
-    }) as { result: unknown };
+    })) as { result: unknown };
 
     expect(result.result).toBe('pong');
   });
@@ -487,7 +542,12 @@ describe('createGenericTools', () => {
   it('内部 walkContainer 递归遍历子容器：set_state 可路由子容器 Service', () => {
     const childInstance = makeMockInstance('ChildSvc#0', { level: 1 });
     const childContainer = mockContainer('child', [
-      { identifier: 'ChildSvc', factory: class {} as any, scope: 'singleton' as any, instance: childInstance },
+      {
+        identifier: 'ChildSvc',
+        factory: class {} as any,
+        scope: 'singleton' as any,
+        instance: childInstance,
+      },
     ]);
     const rootContainer = mockContainer('root', [], [childContainer]);
 

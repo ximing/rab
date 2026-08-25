@@ -10,7 +10,7 @@
  * - 异步方法会自动管理 loading 和 error 状态（通过 $model）
  * - 支持使用 @SyncAction 装饰器排除特定方法的批量更新
  */
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export interface User {
   id: number;
@@ -23,9 +23,9 @@ export class UserService extends Service {
   currentUser: User | null = null;
 
   users: User[] = [
-    { id: 1, name: "Alice", email: "alice@example.com", avatar: "👩" },
-    { id: 2, name: "Bob", email: "bob@example.com", avatar: "👨" },
-    { id: 3, name: "Charlie", email: "charlie@example.com", avatar: "👨‍🦱" },
+    { id: 1, name: 'Alice', email: 'alice@example.com', avatar: '👩' },
+    { id: 2, name: 'Bob', email: 'bob@example.com', avatar: '👨' },
+    { id: 3, name: 'Charlie', email: 'charlie@example.com', avatar: '👨‍🦱' },
   ];
 
   loading = false;
@@ -36,7 +36,7 @@ export class UserService extends Service {
    * 新用户名输入框的值
    * 用于在添加用户时临时存储用户输入
    */
-  newUserName: string = "";
+  newUserName: string = '';
 
   /**
    * 设置当前用户
@@ -57,15 +57,15 @@ export class UserService extends Service {
     this.error = null;
     try {
       // 模拟异步加载
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const user = this.users.find((u) => u.id === userId);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const user = this.users.find(u => u.id === userId);
       if (user) {
         this.currentUser = user;
       } else {
         this.error = `User with id ${userId} not found`;
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Unknown error";
+      this.error = error instanceof Error ? error.message : 'Unknown error';
     } finally {
       this.loading = false;
     }
@@ -82,7 +82,7 @@ export class UserService extends Service {
    * 删除用户
    */
   removeUser(userId: number) {
-    this.users = this.users.filter((u) => u.id !== userId);
+    this.users = this.users.filter(u => u.id !== userId);
     if (this.currentUser?.id === userId) {
       this.currentUser = null;
     }
@@ -92,7 +92,7 @@ export class UserService extends Service {
    * 更新用户信息
    */
   updateUser(userId: number, updates: Partial<User>) {
-    const user = this.users.find((u) => u.id === userId);
+    const user = this.users.find(u => u.id === userId);
     if (user) {
       Object.assign(user, updates);
       if (this.currentUser?.id === userId) {
@@ -121,7 +121,7 @@ export class UserService extends Service {
    * 这是一个纯查询方法，不会被视为 Action
    */
   getUserById(id: number): User | undefined {
-    return this.users.find((u) => u.id === id);
+    return this.users.find(u => u.id === id);
   }
 
   /**
@@ -142,10 +142,10 @@ export class UserService extends Service {
         id: Math.max(...this.users.map((u: User) => u.id), 0) + 1,
         name: this.newUserName,
         email: `${this.newUserName.toLowerCase()}@example.com`,
-        avatar: "👤",
+        avatar: '👤',
       };
       this.addUser(newUser);
-      this.newUserName = "";
+      this.newUserName = '';
     }
   }
 
@@ -153,6 +153,6 @@ export class UserService extends Service {
    * 清空新用户名输入框
    */
   clearNewUserName() {
-    this.newUserName = "";
+    this.newUserName = '';
   }
 }

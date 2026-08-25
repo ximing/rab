@@ -12,7 +12,7 @@
  * 绕过 trap, 归 G3/G7) 已随 G3 对抗审查 #2/#4 修复 (trap 不再调用
  * accessor getter), 见文件末尾 describe。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 function defineValue(obj: object, key: string, value: number) {
   Object.defineProperty(obj, key, {
@@ -38,10 +38,10 @@ function defineValue(obj: object, key: string, value: number) {
  * 变化比较, 通知携带实际落盘值 —— 引擎路由回 receiver 的普通赋值
  * landed === value, 行为不变; setter 变换落盘的场景不再丢通知。
  */
-describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参与比较 (landed-value)", () => {
-  test("base: setter 同 key defineProperty 翻倍落盘, 赋值值恰等于旧值 → 落盘值变化仍通知", () => {
+describe('转发窗口修复: setter 同 key defineProperty 变换落盘值参与比较 (landed-value)', () => {
+  test('base: setter 同 key defineProperty 翻倍落盘, 赋值值恰等于旧值 → 落盘值变化仍通知', () => {
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       configurable: true,
       enumerable: true,
       get() {
@@ -49,7 +49,7 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
       },
       set(v: number) {
         // this 是 proxy (receiver), defineProperty 进 trap, 命中转发帧被透传
-        defineValue(this, "x", v * 2);
+        defineValue(this, 'x', v * 2);
       },
     });
     const obj = observable(raw) as { x: number };
@@ -69,16 +69,16 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     expect(seen).toBe(20);
   });
 
-  test("shadow: shadow handler 上同场景同样通知", () => {
+  test('shadow: shadow handler 上同场景同样通知', () => {
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       configurable: true,
       enumerable: true,
       get() {
         return 10;
       },
       set(v: number) {
-        defineValue(this, "x", v * 2);
+        defineValue(this, 'x', v * 2);
       },
     });
     const obj = shadowObservable(raw) as { x: number };
@@ -95,16 +95,16 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     expect(seen).toBe(20);
   });
 
-  test("对照: 后续赋值按落盘值比较, 连续变换赋值逐次通知", () => {
+  test('对照: 后续赋值按落盘值比较, 连续变换赋值逐次通知', () => {
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       configurable: true,
       enumerable: true,
       get() {
         return 1;
       },
       set(v: number) {
-        defineValue(this, "x", v * 10);
+        defineValue(this, 'x', v * 10);
       },
     });
     const obj = observable(raw) as { x: number };
@@ -124,14 +124,14 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     expect(seen).toBe(2);
   });
 
-  test("gg2-attack2 C1 形态: _v 支撑的 flag setter 同 key defineProperty v*10", () => {
+  test('gg2-attack2 C1 形态: _v 支撑的 flag setter 同 key defineProperty v*10', () => {
     const obj: any = observable({
       _v: 1,
       get flag() {
         return this._v;
       },
       set flag(v: number) {
-        defineValue(obj, "flag", v * 10);
+        defineValue(obj, 'flag', v * 10);
       },
     });
     let reads = 0;
@@ -144,7 +144,7 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     expect(obj.flag).toBe(10);
   });
 
-  test("变换型 accessor (写后仍是 accessor) → 无法无副作用获知落盘值, 必通知 (master 语义)", () => {
+  test('变换型 accessor (写后仍是 accessor) → 无法无副作用获知落盘值, 必通知 (master 语义)', () => {
     // G3 第 3 轮对抗审查 #1/#4 翻转了本用例原先 pin 的行为:
     // 原『落盘后重读 target[key] 与旧 getter 值比较, 观察值不变则不通知』
     // 依赖 set trap 两次调用自有 accessor getter (入口 oldValue + landedValue)
@@ -155,7 +155,7 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
     // (写回值恰使观察值不变时是一次良性重跑, 不产生错误状态)。
     let stored = 4;
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       configurable: true,
       enumerable: true,
       get() {
@@ -201,14 +201,14 @@ describe("转发窗口修复: setter 同 key defineProperty 变换落盘值参�
  * "无值写入"跳过通知。修复: 改用 `'value' in descriptor` 判定数据描述符
  * (accessor descriptor 仍按现行设计跳过)。
  */
-describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 值", () => {
-  test("#1b: grandparent setter 对链上 middle 同 key defineProperty, middle reaction 收到通知", () => {
+describe('转发窗口修复: 链上中间层同 key define 与显式 undefined 值', () => {
+  test('#1b: grandparent setter 对链上 middle 同 key defineProperty, middle reaction 收到通知', () => {
     const middle = observable({ side: 0 });
     const gpRaw: Record<string, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(this: unknown, v: number) {
-        Object.defineProperty(middle, "k", {
+        Object.defineProperty(middle, 'k', {
           value: v,
           writable: true,
           enumerable: true,
@@ -241,7 +241,7 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
     expect(childCalls).toBe(2);
   });
 
-  test("#1c: Object.defineProperty 显式 { value: undefined } 覆盖旧值通知 (对照 set trap 行为一致)", () => {
+  test('#1c: Object.defineProperty 显式 { value: undefined } 覆盖旧值通知 (对照 set trap 行为一致)', () => {
     const obj = observable({ x: 5 }) as { x: number | undefined };
     let calls = 0;
     let seen: number | undefined;
@@ -251,7 +251,7 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
     });
     expect(calls).toBe(1);
 
-    Object.defineProperty(obj, "x", {
+    Object.defineProperty(obj, 'x', {
       value: undefined,
       writable: true,
       configurable: true,
@@ -273,7 +273,7 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
     expect(calls2).toBe(2);
   });
 
-  test("#1c(shadow): shadow handler 上显式 { value: undefined } 覆盖旧值同样通知", () => {
+  test('#1c(shadow): shadow handler 上显式 { value: undefined } 覆盖旧值同样通知', () => {
     const obj = shadowObservable({ x: 5 }) as { x: number | undefined };
     let calls = 0;
     let seen: number | undefined;
@@ -282,7 +282,7 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
       calls++;
     });
     expect(calls).toBe(1);
-    Object.defineProperty(obj, "x", {
+    Object.defineProperty(obj, 'x', {
       value: undefined,
       writable: true,
       configurable: true,
@@ -293,7 +293,7 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
     expect(seen).toBeUndefined();
   });
 
-  test("#1c(对照): accessor descriptor 与无 value 的部分 define 仍不触发数据值通知", () => {
+  test('#1c(对照): accessor descriptor 与无 value 的部分 define 仍不触发数据值通知', () => {
     const obj = observable({ x: 5 }) as { x: number };
     let calls = 0;
     observe(() => {
@@ -302,11 +302,11 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
     });
     expect(calls).toBe(1);
     // 部分 define (仅改 enumerable), 无 value 无 accessor → 值未变, 不通知
-    Object.defineProperty(obj, "x", { enumerable: false });
+    Object.defineProperty(obj, 'x', { enumerable: false });
     expect(obj.x).toBe(5);
     expect(calls).toBe(1);
     // accessor descriptor → 按现行设计跳过数据值通知
-    Object.defineProperty(obj, "y", {
+    Object.defineProperty(obj, 'y', {
       get() {
         return 1;
       },
@@ -326,17 +326,17 @@ describe("转发窗口修复: 链上中间层同 key define 与显式 undefined 
  * 不再读取 oldValue (getter 从不在 trap 内被调用)。下列断言已从
  * "pin 丢通知的限制" 翻转为正确行为。
  */
-describe("已修复: defineProperty trap 不再调用旧 getter (oldValue 捕获隔离)", () => {
-  test("武装的 lazy getter 正常读取时 defineProperty(proxy) → reaction 收到通知", () => {
+describe('已修复: defineProperty trap 不再调用旧 getter (oldValue 捕获隔离)', () => {
+  test('武装的 lazy getter 正常读取时 defineProperty(proxy) → reaction 收到通知', () => {
     let armed = false;
     const obj: any = observable({});
-    Object.defineProperty(obj, "lazy", {
+    Object.defineProperty(obj, 'lazy', {
       configurable: true,
       enumerable: true,
       get() {
         if (armed) {
           // 正常 get 路径 this 是 proxy, defineProperty 经 trap 通知
-          Object.defineProperty(this, "lazy", {
+          Object.defineProperty(this, 'lazy', {
             value: 777,
             writable: true,
             configurable: true,
@@ -364,10 +364,10 @@ describe("已修复: defineProperty trap 不再调用旧 getter (oldValue 捕获
     expect(seen).toBe(777);
   });
 
-  test("defineProperty 重定义旧 accessor 期间旧 getter 不被调用 (副作用隔离)", () => {
+  test('defineProperty 重定义旧 accessor 期间旧 getter 不被调用 (副作用隔离)', () => {
     let oldGetterCalls = 0;
     const raw: Record<string, unknown> = {};
-    Object.defineProperty(raw, "x", {
+    Object.defineProperty(raw, 'x', {
       configurable: true,
       enumerable: true,
       get() {
@@ -380,7 +380,7 @@ describe("已修复: defineProperty trap 不再调用旧 getter (oldValue 捕获
     expect(oldGetterCalls).toBe(1);
 
     // 重定义为数据属性: trap 不得为捕获 oldValue 而调用旧 getter
-    Object.defineProperty(obj, "x", {
+    Object.defineProperty(obj, 'x', {
       value: 2,
       writable: true,
       configurable: true,

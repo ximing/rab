@@ -7,8 +7,7 @@ import { createWsClient, type WsClient } from './ws-client';
 
 // package.json version 由 build 时 define 注入；测试/源码运行时回退 '0.0.0'
 declare const RAB_RN_DEBUG_VERSION: string | undefined;
-const SDK_VERSION =
-  typeof RAB_RN_DEBUG_VERSION !== 'undefined' ? RAB_RN_DEBUG_VERSION : '0.0.0';
+const SDK_VERSION = typeof RAB_RN_DEBUG_VERSION !== 'undefined' ? RAB_RN_DEBUG_VERSION : '0.0.0';
 
 export interface RNDebugOptions {
   host: string;
@@ -43,7 +42,7 @@ export function setupRNDebug(options: RNDebugOptions): RNDebugSession | undefine
 
   // 先声明 wsRef（consoleCapture 的 onLog 闭包在初始化窗口内可能触发，避免 TDZ）
   const consoleCapture = setupConsoleCapture({
-    onLog: (entry) => wsRef?.sendEvent('console', entry),
+    onLog: entry => wsRef?.sendEvent('console', entry),
   });
   consoleRef = consoleCapture;
 
@@ -58,7 +57,7 @@ export function setupRNDebug(options: RNDebugOptions): RNDebugSession | undefine
         sdkVersion: SDK_VERSION,
         connected: wsRef?.isConnected() ?? false,
       }),
-      'console.getLogs': (payload) => {
+      'console.getLogs': payload => {
         const p = (payload ?? {}) as { level?: string; limit?: number };
         return consoleCapture.getLogs({
           level: p.level as never,

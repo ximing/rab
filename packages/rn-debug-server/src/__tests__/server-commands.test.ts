@@ -1,11 +1,18 @@
 import WebSocket from 'ws';
 import { createDebugServer } from '../server';
-import { closeWs, httpFetch, messageKind, waitFor, waitForDevice, waitUntilDeviceGone } from './wait-for';
+import {
+  closeWs,
+  httpFetch,
+  messageKind,
+  waitFor,
+  waitForDevice,
+  waitUntilDeviceGone,
+} from './wait-for';
 
 async function connectDevice(port: number, deviceId: string) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}/device`);
   const received: string[] = [];
-  ws.on('message', (raw) => received.push(String(raw)));
+  ws.on('message', raw => received.push(String(raw)));
   await new Promise<void>((resolve, reject) => {
     ws.on('open', () => resolve());
     ws.on('error', reject);
@@ -22,7 +29,7 @@ async function connectDevice(port: number, deviceId: string) {
 }
 
 function findCommand(received: string[]): string {
-  const raw = received.find((m) => messageKind(m) === 'command');
+  const raw = received.find(m => messageKind(m) === 'command');
   if (!raw) throw new Error('command not received');
   return raw;
 }
@@ -48,10 +55,13 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'ping', payload: {} }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'command delivered to device');
-    expect(received.filter((m) => messageKind(m) === 'command')).toHaveLength(1);
+    await waitFor(
+      () => received.some(m => messageKind(m) === 'command'),
+      'command delivered to device'
+    );
+    expect(received.filter(m => messageKind(m) === 'command')).toHaveLength(1);
     reply(ws, findCommand(received), 'ok', { pong: true });
 
     const body = (await promise) as { status: string; result: unknown };
@@ -69,9 +79,12 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'device.info' }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'command delivered to dest device');
+    await waitFor(
+      () => received.some(m => messageKind(m) === 'command'),
+      'command delivered to dest device'
+    );
     reply(ws, findCommand(received), 'ok', { platform: 'ios' });
     const body = (await promise) as { status: string; result: unknown };
     expect(body.status).toBe('ok');
@@ -146,8 +159,11 @@ describe('debug server command endpoints', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'ping', payload: {} }),
-      }).then((r) => r.json());
-      await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'command after bad JSON');
+      }).then(r => r.json());
+      await waitFor(
+        () => received.some(m => messageKind(m) === 'command'),
+        'command after bad JSON'
+      );
       const command = findCommand(received);
       reply(ws, command, 'ok', { alive: true });
       const body = (await promise) as { status: string; result: unknown };
@@ -168,8 +184,11 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'ping' }),
-    }).then((r) => r.json());
-    await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'command for status query');
+    }).then(r => r.json());
+    await waitFor(
+      () => received.some(m => messageKind(m) === 'command'),
+      'command for status query'
+    );
     const sent = findCommand(received);
     const cmdId = JSON.parse(sent).id;
 

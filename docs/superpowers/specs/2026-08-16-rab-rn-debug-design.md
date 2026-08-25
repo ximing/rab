@@ -45,11 +45,11 @@ rabjs 已支持 React Native。浏览器端已有 `rab-cdp-debug` skill（Agent 
 
 monorepo 新增两个 package + 一个 skill：
 
-| 名称 | 类型 | 职责 |
-|------|------|------|
-| `@rabjs/rn-debug` | RN 端 SDK | WS 客户端、指令调度、内置 handler、console 拦截 |
-| `@rabjs/rn-debug-server` | Node CLI | WS 服务、Agent HTTP API、调试页面 |
-| `skills/rab-rn-debug/SKILL.md` | skill 文档 | 指导 Agent 使用本机制 |
+| 名称                           | 类型       | 职责                                            |
+| ------------------------------ | ---------- | ----------------------------------------------- |
+| `@rabjs/rn-debug`              | RN 端 SDK  | WS 客户端、指令调度、内置 handler、console 拦截 |
+| `@rabjs/rn-debug-server`       | Node CLI   | WS 服务、Agent HTTP API、调试页面               |
+| `skills/rab-rn-debug/SKILL.md` | skill 文档 | 指导 Agent 使用本机制                           |
 
 ## 4. `@rabjs/rn-debug`（RN 端 SDK）
 
@@ -59,11 +59,14 @@ monorepo 新增两个 package + 一个 skill：
 import { setupRNDebug } from '@rabjs/rn-debug';
 
 setupRNDebug({
-  host: '192.168.1.5',   // 电脑局域网 IP，手动配置
+  host: '192.168.1.5', // 电脑局域网 IP，手动配置
   port: 9229,
-  appName: 'MyApp',       // 可选，默认取应用名
-  handlers: {             // 可选，应用自定义指令
-    'app.clearCache': async () => { /* ... */ return { cleared: true }; },
+  appName: 'MyApp', // 可选，默认取应用名
+  handlers: {
+    // 可选，应用自定义指令
+    'app.clearCache': async () => {
+      /* ... */ return { cleared: true };
+    },
   },
 });
 ```
@@ -81,13 +84,13 @@ setupRNDebug({
 ```jsonc
 {
   "kind": "register",
-  "deviceId": "rn-ios-<nanoid>",   // SDK 生成，进程生命周期内稳定
+  "deviceId": "rn-ios-<nanoid>", // SDK 生成，进程生命周期内稳定
   "info": {
     "appName": "MyApp",
-    "platform": "ios",             // Platform.OS
+    "platform": "ios", // Platform.OS
     "osVersion": "17.5",
-    "sdkVersion": "0.1.0"          // @rabjs/rn-debug 版本
-  }
+    "sdkVersion": "0.1.0", // @rabjs/rn-debug 版本
+  },
 }
 ```
 
@@ -109,15 +112,15 @@ setupRNDebug({
 
 ### 4.4 内置 handler
 
-| 指令 type | payload | 说明 |
-|-----------|---------|------|
-| `ping` | — | 返回 `{pong: true, time}` |
-| `device.info` | — | 返回 register 时的 info + 当前连接状态 |
-| `rab.listServices` | — | 枚举容器树中所有已实例化 Service（instanceId / containerName / identifierLabel） |
-| `rab.getServiceState` | `{instanceId? , identifierLabel?, paths?}` | 读取 Service 状态；`paths` 为点号路径数组，缺省返回顶层可序列化字段 |
-| `rab.callServiceMethod` | `{instanceId, method, args?}` | 调用 Service 方法（支持 async），返回方法返回值的可序列化结果 |
-| `rab.expect` | `{instanceId, description?, assertions: [{op, path, expected?, message?}]}` | 复用 RSExpectBuilder 断言，返回 `.run()` 的结构化结果 |
-| `console.getLogs` | `{level?, limit?}` | 返回环形缓冲中的日志条目 |
+| 指令 type               | payload                                                                     | 说明                                                                             |
+| ----------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `ping`                  | —                                                                           | 返回 `{pong: true, time}`                                                        |
+| `device.info`           | —                                                                           | 返回 register 时的 info + 当前连接状态                                           |
+| `rab.listServices`      | —                                                                           | 枚举容器树中所有已实例化 Service（instanceId / containerName / identifierLabel） |
+| `rab.getServiceState`   | `{instanceId? , identifierLabel?, paths?}`                                  | 读取 Service 状态；`paths` 为点号路径数组，缺省返回顶层可序列化字段              |
+| `rab.callServiceMethod` | `{instanceId, method, args?}`                                               | 调用 Service 方法（支持 async），返回方法返回值的可序列化结果                    |
+| `rab.expect`            | `{instanceId, description?, assertions: [{op, path, expected?, message?}]}` | 复用 RSExpectBuilder 断言，返回 `.run()` 的结构化结果                            |
+| `console.getLogs`       | `{level?, limit?}`                                                          | 返回环形缓冲中的日志条目                                                         |
 
 `rab.*` 系列依赖一个平台无关的容器 handle：与 `@rabjs/devtools` 的 root-container-handle 同思路，但基于 `getGlobalContainer()`（`@rabjs/service`）构建，不依赖 `window`。`setupRNDebug` 时自动构建。断言能力复用 devtools 的 `RSExpectBuilder`（`op` 取值与 rab-cdp-debug skill 文档一致）。
 
@@ -159,17 +162,17 @@ npx rab-rn-debug --port 9300
 
 ### 5.3 Agent HTTP API
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/devices` | 设备列表 `[{deviceId, info, connectedAt, lastSeen}]` |
-| POST | `/api/devices/:deviceId/commands` | 向指定设备发指令 |
-| POST | `/api/commands` | 不带 deviceId：唯一在线设备直接路由；多设备返回 409 并在 body 列出候选；无设备返回 404 |
-| GET | `/api/commands/:id` | 查询指令状态（pending/ok/error/timeout），用于调试页面展示 |
+| 方法 | 路径                              | 说明                                                                                   |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------- |
+| GET  | `/api/devices`                    | 设备列表 `[{deviceId, info, connectedAt, lastSeen}]`                                   |
+| POST | `/api/devices/:deviceId/commands` | 向指定设备发指令                                                                       |
+| POST | `/api/commands`                   | 不带 deviceId：唯一在线设备直接路由；多设备返回 409 并在 body 列出候选；无设备返回 404 |
+| GET  | `/api/commands/:id`               | 查询指令状态（pending/ok/error/timeout），用于调试页面展示                             |
 
 请求体：
 
 ```jsonc
-{ "type": "rab.listServices", "payload": {}, "timeout": 30000 }  // timeout 可选，默认 30000，上限 120000
+{ "type": "rab.listServices", "payload": {}, "timeout": 30000 } // timeout 可选，默认 30000，上限 120000
 ```
 
 响应（HTTP 200，业务状态在 body 内）：
@@ -232,15 +235,15 @@ npx rab-rn-debug --port 9300
 
 ## 7. 错误处理
 
-| 场景 | 行为 |
-|------|------|
-| Agent 请求超时（默认 30s，上限 120s） | `{status:'timeout'}`，服务端清理 pending；设备晚到的 result 丢弃 |
-| 设备离线时下发指令 | 404（指定 deviceId）或 409（歧义）；已排队/在途指令立即以 error 结束 |
-| handler 抛异常 | `{status:'error', error:{message,stack}}` |
-| 未知指令 type | `{status:'error', error:{message:'unknown command type'}}` |
-| 返回值不可序列化 | SDK 清洗失败按 error 回传 |
-| SDK 断线 | 指数退避自动重连；重连后重新 register（deviceId 不变） |
-| 服务端重启 | 设备自动重连；Agent 期间请求按超时/断线处理 |
+| 场景                                  | 行为                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------- |
+| Agent 请求超时（默认 30s，上限 120s） | `{status:'timeout'}`，服务端清理 pending；设备晚到的 result 丢弃     |
+| 设备离线时下发指令                    | 404（指定 deviceId）或 409（歧义）；已排队/在途指令立即以 error 结束 |
+| handler 抛异常                        | `{status:'error', error:{message,stack}}`                            |
+| 未知指令 type                         | `{status:'error', error:{message:'unknown command type'}}`           |
+| 返回值不可序列化                      | SDK 清洗失败按 error 回传                                            |
+| SDK 断线                              | 指数退避自动重连；重连后重新 register（deviceId 不变）               |
+| 服务端重启                            | 设备自动重连；Agent 期间请求按超时/断线处理                          |
 
 ## 8. 测试
 

@@ -29,6 +29,7 @@
 ### Task 1: 脚手架 + 设备注册表 + WS `/device` 端点 + `GET /api/devices`
 
 **Files:**
+
 - Create: `packages/rn-debug-server/package.json`
 - Create: `packages/rn-debug-server/tsconfig.json`
 - Create: `packages/rn-debug-server/jest.config.js`
@@ -39,6 +40,7 @@
 - Test: `packages/rn-debug-server/src/__tests__/server-register.test.ts`
 
 **Interfaces:**
+
 - Consumes: 无（首任务）
 - Produces:
   - `createDeviceRegistry(): DeviceRegistry`，其中 `interface DeviceRegistry { add(device: DeviceEntry): void; remove(deviceId: string): boolean; get(deviceId: string): DeviceEntry | undefined; list(): DeviceInfo[]; touch(deviceId: string): void }`
@@ -264,7 +266,8 @@ export interface DeviceEventMessage {
   data: unknown;
 }
 
-export type DeviceToServerMessage = RegisterMessage | PingMessage | ResultMessage | DeviceEventMessage;
+export type DeviceToServerMessage =
+  RegisterMessage | PingMessage | ResultMessage | DeviceEventMessage;
 
 export interface CommandMessage {
   kind: 'command';
@@ -349,7 +352,7 @@ describe('debug server /device + /api/devices', () => {
       })
     );
     // 等 register 被处理
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 200));
 
     const res = await fetch('http://127.0.0.1:9229/api/devices');
     expect(res.status).toBe(200);
@@ -358,7 +361,7 @@ describe('debug server /device + /api/devices', () => {
     expect(devices[0]).toMatchObject({ deviceId: 'dev-1', appName: 'App' });
 
     ws.close();
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 200));
     const res2 = await fetch('http://127.0.0.1:9229/api/devices');
     expect(((await res2.json()) as unknown[]).length).toBe(0);
   });
@@ -370,12 +373,18 @@ describe('debug server /device + /api/devices', () => {
       ws.on('open', () => resolve());
       ws.on('error', reject);
     });
-    ws.send(JSON.stringify({ kind: 'register', deviceId: 'dev-2', info: { appName: 'A', platform: 'android', osVersion: '14', sdkVersion: '0.1.0' } }));
-    await new Promise((r) => setTimeout(r, 150));
+    ws.send(
+      JSON.stringify({
+        kind: 'register',
+        deviceId: 'dev-2',
+        info: { appName: 'A', platform: 'android', osVersion: '14', sdkVersion: '0.1.0' },
+      })
+    );
+    await new Promise(r => setTimeout(r, 150));
     const before = server.registry.get('dev-2')!.lastSeen;
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 20));
     ws.send(JSON.stringify({ kind: 'ping' }));
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 150));
     expect(server.registry.get('dev-2')!.lastSeen).toBeGreaterThan(before);
   });
 });
@@ -422,7 +431,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   httpServer.on('upgrade', (req, socket, head) => {
     const url = req.url ?? '';
     if (url.startsWith('/device')) {
-      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+      wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
     } else {
       socket.destroy();
     }
@@ -431,7 +440,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   wss.on('connection', (ws: WsSocket) => {
     let registeredId: string | undefined;
 
-    ws.on('message', (raw) => {
+    ws.on('message', raw => {
       let msg: DeviceToServerMessage;
       try {
         msg = JSON.parse(String(raw)) as DeviceToServerMessage;
@@ -459,13 +468,13 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     });
   });
 
-  await new Promise<void>((resolve) => httpServer.listen(port, resolve));
+  await new Promise<void>(resolve => httpServer.listen(port, resolve));
 
   return {
     port,
     registry,
     close() {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         for (const client of wss.clients) client.terminate();
         wss.close();
         httpServer.close(() => resolve());
@@ -492,6 +501,7 @@ git commit -m "feat(rn-debug-server): 设备注册表与 /device WS 端点"
 ### Task 2: 指令分发器 + Agent HTTP 指令端点（pending / 串行）
 
 **Files:**
+
 - Modify: `packages/rn-debug-server/src/types.ts`（追加类型）
 - Create: `packages/rn-debug-server/src/command-dispatcher.ts`
 - Modify: `packages/rn-debug-server/src/server.ts`（接入 dispatcher + 新 HTTP 端点）
@@ -499,6 +509,7 @@ git commit -m "feat(rn-debug-server): 设备注册表与 /device WS 端点"
 - Test: `packages/rn-debug-server/src/__tests__/server-commands.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 1 的 `createDebugServer`、`DeviceRegistry`、`ResultMessage`
 - Produces:
   - `createCommandDispatcher(options: { registry: DeviceRegistry }): CommandDispatcher`
@@ -534,7 +545,9 @@ export type { CommandOutcome, CommandRecord, CommandDispatcher } from './command
 import { createCommandDispatcher } from '../command-dispatcher';
 import type { DeviceRegistry } from '../types';
 
-function makeRegistry(ids: string[]): DeviceRegistry & { sockets: Map<string, { sent: string[] }> } {
+function makeRegistry(
+  ids: string[]
+): DeviceRegistry & { sockets: Map<string, { sent: string[] }> } {
   const sockets = new Map<string, { sent: string[] }>();
   const devices = new Map();
   const reg = {
@@ -589,13 +602,13 @@ describe('CommandDispatcher', () => {
     const dispatcher = createCommandDispatcher({ registry: reg });
     const p1 = dispatcher.sendCommand('dev-1', { type: 'a' });
     dispatcher.sendCommand('dev-1', { type: 'b' });
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 50));
     expect(reg.sockets.get('dev-1')!.sent).toHaveLength(1);
 
     const first = JSON.parse(reg.sockets.get('dev-1')!.sent[0]);
     dispatcher.handleResult({ kind: 'result', id: first.id, status: 'ok', result: null });
     await p1;
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 20));
     expect(reg.sockets.get('dev-1')!.sent).toHaveLength(2);
   });
 
@@ -692,7 +705,7 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
   }
 
   function sendAndAwait(deviceId: string, input: CommandInput): Promise<CommandOutcome> {
-    return new Promise<CommandOutcome>((resolve) => {
+    return new Promise<CommandOutcome>(resolve => {
       const entry = registry.get(deviceId);
       const id = `cmd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const timeout = Math.min(input.timeout ?? DEFAULT_TIMEOUT, MAX_TIMEOUT);
@@ -716,10 +729,15 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
       pending.set(id, p);
 
       if (!entry || entry.ws.readyState !== 1) {
-        record({ id, status: 'error', error: { message: 'device disconnected' }, durationMs: 0 }, p);
+        record(
+          { id, status: 'error', error: { message: 'device disconnected' }, durationMs: 0 },
+          p
+        );
         return;
       }
-      entry.ws.send(JSON.stringify({ kind: 'command', id, type: input.type, payload: input.payload ?? {} }));
+      entry.ws.send(
+        JSON.stringify({ kind: 'command', id, type: input.type, payload: input.payload ?? {} })
+      );
     });
   }
 
@@ -755,7 +773,12 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
       for (const [id, p] of pending) {
         if (p.record.deviceId !== deviceId) continue;
         record(
-          { id, status: 'error', error: { message: 'device disconnected' }, durationMs: Date.now() - p.record.sentAt },
+          {
+            id,
+            status: 'error',
+            error: { message: 'device disconnected' },
+            durationMs: Date.now() - p.record.sentAt,
+          },
           p
         );
       }
@@ -765,7 +788,7 @@ export function createCommandDispatcher(options: { registry: DeviceRegistry }): 
       return [...history];
     },
     getCommand(id) {
-      return history.find((h) => h.id === id);
+      return history.find(h => h.id === id);
     },
   };
 }
@@ -789,7 +812,7 @@ import { createDebugServer } from '../server';
 async function connectDevice(port: number, deviceId: string) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}/device`);
   const received: string[] = [];
-  ws.on('message', (raw) => received.push(String(raw)));
+  ws.on('message', raw => received.push(String(raw)));
   await new Promise<void>((resolve, reject) => {
     ws.on('open', () => resolve());
     ws.on('error', reject);
@@ -801,7 +824,7 @@ async function connectDevice(port: number, deviceId: string) {
       info: { appName: 'App', platform: 'ios', osVersion: '17.5', sdkVersion: '0.1.0' },
     })
   );
-  await new Promise((r) => setTimeout(r, 150));
+  await new Promise(r => setTimeout(r, 150));
   return { ws, received };
 }
 
@@ -826,11 +849,16 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'ping', payload: {} }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await new Promise((r) => setTimeout(r, 150));
-    expect(received.filter((m) => JSON.parse(m).kind === 'command')).toHaveLength(1);
-    reply(ws, received.find((m) => JSON.parse(m).kind === 'command')!, 'ok', { pong: true });
+    await new Promise(r => setTimeout(r, 150));
+    expect(received.filter(m => JSON.parse(m).kind === 'command')).toHaveLength(1);
+    reply(
+      ws,
+      received.find(m => JSON.parse(m).kind === 'command')!,
+      'ok',
+      { pong: true }
+    );
 
     const body = (await promise) as { status: string; result: unknown };
     expect(body.status).toBe('ok');
@@ -846,10 +874,15 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'device.info' }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await new Promise((r) => setTimeout(r, 150));
-    reply(ws, received.find((m) => JSON.parse(m).kind === 'command')!, 'ok', { platform: 'ios' });
+    await new Promise(r => setTimeout(r, 150));
+    reply(
+      ws,
+      received.find(m => JSON.parse(m).kind === 'command')!,
+      'ok',
+      { platform: 'ios' }
+    );
     const body = (await promise) as { status: string; result: unknown };
     expect(body.status).toBe('ok');
     expect(body.result).toEqual({ platform: 'ios' });
@@ -881,7 +914,7 @@ describe('debug server command endpoints', () => {
 
     a.ws.close();
     b.ws.close();
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 200));
     const none = await fetch(`http://127.0.0.1:${port}/api/commands`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -897,9 +930,9 @@ describe('debug server command endpoints', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'ping' }),
-    }).then((r) => r.json());
-    await new Promise((r) => setTimeout(r, 150));
-    const sent = received.find((m) => JSON.parse(m).kind === 'command')!;
+    }).then(r => r.json());
+    await new Promise(r => setTimeout(r, 150));
+    const sent = received.find(m => JSON.parse(m).kind === 'command')!;
     const cmdId = JSON.parse(sent).id;
 
     const pendingRes = await fetch(`http://127.0.0.1:${port}/api/commands/${cmdId}`);
@@ -987,7 +1020,12 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
       }
       if (devices.length > 1) {
         res.writeHead(409, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'multiple devices, specify deviceId', devices: devices.map((d) => d.deviceId) }));
+        res.end(
+          JSON.stringify({
+            error: 'multiple devices, specify deviceId',
+            devices: devices.map(d => d.deviceId),
+          })
+        );
         return;
       }
       const input = (await readJson(req)) as CommandInput;
@@ -1019,7 +1057,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   httpServer.on('upgrade', (req, socket, head) => {
     const url = req.url ?? '';
     if (url.startsWith('/device')) {
-      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+      wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
     } else {
       socket.destroy();
     }
@@ -1028,7 +1066,7 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
   wss.on('connection', (ws: WsSocket) => {
     let registeredId: string | undefined;
 
-    ws.on('message', (raw) => {
+    ws.on('message', raw => {
       let msg: DeviceToServerMessage;
       try {
         msg = JSON.parse(String(raw)) as DeviceToServerMessage;
@@ -1060,14 +1098,14 @@ export async function createDebugServer(options: { port: number }): Promise<Debu
     });
   });
 
-  await new Promise<void>((resolve) => httpServer.listen(port, resolve));
+  await new Promise<void>(resolve => httpServer.listen(port, resolve));
 
   return {
     port,
     registry,
     dispatcher,
     close() {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         for (const client of wss.clients) client.terminate();
         wss.close();
         httpServer.close(() => resolve());
@@ -1096,9 +1134,11 @@ git commit -m "feat(rn-debug-server): 指令分发器与 Agent HTTP 指令端点
 > dispatcher 单元测试已覆盖超时与断线核心逻辑；本任务补充集成级验证，确保 HTTP 层同样拿到 timeout outcome、晚到 result 被丢弃。
 
 **Files:**
+
 - Test: `packages/rn-debug-server/src/__tests__/server-timeout.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2 的全部接口，无新产出
 - Produces: 无
 
@@ -1113,7 +1153,7 @@ import { createDebugServer } from '../server';
 async function connectDevice(port: number, deviceId: string) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}/device`);
   const received: string[] = [];
-  ws.on('message', (raw) => received.push(String(raw)));
+  ws.on('message', raw => received.push(String(raw)));
   await new Promise<void>((resolve, reject) => {
     ws.on('open', () => resolve());
     ws.on('error', reject);
@@ -1125,7 +1165,7 @@ async function connectDevice(port: number, deviceId: string) {
       info: { appName: 'App', platform: 'ios', osVersion: '17.5', sdkVersion: '0.1.0' },
     })
   );
-  await new Promise((r) => setTimeout(r, 150));
+  await new Promise(r => setTimeout(r, 150));
   return { ws, received };
 }
 
@@ -1145,15 +1185,15 @@ describe('timeout & disconnect (integration)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'hang', payload: {}, timeout: 400 }),
-    }).then((r) => r.json())) as { status: string; durationMs: number };
+    }).then(r => r.json())) as { status: string; durationMs: number };
 
     expect(body.status).toBe('timeout');
     expect(body.durationMs).toBeGreaterThanOrEqual(350);
 
     // 晚到 result：不应抛错（服务端日志静默丢弃）
-    const sent = received.find((m) => JSON.parse(m).kind === 'command')!;
+    const sent = received.find(m => JSON.parse(m).kind === 'command')!;
     ws.send(JSON.stringify({ kind: 'result', id: JSON.parse(sent).id, status: 'ok', result: 1 }));
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 100));
     const record = server.dispatcher.getCommand(JSON.parse(sent).id);
     expect(record?.status).toBe('timeout');
     ws.close();
@@ -1167,9 +1207,9 @@ describe('timeout & disconnect (integration)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'hang', timeout: 10_000 }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 150));
     ws.terminate();
     const body = (await promise) as { status: string; error: { message: string } };
     expect(body.status).toBe('error');
@@ -1195,11 +1235,13 @@ git commit -m "test(rn-debug-server): 超时与断线集成测试"
 ### Task 4: events 总线 + `/events` 端点 + console 转发
 
 **Files:**
+
 - Create: `packages/rn-debug-server/src/events-bus.ts`
 - Modify: `packages/rn-debug-server/src/server.ts`（接入 eventsBus、console 转发、设备上下线广播）
 - Test: `packages/rn-debug-server/src/__tests__/events.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2 的 `DebugServer`
 - Produces:
   - `createEventsBus(): EventsBus`
@@ -1220,7 +1262,7 @@ import { createDebugServer } from '../server';
 
 function collect(ws: WebSocket) {
   const messages: unknown[] = [];
-  ws.on('message', (raw) => messages.push(JSON.parse(String(raw))));
+  ws.on('message', raw => messages.push(JSON.parse(String(raw))));
   return messages;
 }
 
@@ -1236,16 +1278,24 @@ describe('events bus /events', () => {
     server = await createDebugServer({ port });
     const dash = new WebSocket(`ws://127.0.0.1:${port}/events`);
     const events = collect(dash);
-    await new Promise<void>((r) => dash.on('open', () => r()));
+    await new Promise<void>(r => dash.on('open', () => r()));
 
     const dev = new WebSocket(`ws://127.0.0.1:${port}/device`);
-    await new Promise<void>((r) => dev.on('open', () => r()));
-    dev.send(JSON.stringify({ kind: 'register', deviceId: 'dev-e', info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' } }));
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise<void>(r => dev.on('open', () => r()));
+    dev.send(
+      JSON.stringify({
+        kind: 'register',
+        deviceId: 'dev-e',
+        info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' },
+      })
+    );
+    await new Promise(r => setTimeout(r, 200));
     dev.close();
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 200));
 
-    const actions = events.filter((e) => (e as { kind: string }).kind === 'device').map((e) => (e as { action: string }).action);
+    const actions = events
+      .filter(e => (e as { kind: string }).kind === 'device')
+      .map(e => (e as { action: string }).action);
     expect(actions).toContain('connected');
     expect(actions).toContain('disconnected');
   });
@@ -1254,16 +1304,31 @@ describe('events bus /events', () => {
     server = await createDebugServer({ port });
     const dash = new WebSocket(`ws://127.0.0.1:${port}/events`);
     const events = collect(dash);
-    await new Promise<void>((r) => dash.on('open', () => r()));
+    await new Promise<void>(r => dash.on('open', () => r()));
 
     const dev = new WebSocket(`ws://127.0.0.1:${port}/device`);
-    await new Promise<void>((r) => dev.on('open', () => r()));
-    dev.send(JSON.stringify({ kind: 'register', deviceId: 'dev-c', info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' } }));
-    await new Promise((r) => setTimeout(r, 150));
-    dev.send(JSON.stringify({ kind: 'event', event: 'console', data: { level: 'warn', args: ['hi'], time: 1 } }));
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise<void>(r => dev.on('open', () => r()));
+    dev.send(
+      JSON.stringify({
+        kind: 'register',
+        deviceId: 'dev-c',
+        info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' },
+      })
+    );
+    await new Promise(r => setTimeout(r, 150));
+    dev.send(
+      JSON.stringify({
+        kind: 'event',
+        event: 'console',
+        data: { level: 'warn', args: ['hi'], time: 1 },
+      })
+    );
+    await new Promise(r => setTimeout(r, 200));
 
-    const con = events.find((e) => (e as { kind: string }).kind === 'console') as { deviceId: string; data: { level: string } };
+    const con = events.find(e => (e as { kind: string }).kind === 'console') as {
+      deviceId: string;
+      data: { level: string };
+    };
     expect(con).toBeDefined();
     expect(con.deviceId).toBe('dev-c');
     expect(con.data.level).toBe('warn');
@@ -1274,27 +1339,35 @@ describe('events bus /events', () => {
     server = await createDebugServer({ port });
     const dash = new WebSocket(`ws://127.0.0.1:${port}/events`);
     const events = collect(dash);
-    await new Promise<void>((r) => dash.on('open', () => r()));
+    await new Promise<void>(r => dash.on('open', () => r()));
 
     const dev = new WebSocket(`ws://127.0.0.1:${port}/device`);
     const devReceived: string[] = [];
-    dev.on('message', (raw) => devReceived.push(String(raw)));
-    await new Promise<void>((r) => dev.on('open', () => r()));
-    dev.send(JSON.stringify({ kind: 'register', deviceId: 'dev-x', info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' } }));
-    await new Promise((r) => setTimeout(r, 150));
+    dev.on('message', raw => devReceived.push(String(raw)));
+    await new Promise<void>(r => dev.on('open', () => r()));
+    dev.send(
+      JSON.stringify({
+        kind: 'register',
+        deviceId: 'dev-x',
+        info: { appName: 'A', platform: 'ios', osVersion: '17', sdkVersion: '0.1.0' },
+      })
+    );
+    await new Promise(r => setTimeout(r, 150));
 
     const promise = fetch(`http://127.0.0.1:${port}/api/commands`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'ping' }),
-    }).then((r) => r.json());
-    await new Promise((r) => setTimeout(r, 150));
-    const sent = devReceived.find((m) => JSON.parse(m).kind === 'command')!;
+    }).then(r => r.json());
+    await new Promise(r => setTimeout(r, 150));
+    const sent = devReceived.find(m => JSON.parse(m).kind === 'command')!;
     dev.send(JSON.stringify({ kind: 'result', id: JSON.parse(sent).id, status: 'ok', result: 1 }));
     await promise;
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 150));
 
-    const cmdEvents = events.filter((e) => (e as { kind: string }).kind === 'command').map((e) => (e as { action: string }).action);
+    const cmdEvents = events
+      .filter(e => (e as { kind: string }).kind === 'command')
+      .map(e => (e as { action: string }).action);
     expect(cmdEvents).toContain('sent');
     expect(cmdEvents).toContain('completed');
     dev.close();
@@ -1362,9 +1435,9 @@ const eventsBus = createEventsBus();
 httpServer.on('upgrade', (req, socket, head) => {
   const url = req.url ?? '';
   if (url.startsWith('/device')) {
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
   } else if (url.startsWith('/events')) {
-    wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.handleUpgrade(req, socket, head, ws => {
       eventsBus.subscribe(ws);
     });
   } else {
@@ -1378,7 +1451,11 @@ httpServer.on('upgrade', (req, socket, head) => {
 ```ts
 const connectedAt = Date.now();
 registry.add({ deviceId: msg.deviceId, ws, info: msg.info, connectedAt, lastSeen: connectedAt });
-eventsBus.publish({ kind: 'device', action: 'connected', device: { deviceId: msg.deviceId, ...msg.info, connectedAt, lastSeen: connectedAt } });
+eventsBus.publish({
+  kind: 'device',
+  action: 'connected',
+  device: { deviceId: msg.deviceId, ...msg.info, connectedAt, lastSeen: connectedAt },
+});
 ```
 
 6. 设备 close 处理改为（先取 info 再 remove，disconnected 事件带上设备信息）：
@@ -1393,7 +1470,12 @@ ws.on('close', () => {
       eventsBus.publish({
         kind: 'device',
         action: 'disconnected',
-        device: { deviceId: registeredId, ...info.info, connectedAt: info.connectedAt, lastSeen: info.lastSeen },
+        device: {
+          deviceId: registeredId,
+          ...info.info,
+          connectedAt: info.connectedAt,
+          lastSeen: info.lastSeen,
+        },
       });
     }
   }
@@ -1415,7 +1497,7 @@ ws.on('close', () => {
 ```ts
 const dispatcher = createCommandDispatcher({
   registry,
-  onEvent: (event) => eventsBus.publish(event),
+  onEvent: event => eventsBus.publish(event),
 });
 ```
 
@@ -1438,11 +1520,13 @@ git commit -m "feat(rn-debug-server): events 总线与 /events 端点"
 ### Task 5: 调试页面（`GET /`）
 
 **Files:**
+
 - Create: `packages/rn-debug-server/src/debug-page.html`
 - Modify: `packages/rn-debug-server/src/server.ts`（`GET /` 返回该页面）
 - Test: `packages/rn-debug-server/src/__tests__/debug-page.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 4 的 `/events` 事件流、Task 2 的 HTTP API
 - Produces: `GET /` 返回 `text/html`（内嵌于 `src/debug-page.html`，构建时随 lib 输出——本任务先以 `fs.readFileSync(path.join(__dirname, 'debug-page.html'))` 读取，esbuild `--loader:.html=copy` 处理复制）
 
@@ -1484,125 +1568,217 @@ Expected: FAIL（GET / 返回 404）
 ```html
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>rab-rn-debug</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: ui-monospace, Menlo, Consolas, monospace; margin: 0; display: grid;
-         grid-template-columns: 340px 1fr; gap: 1px; background: #8882; min-height: 100vh; }
-  section { background: Canvas; padding: 12px; overflow: auto; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin: 0 0 8px; }
-  .device { border: 1px solid #8884; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2c2; margin-right: 6px; }
-  form { display: flex; flex-direction: column; gap: 6px; }
-  textarea, select, input { font: inherit; padding: 4px; border: 1px solid #8886; border-radius: 4px; background: inherit; color: inherit; }
-  textarea { min-height: 90px; }
-  button { font: inherit; padding: 6px 12px; cursor: pointer; }
-  .row { border-bottom: 1px solid #8883; padding: 6px 0; font-size: 12px; }
-  .ok { color: #2a2; } .error { color: #c33; } .timeout { color: #c83; } .pending { color: #88a; }
-  details > summary { cursor: pointer; }
-  pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all; opacity: .85; }
-  .log-warn { color: #b80; } .log-error { color: #c33; }
-</style>
-</head>
-<body>
-  <section>
-    <h2>设备</h2>
-    <div id="devices"></div>
-    <h2 style="margin-top:16px">发送指令</h2>
-    <form id="command-form">
-      <select id="cmd-device"></select>
-      <input id="cmd-type" placeholder="指令 type，如 rab.listServices" required />
-      <textarea id="cmd-payload" placeholder='payload JSON，如 {}'></textarea>
-      <button type="submit">发送</button>
-    </form>
-    <div id="cmd-result"></div>
-  </section>
-  <section>
-    <h2>指令流水</h2>
-    <div id="timeline"></div>
-    <h2 style="margin-top:16px">Console 日志</h2>
-    <div id="logs"></div>
-  </section>
-<script>
-  const $ = (id) => document.getElementById(id);
-  const devices = new Map();
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rab-rn-debug</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        margin: 0;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 1px;
+        background: #8882;
+        min-height: 100vh;
+      }
+      section {
+        background: Canvas;
+        padding: 12px;
+        overflow: auto;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.7;
+        margin: 0 0 8px;
+      }
+      .device {
+        border: 1px solid #8884;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 8px;
+      }
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #2c2;
+        margin-right: 6px;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      textarea,
+      select,
+      input {
+        font: inherit;
+        padding: 4px;
+        border: 1px solid #8886;
+        border-radius: 4px;
+        background: inherit;
+        color: inherit;
+      }
+      textarea {
+        min-height: 90px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 12px;
+        cursor: pointer;
+      }
+      .row {
+        border-bottom: 1px solid #8883;
+        padding: 6px 0;
+        font-size: 12px;
+      }
+      .ok {
+        color: #2a2;
+      }
+      .error {
+        color: #c33;
+      }
+      .timeout {
+        color: #c83;
+      }
+      .pending {
+        color: #88a;
+      }
+      details > summary {
+        cursor: pointer;
+      }
+      pre {
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+        opacity: 0.85;
+      }
+      .log-warn {
+        color: #b80;
+      }
+      .log-error {
+        color: #c33;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <h2>设备</h2>
+      <div id="devices"></div>
+      <h2 style="margin-top:16px">发送指令</h2>
+      <form id="command-form">
+        <select id="cmd-device"></select>
+        <input id="cmd-type" placeholder="指令 type，如 rab.listServices" required />
+        <textarea id="cmd-payload" placeholder="payload JSON，如 {}"></textarea>
+        <button type="submit">发送</button>
+      </form>
+      <div id="cmd-result"></div>
+    </section>
+    <section>
+      <h2>指令流水</h2>
+      <div id="timeline"></div>
+      <h2 style="margin-top:16px">Console 日志</h2>
+      <div id="logs"></div>
+    </section>
+    <script>
+      const $ = id => document.getElementById(id);
+      const devices = new Map();
 
-  function renderDevices() {
-    $('devices').innerHTML = devices.size === 0
-      ? '<div class="row">暂无设备连接</div>'
-      : [...devices.values()].map((d) =>
-          `<div class="device"><span class="dot"></span><b>${d.deviceId}</b><br/>` +
-          `${d.appName ?? ''} · ${d.platform ?? ''} ${d.osVersion ?? ''}<br/>` +
-          `<small>connected ${new Date(d.connectedAt).toLocaleTimeString()}</small></div>`
-        ).join('');
-    const sel = $('cmd-device');
-    const cur = sel.value;
-    sel.innerHTML = [...devices.keys()].map((id) => `<option value="${id}">${id}</option>`).join('');
-    if (devices.has(cur)) sel.value = cur;
-  }
+      function renderDevices() {
+        $('devices').innerHTML =
+          devices.size === 0
+            ? '<div class="row">暂无设备连接</div>'
+            : [...devices.values()]
+                .map(
+                  d =>
+                    `<div class="device"><span class="dot"></span><b>${d.deviceId}</b><br/>` +
+                    `${d.appName ?? ''} · ${d.platform ?? ''} ${d.osVersion ?? ''}<br/>` +
+                    `<small>connected ${new Date(d.connectedAt).toLocaleTimeString()}</small></div>`
+                )
+                .join('');
+        const sel = $('cmd-device');
+        const cur = sel.value;
+        sel.innerHTML = [...devices.keys()]
+          .map(id => `<option value="${id}">${id}</option>`)
+          .join('');
+        if (devices.has(cur)) sel.value = cur;
+      }
 
-  function renderCommand(cmd) {
-    const div = document.createElement('div');
-    div.className = 'row';
-    div.dataset.id = cmd.id;
-    div.innerHTML =
-      `<details><summary><span class="${cmd.status}">${cmd.status}</span> ` +
-      `${new Date(cmd.sentAt).toLocaleTimeString()} ${cmd.deviceId} → ${cmd.type}` +
-      ` (${cmd.durationMs ?? 0}ms)</summary>` +
-      `<pre>payload: ${JSON.stringify(cmd.payload ?? {}, null, 2)}</pre>` +
-      `<pre>${cmd.status === 'pending' ? '' : JSON.stringify(cmd.result ?? cmd.error ?? '', null, 2)}</pre></details>`;
-    const old = document.querySelector(`#timeline .row[data-id="${cmd.id}"]`);
-    if (old) old.replaceWith(div); else $('timeline').prepend(div);
-  }
+      function renderCommand(cmd) {
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.dataset.id = cmd.id;
+        div.innerHTML =
+          `<details><summary><span class="${cmd.status}">${cmd.status}</span> ` +
+          `${new Date(cmd.sentAt).toLocaleTimeString()} ${cmd.deviceId} → ${cmd.type}` +
+          ` (${cmd.durationMs ?? 0}ms)</summary>` +
+          `<pre>payload: ${JSON.stringify(cmd.payload ?? {}, null, 2)}</pre>` +
+          `<pre>${cmd.status === 'pending' ? '' : JSON.stringify(cmd.result ?? cmd.error ?? '', null, 2)}</pre></details>`;
+        const old = document.querySelector(`#timeline .row[data-id="${cmd.id}"]`);
+        if (old) old.replaceWith(div);
+        else $('timeline').prepend(div);
+      }
 
-  function renderLog(deviceId, data) {
-    const div = document.createElement('div');
-    div.className = 'row log-' + (data.level ?? 'log');
-    div.textContent = `${new Date(data.time ?? Date.now()).toLocaleTimeString()} [${deviceId}] ${data.level ?? 'log'} ${(data.args ?? []).map(safeStr).join(' ')}`;
-    $('logs').prepend(div);
-  }
-  const safeStr = (v) => typeof v === 'string' ? v : JSON.stringify(v);
+      function renderLog(deviceId, data) {
+        const div = document.createElement('div');
+        div.className = 'row log-' + (data.level ?? 'log');
+        div.textContent = `${new Date(data.time ?? Date.now()).toLocaleTimeString()} [${deviceId}] ${data.level ?? 'log'} ${(data.args ?? []).map(safeStr).join(' ')}`;
+        $('logs').prepend(div);
+      }
+      const safeStr = v => (typeof v === 'string' ? v : JSON.stringify(v));
 
-  const ws = new WebSocket(`ws://${location.host}/events`);
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (msg.kind === 'device') {
-      if (msg.action === 'connected') devices.set(msg.device.deviceId, msg.device);
-      else devices.delete(msg.device.deviceId);
-      renderDevices();
-    } else if (msg.kind === 'command') {
-      renderCommand(msg.command);
-    } else if (msg.kind === 'console') {
-      renderLog(msg.deviceId, msg.data);
-    }
-  };
-  // 初始拉一次设备列表
-  fetch('/api/devices').then((r) => r.json()).then((list) => {
-    for (const d of list) devices.set(d.deviceId, d);
-    renderDevices();
-  });
+      const ws = new WebSocket(`ws://${location.host}/events`);
+      ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.kind === 'device') {
+          if (msg.action === 'connected') devices.set(msg.device.deviceId, msg.device);
+          else devices.delete(msg.device.deviceId);
+          renderDevices();
+        } else if (msg.kind === 'command') {
+          renderCommand(msg.command);
+        } else if (msg.kind === 'console') {
+          renderLog(msg.deviceId, msg.data);
+        }
+      };
+      // 初始拉一次设备列表
+      fetch('/api/devices')
+        .then(r => r.json())
+        .then(list => {
+          for (const d of list) devices.set(d.deviceId, d);
+          renderDevices();
+        });
 
-  $('command-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const deviceId = $('cmd-device').value;
-    const type = $('cmd-type').value.trim();
-    let payload = {};
-    try { payload = JSON.parse($('cmd-payload').value || '{}'); }
-    catch { $('cmd-result').textContent = 'payload 不是合法 JSON'; return; }
-    const url = deviceId ? `/api/devices/${encodeURIComponent(deviceId)}/commands` : '/api/commands';
-    $('cmd-result').textContent = '…';
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, payload }),
-    });
-    $('cmd-result').textContent = `${res.status} ${JSON.stringify(await res.json(), null, 2)}`;
-  });
-</script>
-</body>
+      $('command-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const deviceId = $('cmd-device').value;
+        const type = $('cmd-type').value.trim();
+        let payload = {};
+        try {
+          payload = JSON.parse($('cmd-payload').value || '{}');
+        } catch {
+          $('cmd-result').textContent = 'payload 不是合法 JSON';
+          return;
+        }
+        const url = deviceId
+          ? `/api/devices/${encodeURIComponent(deviceId)}/commands`
+          : '/api/commands';
+        $('cmd-result').textContent = '…';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, payload }),
+        });
+        $('cmd-result').textContent = `${res.status} ${JSON.stringify(await res.json(), null, 2)}`;
+      });
+    </script>
+  </body>
 </html>
 ```
 
@@ -1650,6 +1826,7 @@ git commit -m "feat(rn-debug-server): 内置调试页面"
 ### Task 6: CLI 入口 + 构建配置
 
 **Files:**
+
 - Create: `packages/rn-debug-server/bin/rab-rn-debug.js`
 - Create: `packages/rn-debug-server/src/cli.ts`
 - Create: `packages/rn-debug-server/src/main.ts`
@@ -1657,6 +1834,7 @@ git commit -m "feat(rn-debug-server): 内置调试页面"
 - Create: `packages/rn-debug-server/README.md`
 
 **Interfaces:**
+
 - Consumes: Task 1–5 的 `createDebugServer`
 - Produces:
   - CLI：`rab-rn-debug [--port 9229]`，启动服务并打印监听地址、本机局域网 IP、调试页面 URL
@@ -1682,8 +1860,14 @@ function localIPs(): string[] {
 }
 
 async function main() {
-  const portFlag = process.argv.find((a) => a.startsWith('--port'));
-  const port = portFlag ? Number(portFlag.split('=')[1] ?? portFlag.split(' ')[1] ?? process.argv[process.argv.indexOf(portFlag) + 1]) : 9229;
+  const portFlag = process.argv.find(a => a.startsWith('--port'));
+  const port = portFlag
+    ? Number(
+        portFlag.split('=')[1] ??
+          portFlag.split(' ')[1] ??
+          process.argv[process.argv.indexOf(portFlag) + 1]
+      )
+    : 9229;
   const portNumber = Number.isFinite(port) && port > 0 ? port : 9229;
 
   const server = await createDebugServer({ port: portNumber });
@@ -1704,7 +1888,7 @@ async function main() {
   process.on('SIGTERM', shutdown);
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('启动失败:', err);
   process.exit(1);
 });
@@ -1738,7 +1922,7 @@ export type { CommandOutcome, CommandRecord, CommandDispatcher } from './command
 
 ```js
 #!/usr/bin/env node
-import('../lib/cli.js').catch((err) => {
+import('../lib/cli.js').catch(err => {
   console.error('rab-rn-debug: 启动失败（请先执行 pnpm build 构建产物）:', err);
   process.exit(1);
 });
@@ -1854,12 +2038,12 @@ npx rab-rn-debug --port 9300
 
 ## HTTP API
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/devices | 设备列表 |
-| POST | /api/commands | 发指令（唯一设备时自动路由） |
-| POST | /api/devices/:deviceId/commands | 向指定设备发指令 |
-| GET | /api/commands/:id | 查询指令状态 |
+| 方法 | 路径                            | 说明                         |
+| ---- | ------------------------------- | ---------------------------- |
+| GET  | /api/devices                    | 设备列表                     |
+| POST | /api/commands                   | 发指令（唯一设备时自动路由） |
+| POST | /api/devices/:deviceId/commands | 向指定设备发指令             |
+| GET  | /api/commands/:id               | 查询指令状态                 |
 
 ```bash
 curl -X POST http://localhost:9229/api/commands \
@@ -1878,11 +2062,13 @@ const server = await createDebugServer({ port: 9229 });
 - [ ] **Step 5: 验证构建与 CLI**
 
 Run:
+
 ```bash
 cd packages/rn-debug-server && pnpm build && node bin/rab-rn-debug.js --port 9235 &
 sleep 1 && curl -s http://127.0.0.1:9235/api/devices && curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9235/
 kill %1
 ```
+
 Expected: `/api/devices` 返回 `[]`；`GET /` 返回 200
 
 Run: `cd packages/rn-debug-server && pnpm jest`
@@ -1902,6 +2088,7 @@ git commit -m "feat(rn-debug-server): CLI 入口与构建配置"
 ### Task 7: `@rabjs/rn-debug` 脚手架 + safeSerialize
 
 **Files:**
+
 - Create: `packages/rn-debug/package.json`
 - Create: `packages/rn-debug/tsconfig.json`
 - Create: `packages/rn-debug/jest.config.js`
@@ -1910,6 +2097,7 @@ git commit -m "feat(rn-debug-server): CLI 入口与构建配置"
 - Test: `packages/rn-debug/src/__tests__/serialize.test.ts`
 
 **Interfaces:**
+
 - Consumes: 无
 - Produces:
   - `safeSerialize(value: unknown): { ok: true; data: unknown } | { ok: false; error: { message: string } }` —— 递归移除函数/undefined/循环引用/Symbol 键；深度上限 6；数组/普通对象递归；其他原样返回
@@ -2075,7 +2263,7 @@ function serialize(value: unknown, depth: number, seen: Set<object>): unknown {
   seen.add(value as object);
   try {
     if (Array.isArray(value)) {
-      return value.map((item) => serialize(item, depth + 1, seen));
+      return value.map(item => serialize(item, depth + 1, seen));
     }
     if (isPlainObject(value)) {
       const out: Record<string, unknown> = {};
@@ -2123,10 +2311,12 @@ git commit -m "feat(rn-debug): 包脚手架与 safeSerialize"
 ### Task 8: 指令执行器（串行调度 + 错误处理 + handler 注册）
 
 **Files:**
+
 - Create: `packages/rn-debug/src/command-executor.ts`
 - Test: `packages/rn-debug/src/__tests__/command-executor.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 7 的 `safeSerialize`、`CommandMessage`、`ResultMessage`、`DebugHandler`
 - Produces:
   - `createCommandExecutor(options?: { handlers?: Record<string, DebugHandler> }): CommandExecutor`
@@ -2145,7 +2335,7 @@ function setup() {
   const sent: ResultMessage[] = [];
   const executor = createCommandExecutor({
     handlers: {
-      echo: async (payload) => payload,
+      echo: async payload => payload,
       fail: () => {
         throw new Error('boom');
       },
@@ -2189,7 +2379,7 @@ describe('CommandExecutor', () => {
     const executor = createCommandExecutor({
       handlers: {
         slow: async () => {
-          await new Promise((r) => setTimeout(r, 80));
+          await new Promise(r => setTimeout(r, 80));
           order.push('slow-done');
         },
         fast: async () => {
@@ -2212,7 +2402,7 @@ describe('CommandExecutor', () => {
       handlers: { weird: () => cyc },
     });
     const sent: ResultMessage[] = [];
-    await executor.execute(cmd('4', 'weird'), (m) => sent.push(m));
+    await executor.execute(cmd('4', 'weird'), m => sent.push(m));
     expect(sent[0].status).toBe('ok'); // 循环引用被切断后可序列化
   });
 
@@ -2240,9 +2430,9 @@ export interface CommandExecutor {
   execute(command: CommandMessage, send: (msg: ResultMessage) => void): Promise<void>;
 }
 
-export function createCommandExecutor(
-  options?: { handlers?: Record<string, DebugHandler> }
-): CommandExecutor {
+export function createCommandExecutor(options?: {
+  handlers?: Record<string, DebugHandler>;
+}): CommandExecutor {
   const handlers = new Map<string, DebugHandler>(Object.entries(options?.handlers ?? {}));
   let queue: Promise<void> = Promise.resolve();
 
@@ -2308,10 +2498,12 @@ git commit -m "feat(rn-debug): 串行指令执行器"
 ### Task 9: WS 客户端（连接 / register / 重连退避 / 心跳）
 
 **Files:**
+
 - Create: `packages/rn-debug/src/ws-client.ts`
 - Test: `packages/rn-debug/src/__tests__/ws-client.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 8 的 `CommandExecutor`、Task 7 的协议类型
 - Produces:
   - `createWsClient(options: { url: string; registerMessage: RegisterMessage; executor: CommandExecutor; WebSocketImpl?: WebSocketConstructor; heartbeatIntervalMs?: number }): WsClient`
@@ -2392,9 +2584,11 @@ describe('WsClient', () => {
     const registerMsg = JSON.parse(ws.sent[0]);
     expect(registerMsg).toMatchObject({ kind: 'register', deviceId: 'dev-1' });
 
-    ws.simulateServerMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} }));
-    await new Promise((r) => setTimeout(r, 50));
-    const resultMsg = JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!);
+    ws.simulateServerMessage(
+      JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} })
+    );
+    await new Promise(r => setTimeout(r, 50));
+    const resultMsg = JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!);
     expect(resultMsg).toMatchObject({ id: 'c1', status: 'ok', result: { pong: true } });
   });
 
@@ -2403,8 +2597,8 @@ describe('WsClient', () => {
     client.connect();
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
-    await new Promise((r) => setTimeout(r, 100));
-    expect(ws.sent.filter((s) => JSON.parse(s).kind === 'ping').length).toBeGreaterThanOrEqual(2);
+    await new Promise(r => setTimeout(r, 100));
+    expect(ws.sent.filter(s => JSON.parse(s).kind === 'ping').length).toBeGreaterThanOrEqual(2);
   });
 
   it('断线后指数退避重连，重连成功重新 register', async () => {
@@ -2414,7 +2608,7 @@ describe('WsClient', () => {
     first.simulateOpen();
     first.onclose?.(); // 模拟服务端断开
 
-    await new Promise((r) => setTimeout(r, 50)); // 退避基数 1s？—— 见下：测试用注入 backoffMs
+    await new Promise(r => setTimeout(r, 50)); // 退避基数 1s？—— 见下：测试用注入 backoffMs
     expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
     const second = FakeWebSocket.instances[1];
     second.simulateOpen();
@@ -2427,7 +2621,7 @@ describe('WsClient', () => {
     const first = FakeWebSocket.instances[0];
     first.simulateOpen();
     client.disconnect();
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1200));
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });
@@ -2521,7 +2715,7 @@ export function createWsClient(options: WsClientOptions): WsClient {
         if (connected) ws?.send(JSON.stringify({ kind: 'ping' }));
       }, heartbeatIntervalMs);
     };
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       let msg: { kind?: string } & Record<string, unknown>;
       try {
         const text = typeof event.data === 'string' ? event.data : String(event.data);
@@ -2582,10 +2776,12 @@ git commit -m "feat(rn-debug): WS 客户端（重连退避与心跳）"
 ### Task 10: console 捕获（环形缓冲 + 实时上报）
 
 **Files:**
+
 - Create: `packages/rn-debug/src/console-capture.ts`
 - Test: `packages/rn-debug/src/__tests__/console-capture.test.ts`
 
 **Interfaces:**
+
 - Consumes: 无
 - Produces:
   - `setupConsoleCapture(options: { capacity?: number; onLog?: (entry: ConsoleLogEntry) => void }): ConsoleCapture`
@@ -2632,8 +2828,8 @@ describe('ConsoleCapture', () => {
     console.warn = originalWarn;
     console.error = originalError;
 
-    expect(capture.getLogs({ level: 'warn' }).map((l) => l.args[0])).toEqual(['w1', 'w2']);
-    expect(capture.getLogs({ limit: 2 }).map((l) => l.args[0])).toEqual(['e1', 'w2']);
+    expect(capture.getLogs({ level: 'warn' }).map(l => l.args[0])).toEqual(['w1', 'w2']);
+    expect(capture.getLogs({ limit: 2 }).map(l => l.args[0])).toEqual(['e1', 'w2']);
     capture.restore();
   });
 
@@ -2643,13 +2839,13 @@ describe('ConsoleCapture', () => {
     console.log = () => {};
     for (let i = 0; i < 5; i++) console.log(`m${i}`);
     console.log = orig;
-    expect(capture.getLogs().map((l) => l.args[0])).toEqual(['m2', 'm3', 'm4']);
+    expect(capture.getLogs().map(l => l.args[0])).toEqual(['m2', 'm3', 'm4']);
     capture.restore();
   });
 
   it('onLog 实时回调', () => {
     const seen: string[] = [];
-    const capture = setupConsoleCapture({ onLog: (entry) => seen.push(String(entry.args[0])) });
+    const capture = setupConsoleCapture({ onLog: entry => seen.push(String(entry.args[0])) });
     const orig = console.info;
     console.info = () => {};
     console.info('live');
@@ -2693,10 +2889,12 @@ export interface ConsoleCapture {
 
 const LEVELS = ['log', 'info', 'warn', 'error', 'debug'] as const;
 
-export function setupConsoleCapture(options: {
-  capacity?: number;
-  onLog?: (entry: ConsoleLogEntry) => void;
-} = {}): ConsoleCapture {
+export function setupConsoleCapture(
+  options: {
+    capacity?: number;
+    onLog?: (entry: ConsoleLogEntry) => void;
+  } = {}
+): ConsoleCapture {
   const capacity = options.capacity ?? 500;
   const buffer: ConsoleLogEntry[] = [];
   const originals = new Map<string, (...args: unknown[]) => void>();
@@ -2722,7 +2920,7 @@ export function setupConsoleCapture(options: {
   return {
     getLogs(filter) {
       let logs = buffer;
-      if (filter?.level) logs = logs.filter((l) => l.level === filter.level);
+      if (filter?.level) logs = logs.filter(l => l.level === filter.level);
       const limit = filter?.limit;
       return [...(limit ? logs.slice(-limit) : logs)];
     },
@@ -2752,10 +2950,12 @@ git commit -m "feat(rn-debug): console 捕获环形缓冲"
 ### Task 11: rab Service 内置 handler（listServices / getServiceState / callServiceMethod / expect）
 
 **Files:**
+
 - Create: `packages/rn-debug/src/rab-handlers.ts`
 - Test: `packages/rn-debug/src/__tests__/rab-handlers.test.ts`
 
 **Interfaces:**
+
 - Consumes:
   - `@rabjs/service`：`getGlobalContainer()`、`Container`（`getServiceDefinitions()` 返回含 `instance`、`instanceId`、`name` 的定义；`getChildren()`）、`Service`
   - `@rabjs/shared`：`executeAssertions(instance, assertions): AssertResult`
@@ -2817,46 +3017,73 @@ async function call(type: string, payload: unknown) {
 describe('rab handlers', () => {
   it('rab.listServices 枚举容器内 Service', async () => {
     setupService();
-    const list = (await call('rab.listServices', {})) as Array<{ identifierLabel: string; instanceId: string }>;
-    const cart = list.find((s) => s.identifierLabel === 'CartService');
+    const list = (await call('rab.listServices', {})) as Array<{
+      identifierLabel: string;
+      instanceId: string;
+    }>;
+    const cart = list.find(s => s.identifierLabel === 'CartService');
     expect(cart).toBeDefined();
     expect(typeof cart!.instanceId).toBe('string');
   });
 
   it('rab.getServiceState 按 instanceId 读取状态，paths 过滤', async () => {
     setupService();
-    const list = (await call('rab.listServices', {})) as Array<{ identifierLabel: string; instanceId: string }>;
-    const cart = list.find((s) => s.identifierLabel === 'CartService')!;
-    const state = (await call('rab.getServiceState', { instanceId: cart.instanceId })) as Record<string, unknown>;
+    const list = (await call('rab.listServices', {})) as Array<{
+      identifierLabel: string;
+      instanceId: string;
+    }>;
+    const cart = list.find(s => s.identifierLabel === 'CartService')!;
+    const state = (await call('rab.getServiceState', { instanceId: cart.instanceId })) as Record<
+      string,
+      unknown
+    >;
     expect(state.total).toBe(0);
-    const partial = (await call('rab.getServiceState', { instanceId: cart.instanceId, paths: ['total'] })) as Record<string, unknown>;
+    const partial = (await call('rab.getServiceState', {
+      instanceId: cart.instanceId,
+      paths: ['total'],
+    })) as Record<string, unknown>;
     expect(partial).toEqual({ total: 0 });
   });
 
   it('rab.getServiceState 找不到时抛错（executor 转为 error result）', async () => {
     setupService();
-    await expect(call('rab.getServiceState', { instanceId: 'ghost' })).rejects.toThrow(/service not found/);
+    await expect(call('rab.getServiceState', { instanceId: 'ghost' })).rejects.toThrow(
+      /service not found/
+    );
   });
 
   it('rab.callServiceMethod 调用异步方法并返回值', async () => {
     setupService();
-    const list = (await call('rab.listServices', {})) as Array<{ identifierLabel: string; instanceId: string }>;
-    const cart = list.find((s) => s.identifierLabel === 'CartService')!;
+    const list = (await call('rab.listServices', {})) as Array<{
+      identifierLabel: string;
+      instanceId: string;
+    }>;
+    const cart = list.find(s => s.identifierLabel === 'CartService')!;
     const count = await call('rab.callServiceMethod', {
       instanceId: cart.instanceId,
       method: 'addItem',
       args: [{ id: 'x1', price: 5 }],
     });
     expect(count).toBe(1);
-    const state = (await call('rab.getServiceState', { instanceId: cart.instanceId })) as Record<string, unknown>;
+    const state = (await call('rab.getServiceState', { instanceId: cart.instanceId })) as Record<
+      string,
+      unknown
+    >;
     expect(state.total).toBe(5);
   });
 
   it('rab.expect 断言执行返回结构化结果', async () => {
     setupService();
-    const list = (await call('rab.listServices', {})) as Array<{ identifierLabel: string; instanceId: string }>;
-    const cart = list.find((s) => s.identifierLabel === 'CartService')!;
-    await call('rab.callServiceMethod', { instanceId: cart.instanceId, method: 'addItem', args: [{ id: 'x1', price: 5 }] });
+    const list = (await call('rab.listServices', {})) as Array<{
+      identifierLabel: string;
+      instanceId: string;
+    }>;
+    const cart = list.find(s => s.identifierLabel === 'CartService')!;
+    await call('rab.callServiceMethod', {
+      instanceId: cart.instanceId,
+      method: 'addItem',
+      args: [{ id: 'x1', price: 5 }],
+    });
     const result = (await call('rab.expect', {
       instanceId: cart.instanceId,
       description: '加购验证',
@@ -2865,10 +3092,14 @@ describe('rab handlers', () => {
         { op: 'gt', path: 'total', expected: 0 },
         { op: 'exists', path: 'items.0.id' },
       ],
-    })) as { passed: boolean; summary: { passed: number; total: number }; results: Array<{ path: string; passed: boolean }> };
+    })) as {
+      passed: boolean;
+      summary: { passed: number; total: number };
+      results: Array<{ path: string; passed: boolean }>;
+    };
     expect(result.passed).toBe(true);
     expect(result.summary).toEqual({ passed: 3, total: 3 });
-    expect(result.results.map((r) => r.path)).toEqual(['items.length', 'total', 'items.0.id']);
+    expect(result.results.map(r => r.path)).toEqual(['items.length', 'total', 'items.0.id']);
   });
 });
 ```
@@ -2926,9 +3157,9 @@ function listServices(): ServiceRef[] {
 function findService(payload: { instanceId?: string; identifierLabel?: string }): ServiceRef {
   const services = listServices();
   const found = payload.instanceId
-    ? services.find((s) => s.instanceId === payload.instanceId)
+    ? services.find(s => s.instanceId === payload.instanceId)
     : payload.identifierLabel
-      ? services.find((s) => s.identifierLabel === payload.identifierLabel)
+      ? services.find(s => s.identifierLabel === payload.identifierLabel)
       : undefined;
   if (!found) {
     throw new Error(
@@ -2964,8 +3195,12 @@ export function createRabHandlers(): Record<string, DebugHandler> {
         identifierLabel,
       })),
 
-    'rab.getServiceState': async (payload) => {
-      const p = (payload ?? {}) as { instanceId?: string; identifierLabel?: string; paths?: string[] };
+    'rab.getServiceState': async payload => {
+      const p = (payload ?? {}) as {
+        instanceId?: string;
+        identifierLabel?: string;
+        paths?: string[];
+      };
       const ref = findService(p);
       if (p.paths && p.paths.length > 0) {
         const out: Record<string, unknown> = {};
@@ -2979,20 +3214,23 @@ export function createRabHandlers(): Record<string, DebugHandler> {
       return serialized.data;
     },
 
-    'rab.callServiceMethod': async (payload) => {
+    'rab.callServiceMethod': async payload => {
       const p = (payload ?? {}) as { instanceId: string; method: string; args?: unknown[] };
       const ref = findService({ instanceId: p.instanceId });
       const method = (ref.instance as unknown as Record<string, unknown>)[p.method];
       if (typeof method !== 'function') {
         throw new Error(`method not found: ${p.method}`);
       }
-      const raw = await (method as (...args: unknown[]) => unknown).apply(ref.instance, p.args ?? []);
+      const raw = await (method as (...args: unknown[]) => unknown).apply(
+        ref.instance,
+        p.args ?? []
+      );
       const serialized = safeSerialize(raw);
       if (!serialized.ok) throw new Error(serialized.error.message);
       return serialized.data;
     },
 
-    'rab.expect': async (payload) => {
+    'rab.expect': async payload => {
       const p = (payload ?? {}) as {
         instanceId: string;
         description?: string;
@@ -3005,7 +3243,7 @@ export function createRabHandlers(): Record<string, DebugHandler> {
         description: p.description,
         passed: result.passed,
         summary: result.summary,
-        results: result.results.map((r) => ({
+        results: result.results.map(r => ({
           path: r.path,
           op: r.op,
           passed: r.passed,
@@ -3035,14 +3273,16 @@ git commit -m "feat(rn-debug): rab Service 内置调试指令"
 
 ---
 
-### Task 12: setupRNDebug 入口 + ping/device.info/console.getLogs + __DEV__ 门控
+### Task 12: setupRNDebug 入口 + ping/device.info/console.getLogs + **DEV** 门控
 
 **Files:**
+
 - Create: `packages/rn-debug/src/main.ts`
 - Create: `packages/rn-debug/src/setup.ts`
 - Test: `packages/rn-debug/src/__tests__/setup.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 8–11 的全部产出
 - Produces（npm 主入口导出）：
   - `setupRNDebug(options: RNDebugOptions): RNDebugSession | undefined` —— `__DEV__` 为 false 时返回 undefined 且无副作用；幂等（重复调用返回同一 session）
@@ -3134,24 +3374,31 @@ describe('setupRNDebug', () => {
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} }));
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c2', type: 'device.info', payload: {} }));
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c3', type: 'console.getLogs', payload: { limit: 10 } }));
-    await new Promise((r) => setTimeout(r, 100));
-    const results = ws.sent
-      .map((s) => JSON.parse(s))
-      .filter((m) => m.kind === 'result');
-    expect(results.find((r) => r.id === 'c1')).toMatchObject({ status: 'ok', result: { pong: true } });
-    expect(results.find((r) => r.id === 'c2')?.result).toMatchObject({ appName: 'TestApp' });
-    expect(results.find((r) => r.id === 'c3')).toMatchObject({ status: 'ok', result: [] });
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c2', type: 'device.info', payload: {} })
+    );
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c3', type: 'console.getLogs', payload: { limit: 10 } })
+    );
+    await new Promise(r => setTimeout(r, 100));
+    const results = ws.sent.map(s => JSON.parse(s)).filter(m => m.kind === 'result');
+    expect(results.find(r => r.id === 'c1')).toMatchObject({
+      status: 'ok',
+      result: { pong: true },
+    });
+    expect(results.find(r => r.id === 'c2')?.result).toMatchObject({ appName: 'TestApp' });
+    expect(results.find(r => r.id === 'c3')).toMatchObject({ status: 'ok', result: [] });
   });
 
   it('handlers 选项注册自定义指令', async () => {
     setup({ handlers: { 'app.ping': () => 'pong-app' } });
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'app.ping', payload: {} }));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c1', type: 'app.ping', payload: {} })
+    );
+    await new Promise(r => setTimeout(r, 50));
+    expect(JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c1',
       status: 'ok',
       result: 'pong-app',
@@ -3164,9 +3411,11 @@ describe('setupRNDebug', () => {
     expect(() => registerHandler('app.late', () => 43)).toThrow(/already registered/);
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c9', type: 'app.late', payload: {} }));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c9', type: 'app.late', payload: {} })
+    );
+    await new Promise(r => setTimeout(r, 50));
+    expect(JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c9',
       status: 'ok',
       result: 42,
@@ -3194,8 +3443,7 @@ import type { DebugHandler } from './types';
 
 // package.json version 由 build 时 define 注入；测试/源码运行时回退 '0.0.0'
 declare const RAB_RN_DEBUG_VERSION: string | undefined;
-const SDK_VERSION =
-  typeof RAB_RN_DEBUG_VERSION !== 'undefined' ? RAB_RN_DEBUG_VERSION : '0.0.0';
+const SDK_VERSION = typeof RAB_RN_DEBUG_VERSION !== 'undefined' ? RAB_RN_DEBUG_VERSION : '0.0.0';
 
 export interface RNDebugOptions {
   host: string;
@@ -3230,7 +3478,7 @@ export function setupRNDebug(options: RNDebugOptions): RNDebugSession | undefine
   let wsRef: WsClient | undefined;
 
   const consoleCapture = setupConsoleCapture({
-    onLog: (entry) => wsRef?.sendEvent('console', entry),
+    onLog: entry => wsRef?.sendEvent('console', entry),
   });
 
   const executor = createCommandExecutor({
@@ -3244,7 +3492,7 @@ export function setupRNDebug(options: RNDebugOptions): RNDebugSession | undefine
         sdkVersion: SDK_VERSION,
         connected: wsRef?.isConnected() ?? false,
       }),
-      'console.getLogs': (payload) => {
+      'console.getLogs': payload => {
         const p = (payload ?? {}) as { level?: string; limit?: number };
         return consoleCapture.getLogs({
           level: p.level as never,
@@ -3262,7 +3510,12 @@ export function setupRNDebug(options: RNDebugOptions): RNDebugSession | undefine
     registerMessage: {
       kind: 'register',
       deviceId,
-      info: { appName, platform: Platform.OS, osVersion: String(Platform.Version), sdkVersion: SDK_VERSION },
+      info: {
+        appName,
+        platform: Platform.OS,
+        osVersion: String(Platform.Version),
+        sdkVersion: SDK_VERSION,
+      },
     },
     executor,
   });
@@ -3350,10 +3603,12 @@ git commit -m "feat(rn-debug): setupRNDebug 入口与内置指令集成"
 ### Task 13: SDK 构建配置
 
 **Files:**
+
 - Create: `packages/rn-debug/build.config.ts`
 - Create: `packages/rn-debug/README.md`
 
 **Interfaces:**
+
 - Consumes: Task 7–12 的 src
 - Produces: `lib/` 双格式产物 + 类型声明；`RAB_RN_DEBUG_VERSION` define 注入
 
@@ -3445,15 +3700,15 @@ registerHandler('app.gotoScreen', async ({ name }) => {
 
 ## 内置指令
 
-| type | payload | 说明 |
-|------|---------|------|
-| ping | — | 连通性 |
-| device.info | — | 设备与应用信息 |
-| console.getLogs | `{level?, limit?}` | 拉取设备端 console 日志（环形 500 条） |
-| rab.listServices | — | 枚举已实例化 Service |
-| rab.getServiceState | `{instanceId?, identifierLabel?, paths?}` | 读取 Service 状态 |
-| rab.callServiceMethod | `{instanceId, method, args?}` | 调用 Service 方法 |
-| rab.expect | `{instanceId, description?, assertions[]}` | 断言（op 与 @rabjs/devtools 一致） |
+| type                  | payload                                    | 说明                                   |
+| --------------------- | ------------------------------------------ | -------------------------------------- |
+| ping                  | —                                          | 连通性                                 |
+| device.info           | —                                          | 设备与应用信息                         |
+| console.getLogs       | `{level?, limit?}`                         | 拉取设备端 console 日志（环形 500 条） |
+| rab.listServices      | —                                          | 枚举已实例化 Service                   |
+| rab.getServiceState   | `{instanceId?, identifierLabel?, paths?}`  | 读取 Service 状态                      |
+| rab.callServiceMethod | `{instanceId, method, args?}`              | 调用 Service 方法                      |
+| rab.expect            | `{instanceId, description?, assertions[]}` | 断言（op 与 @rabjs/devtools 一致）     |
 
 配合 `npx rab-rn-debug` 使用，详见 server 包 README。
 ````
@@ -3470,9 +3725,11 @@ git commit -m "feat(rn-debug): 构建配置与 README"
 ### Task 14: skill 文档 `skills/rab-rn-debug/SKILL.md`
 
 **Files:**
+
 - Create: `skills/rab-rn-debug/SKILL.md`
 
 **Interfaces:**
+
 - Consumes: Task 1–13 的最终 API 与指令集
 - Produces: Agent 可依据其调试 RN 应用的 skill 文档
 
@@ -3557,9 +3814,16 @@ curl -X POST localhost:9229/api/commands -H 'Content-Type: application/json' \
 返回示例：
 
 ```json
-{ "status": "ok", "result": [
-  { "instanceId": "CartService_abc12", "containerName": "ProductPage_2", "identifierLabel": "CartService" }
-]}
+{
+  "status": "ok",
+  "result": [
+    {
+      "instanceId": "CartService_abc12",
+      "containerName": "ProductPage_2",
+      "identifierLabel": "CartService"
+    }
+  ]
+}
 ```
 
 ### 3. 读取 Service 状态
@@ -3619,17 +3883,21 @@ curl -X POST localhost:9229/api/commands -H 'Content-Type: application/json' \
 ## 常见问题
 
 ### 设备列表为空？
+
 - 手机与电脑不在同一网段，或 `host` 填错（用 server 启动时打印的 IP）
 - App 为 release 构建（SDK 仅 `__DEV__` 生效）
 - 模拟器注意：Android 模拟器访问宿主机用 `10.0.2.2` 而非 localhost
 
 ### 指令返回 timeout？
+
 - 设备端 handler 执行过久——加大 `timeout`；或设备已掉线，先查 `/api/devices`
 
 ### 返回 409？
+
 - 多台设备在线，从 body 的 `devices` 数组选一个，改用 `/api/devices/<deviceId>/commands`
 
 ### 结果字段缺失？
+
 - handler 返回值必须 JSON 可序列化；循环引用/函数/过深结构会被 SDK 清洗或截断
 ````
 
@@ -3649,9 +3917,11 @@ git commit -m "docs: rab-rn-debug skill"
 ### Task 15: 端到端联调验证 + 收尾
 
 **Files:**
+
 - Create: `packages/rn-debug/src/__tests__/e2e.test.ts`（SDK 与 server 同进程联调，不依赖真实手机）
 
 **Interfaces:**
+
 - Consumes: 两个包的全部产出
 - Produces: 端到端测试证明全链路可用
 
@@ -3681,7 +3951,7 @@ class NodeWebSocketAdapter implements MinimalWebSocket {
   onerror: (() => void) | null = null;
   constructor(private readonly inner: WS) {
     inner.on('open', () => this.onopen?.());
-    inner.on('message', (data) => this.onmessage?.({ data: String(data) }));
+    inner.on('message', data => this.onmessage?.({ data: String(data) }));
     inner.on('close', () => this.onclose?.());
     inner.on('error', () => this.onerror?.());
   }
@@ -3707,15 +3977,17 @@ describe('e2e: SDK ⇄ server', () => {
       setupRNDebug({ host: '127.0.0.1', port: 9236, appName: 'E2E' });
 
       // 等设备注册
-      await new Promise((r) => setTimeout(r, 300));
-      const devices = (await fetch('http://127.0.0.1:9236/api/devices').then((r) => r.json())) as unknown[];
+      await new Promise(r => setTimeout(r, 300));
+      const devices = (await fetch('http://127.0.0.1:9236/api/devices').then(r =>
+        r.json()
+      )) as unknown[];
       expect(devices.length).toBe(1);
 
       const body = (await fetch('http://127.0.0.1:9236/api/commands', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'rab.listServices', payload: {} }),
-      }).then((r) => r.json())) as { status: string; result: unknown[] };
+      }).then(r => r.json())) as { status: string; result: unknown[] };
 
       expect(body.status).toBe('ok');
       expect(Array.isArray(body.result)).toBe(true);
@@ -3737,18 +4009,22 @@ Expected: PASS（1 test）
 - [ ] **Step 3: 全量验证**
 
 Run:
+
 ```bash
 cd packages/rn-debug-server && pnpm jest && pnpm build
 cd ../rn-debug && pnpm jest && pnpm build
 ```
+
 Expected: server 21 tests PASS（含 debug-page）、SDK 31 tests PASS（含 e2e）、两个包构建成功
 
 Run（CLI 冒烟）:
+
 ```bash
 cd packages/rn-debug-server && node bin/rab-rn-debug.js --port 9237 &
 sleep 1 && curl -s http://127.0.0.1:9237/api/devices
 kill %1
 ```
+
 Expected: `[]`
 
 - [ ] **Step 4: 手动真机验收（有设备时）**

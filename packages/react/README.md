@@ -30,17 +30,17 @@ pnpm add @rabjs/react
 **第一步：定义 Service**
 
 ```tsx
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 class ProductService extends Service {
   // 所有属性默认是响应式的，无需装饰器
   products = [];
-  filterStatus = "all";
+  filterStatus = 'all';
 
   // 计算属性（getter）
   get filteredProducts() {
-    if (this.filterStatus === "all") return this.products;
-    return this.products.filter((p) => p.status === this.filterStatus);
+    if (this.filterStatus === 'all') return this.products;
+    return this.products.filter(p => p.status === this.filterStatus);
   }
 
   // 所有方法默认是 Action，自动批量更新
@@ -50,7 +50,7 @@ class ProductService extends Service {
 
   // 异步方法会自动追踪 loading 和 error 状态
   async fetchProducts() {
-    const response = await fetch("/api/products");
+    const response = await fetch('/api/products');
     this.products = await response.json();
   }
 }
@@ -59,7 +59,7 @@ class ProductService extends Service {
 **第二步：绑定 Service 到组件**
 
 ```tsx
-import { useService, bindServices } from "@rabjs/react";
+import { useService, bindServices } from '@rabjs/react';
 
 // 注意：使用 useService 时组件不需要 observer 包裹
 const ProductPage = () => {
@@ -69,7 +69,7 @@ const ProductPage = () => {
     <div>
       <select
         value={productService.filterStatus}
-        onChange={(e) => productService.setFilterStatus(e.target.value)}
+        onChange={e => productService.setFilterStatus(e.target.value)}
       >
         <option value="all">全部</option>
         <option value="active">在售</option>
@@ -91,17 +91,17 @@ export default bindServices(ProductPage, [ProductService]);
 支持多级领域嵌套，子组件可访问父级 Service，同级 Service 相互隔离。
 
 ```tsx
-import { Service, bindServices, useService } from "@rabjs/react";
+import { Service, bindServices, useService } from '@rabjs/react';
 
 // ========== 应用级 Service ==========
 class AppService extends Service {
-  appName = "My App";
-  theme = "light";
+  appName = 'My App';
+  theme = 'light';
 }
 
 // ========== 页面级 Service ==========
 class PageService extends Service {
-  pageTitle = "页面标题";
+  pageTitle = '页面标题';
   data: any[] = [];
 }
 
@@ -239,7 +239,7 @@ class ProductService extends Service {
   }
 
   async fetchProducts() {
-    const res = await fetch("/api/products");
+    const res = await fetch('/api/products');
     this.products = await res.json();
   }
 }
@@ -309,10 +309,7 @@ function ProductList() {
 
 ```tsx
 function ProductCount() {
-  const [count, productService] = useObserverService(
-    ProductService,
-    (s) => s.products.length
-  );
+  const [count, productService] = useObserverService(ProductService, s => s.products.length);
   return <div>{count}</div>;
 }
 ```
@@ -324,7 +321,7 @@ function ProductCount() {
 ```tsx
 const container = useContainer();
 const events = useContainerEvents();
-events.on("product:added", handler);
+events.on('product:added', handler);
 ```
 
 ### Observable API
@@ -363,7 +360,9 @@ const service = container.resolve(ProductService);
 // 全局注册和解析
 register(ProductService);
 const service2 = resolve(ProductService);
-if (has(ProductService)) { /* ... */ }
+if (has(ProductService)) {
+  /* ... */
+}
 ```
 
 ### SSR
@@ -373,7 +372,7 @@ if (has(ProductService)) { /* ... */ }
 服务端渲染时禁用响应式追踪。
 
 ```tsx
-if (typeof window === "undefined") {
+if (typeof window === 'undefined') {
   enableStaticRendering(true);
 }
 ```

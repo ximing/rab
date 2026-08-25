@@ -7,16 +7,10 @@
  * 随后的写入落在真实的 Object.prototype 上 —— 全局原型污染。
  * 实测 (修复前): state.__proto__.zzPolluted = 1 之后 ({}).zzPolluted === 1。
  */
-import {
-  observable,
-  shadowObservable,
-  observe,
-  raw,
-  isObservable,
-} from "../main";
+import { observable, shadowObservable, observe, raw, isObservable } from '../main';
 
-describe("__proto__ 不得造成原型污染", () => {
-  test("读取 __proto__ 不得把 Object.prototype 变成 observable (写入不进入响应式系统)", () => {
+describe('__proto__ 不得造成原型污染', () => {
+  test('读取 __proto__ 不得把 Object.prototype 变成 observable (写入不进入响应式系统)', () => {
     const state = observable<{ count: number }>({ count: 0 });
     const proto = (state as unknown as { __proto__: object }).__proto__;
     // 修复前: proto 是 Object.prototype 的 observable 包装,
@@ -25,7 +19,7 @@ describe("__proto__ 不得造成原型污染", () => {
     expect(proto).toBe(Object.prototype);
   });
 
-  test("merge 场景的 __proto__ 赋值被拒绝且不改原型 (防 JSON 注入)", () => {
+  test('merge 场景的 __proto__ 赋值被拒绝且不改原型 (防 JSON 注入)', () => {
     const state = observable<{ count: number; [k: string]: unknown }>({
       count: 0,
     });
@@ -39,12 +33,10 @@ describe("__proto__ 不得造成原型污染", () => {
     expect(({} as Record<string, unknown>).evil).toBeUndefined();
   });
 
-  test("对 __proto__ 赋值应抛错且不改原始对象原型", () => {
+  test('对 __proto__ 赋值应抛错且不改原始对象原型', () => {
     const state = observable<{ count: number }>({ count: 0 });
     const evil = { evil: true };
-    expect(
-      () => ((state as unknown as { __proto__: object }).__proto__ = evil)
-    ).toThrow(TypeError);
+    expect(() => ((state as unknown as { __proto__: object }).__proto__ = evil)).toThrow(TypeError);
 
     // raw 对象的原型链不应被改变
     expect(Object.getPrototypeOf(raw(state))).toBe(Object.prototype);
@@ -52,15 +44,13 @@ describe("__proto__ 不得造成原型污染", () => {
     expect(({} as Record<string, unknown>).evil).toBeUndefined();
   });
 
-  test("constructor 读取不得返回可被污染的包装对象", () => {
+  test('constructor 读取不得返回可被污染的包装对象', () => {
     const state = observable<{ count: number }>({ count: 0 });
     // constructor 是原型链上的敏感属性, 读取结果应保持原生语义
-    expect((state as unknown as { constructor: unknown }).constructor).toBe(
-      Object
-    );
+    expect((state as unknown as { constructor: unknown }).constructor).toBe(Object);
   });
 
-  test("普通继承用法保持正常", () => {
+  test('普通继承用法保持正常', () => {
     const parent = observable({ shared: 1 });
     const child = observable(Object.create(parent));
     const seen: unknown[] = [];
@@ -72,7 +62,7 @@ describe("__proto__ 不得造成原型污染", () => {
     expect(seen).toEqual([1, 2]);
   });
 
-  test("shadowObservable 同样不包装 __proto__ 且拒绝 __proto__ 赋值", () => {
+  test('shadowObservable 同样不包装 __proto__ 且拒绝 __proto__ 赋值', () => {
     const state = shadowObservable<{ [k: string]: unknown }>({ count: 0 });
     const proto = (state as unknown as { __proto__: object }).__proto__;
     expect(isObservable(proto)).toBe(false);

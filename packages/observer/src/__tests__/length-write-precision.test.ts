@@ -6,10 +6,10 @@
  * - 同样的折叠比较也要覆盖 defineProperty 的 length 路径
  * - 正向对照: 真实发生的类型化收缩/增长仍必须通知 (不能因精度修复而漏报)
  * */
-import { observable, shadowObservable, observe } from "../main";
+import { observable, shadowObservable, observe } from '../main';
 
-describe("set trap 写入精度: 失败写入不通知", () => {
-  test("sealed 数组上失败的 length 收缩不通知 length 依赖", () => {
+describe('set trap 写入精度: 失败写入不通知', () => {
+  test('sealed 数组上失败的 length 收缩不通知 length 依赖', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     Object.seal(arr);
     let runs = 0;
@@ -18,27 +18,27 @@ describe("set trap 写入精度: 失败写入不通知", () => {
       runs++;
     });
     expect(runs).toBe(1);
-    const ok = Reflect.set(arr, "length", 3);
+    const ok = Reflect.set(arr, 'length', 3);
     expect(ok).toBe(false);
     expect(arr.length).toBe(5); // 收缩未发生
     expect(runs).toBe(1); // 不应假通知
   });
 
-  test("sealed 数组上失败的 length 收缩不通知索引依赖", () => {
+  test('sealed 数组上失败的 length 收缩不通知索引依赖', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     Object.seal(arr);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
     });
-    expect(Reflect.set(arr, "length", 3)).toBe(false);
+    expect(Reflect.set(arr, 'length', 3)).toBe(false);
     expect(runs).toBe(1);
     expect(last).toBe(5);
   });
 
-  test("sealed shadow 数组上失败的 length 收缩不通知 length 依赖", () => {
+  test('sealed shadow 数组上失败的 length 收缩不通知 length 依赖', () => {
     const arr = shadowObservable([1, 2, 3, 4, 5]);
     Object.seal(arr);
     let runs = 0;
@@ -46,12 +46,12 @@ describe("set trap 写入精度: 失败写入不通知", () => {
       void arr.length;
       runs++;
     });
-    expect(Reflect.set(arr, "length", 3)).toBe(false);
+    expect(Reflect.set(arr, 'length', 3)).toBe(false);
     expect(arr.length).toBe(5);
     expect(runs).toBe(1);
   });
 
-  test("frozen 对象上失败的属性写入不通知该属性依赖", () => {
+  test('frozen 对象上失败的属性写入不通知该属性依赖', () => {
     const obj = observable({ x: 1 });
     Object.freeze(obj);
     let runs = 0;
@@ -60,13 +60,13 @@ describe("set trap 写入精度: 失败写入不通知", () => {
       runs++;
     });
     expect(runs).toBe(1);
-    const ok = Reflect.set(obj, "x", 2);
+    const ok = Reflect.set(obj, 'x', 2);
     expect(ok).toBe(false);
     expect(obj.x).toBe(1);
     expect(runs).toBe(1);
   });
 
-  test("sealed 数组上失败的 Object.defineProperty length 收缩不通知", () => {
+  test('sealed 数组上失败的 Object.defineProperty length 收缩不通知', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     Object.seal(arr);
     let runs = 0;
@@ -76,15 +76,13 @@ describe("set trap 写入精度: 失败写入不通知", () => {
     });
     // length 在 sealed 数组上不可配置, 收缩需要隐式删除元素 → 定义失败;
     // strict mode 下引擎直接抛 TypeError (即使不抛, trap 也应返回 false)
-    expect(() => Object.defineProperty(arr, "length", { value: 3 })).toThrow(
-      TypeError
-    );
+    expect(() => Object.defineProperty(arr, 'length', { value: 3 })).toThrow(TypeError);
     expect(arr.length).toBe(5);
     expect(runs).toBe(1);
   });
 });
 
-describe("set trap 写入精度: 数组 length 折叠比较", () => {
+describe('set trap 写入精度: 数组 length 折叠比较', () => {
   test("同值异型写入 arr.length = '5' (length 已是 5) 不通知", () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
@@ -93,7 +91,7 @@ describe("set trap 写入精度: 数组 length 折叠比较", () => {
       runs++;
     });
     expect(runs).toBe(1);
-    expect(Reflect.set(arr, "length", "5")).toBe(true);
+    expect(Reflect.set(arr, 'length', '5')).toBe(true);
     expect(arr.length).toBe(5);
     expect(runs).toBe(1);
   });
@@ -105,11 +103,11 @@ describe("set trap 写入精度: 数组 length 折叠比较", () => {
       void arr.length;
       runs++;
     });
-    expect(Reflect.set(arr, "length", "5")).toBe(true);
+    expect(Reflect.set(arr, 'length', '5')).toBe(true);
     expect(runs).toBe(1);
   });
 
-  test("同值数值写入 arr.length = 5 不通知 (既有行为回归钉)", () => {
+  test('同值数值写入 arr.length = 5 不通知 (既有行为回归钉)', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
     observe(() => {
@@ -127,7 +125,7 @@ describe("set trap 写入精度: 数组 length 折叠比较", () => {
       void arr.length;
       runs++;
     });
-    Object.defineProperty(arr, "length", { value: "5" });
+    Object.defineProperty(arr, 'length', { value: '5' });
     expect(arr.length).toBe(5);
     expect(runs).toBe(1);
   });
@@ -139,17 +137,17 @@ describe("set trap 写入精度: 数组 length 折叠比较", () => {
       void arr.length;
       runs++;
     });
-    Object.defineProperty(arr, "length", { value: "5" });
+    Object.defineProperty(arr, 'length', { value: '5' });
     expect(runs).toBe(1);
   });
 });
 
-describe("set trap 写入精度: 正向对照 (真实变化仍通知)", () => {
+describe('set trap 写入精度: 正向对照 (真实变化仍通知)', () => {
   test("类型化收缩 arr.length = '3' 通知 length 与索引依赖", () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let lenRuns = 0;
     let idxRuns = 0;
-    let lastIdx: unknown = "initial";
+    let lastIdx: unknown = 'initial';
     observe(() => {
       void arr.length;
       lenRuns++;
@@ -158,7 +156,7 @@ describe("set trap 写入精度: 正向对照 (真实变化仍通知)", () => {
       idxRuns++;
       lastIdx = arr[4];
     });
-    expect(Reflect.set(arr, "length", "3")).toBe(true);
+    expect(Reflect.set(arr, 'length', '3')).toBe(true);
     expect(arr.length).toBe(3);
     expect(lenRuns).toBe(2);
     expect(idxRuns).toBe(2);
@@ -172,7 +170,7 @@ describe("set trap 写入精度: 正向对照 (真实变化仍通知)", () => {
       void arr.length;
       runs++;
     });
-    expect(Reflect.set(arr, "length", "7")).toBe(true);
+    expect(Reflect.set(arr, 'length', '7')).toBe(true);
     expect(arr.length).toBe(7);
     expect(runs).toBe(2);
   });
@@ -180,25 +178,25 @@ describe("set trap 写入精度: 正向对照 (真实变化仍通知)", () => {
   test("Object.defineProperty 类型化收缩 {value: '3'} 通知索引依赖", () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
     });
-    Object.defineProperty(arr, "length", { value: "3" });
+    Object.defineProperty(arr, 'length', { value: '3' });
     expect(arr.length).toBe(3);
     expect(runs).toBe(2);
     expect(last).toBeUndefined();
   });
 
-  test("数值收缩失败后真实收缩仍正常通知", () => {
+  test('数值收缩失败后真实收缩仍正常通知', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
     observe(() => {
       void arr.length;
       runs++;
     });
-    Reflect.set(arr, "length", 5); // 同值, 不通知
+    Reflect.set(arr, 'length', 5); // 同值, 不通知
     expect(runs).toBe(1);
     arr.length = 3; // 真实收缩, 通知
     expect(runs).toBe(2);

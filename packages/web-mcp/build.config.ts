@@ -100,5 +100,7 @@ const mode = process.argv[2];
 if (mode === '--watch' || mode === '-w') {
   dev().catch(() => process.exit(1));
 } else {
-  buildLibrary().then(() => console.log('\n✅ Build completed!')).catch(() => process.exit(1));
+  buildLibrary()
+    .then(() => console.log('\n✅ Build completed!'))
+    .catch(() => process.exit(1));
 }

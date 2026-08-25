@@ -16,11 +16,8 @@ export const REGISTRY_SWEEP_INTERVAL = 10_000;
  * 基于定时器的 FinalizationRegistry 实现
  * 用于不支持原生 FinalizationRegistry 的环境
  */
-export class TimerBasedFinalizationRegistry<T>
-  implements FinalizationRegistryType<T>
-{
-  private registrations: Map<unknown, { value: T; registeredAt: number }> =
-    new Map();
+export class TimerBasedFinalizationRegistry<T> implements FinalizationRegistryType<T> {
+  private registrations: Map<unknown, { value: T; registeredAt: number }> = new Map();
   private sweepTimeout: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly finalize: (value: T) => void) {}

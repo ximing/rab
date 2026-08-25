@@ -8,14 +8,14 @@
  *   浅层语义被破坏 (嵌套对象内部属性变更也会触发 reaction)。
  */
 
-import { observable } from "../observable";
-import { shadowObservable } from "../shadow-observable";
-import { observe } from "../observer";
-import { raw } from "../internals/utils";
+import { observable } from '../observable';
+import { shadowObservable } from '../shadow-observable';
+import { observe } from '../observer';
+import { raw } from '../internals/utils';
 
-describe("#6 rawToProxy 按深度模式分桶", () => {
-  describe("先 shadow 后 deep", () => {
-    test("observable(raw) 返回独立的 deep 代理, 深层响应正常", () => {
+describe('#6 rawToProxy 按深度模式分桶', () => {
+  describe('先 shadow 后 deep', () => {
+    test('observable(raw) 返回独立的 deep 代理, 深层响应正常', () => {
       const rawObj = { nested: { a: 1 }, count: 0 };
       const s = shadowObservable(rawObj);
       const o = observable(rawObj);
@@ -36,8 +36,8 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(rawObj.nested.a).toBe(2);
     });
 
-    test("shadow 代理保持浅层语义 (嵌套内部属性变更不触发)", () => {
-      const rawObj = { user: { name: "John" }, count: 0 };
+    test('shadow 代理保持浅层语义 (嵌套内部属性变更不触发)', () => {
+      const rawObj = { user: { name: 'John' }, count: 0 };
       const s = shadowObservable(rawObj);
       observable(rawObj);
 
@@ -55,7 +55,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(rootCalls).toBe(1);
 
       // 浅层: 嵌套对象内部属性变更不触发
-      s.user.name = "Jane";
+      s.user.name = 'Jane';
       expect(nestedCalls).toBe(1);
 
       // 根级别属性变更触发
@@ -63,7 +63,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(rootCalls).toBe(2);
     });
 
-    test("shadow 之后创建 deep 时 options 仍然生效", () => {
+    test('shadow 之后创建 deep 时 options 仍然生效', () => {
       const rawObj = { count: 0 };
       shadowObservable(rawObj);
       // transformReactions 返回空数组: 过滤掉所有 reactions
@@ -86,9 +86,9 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
     });
   });
 
-  describe("先 deep 后 shadow", () => {
-    test("shadowObservable(raw) 返回独立的 shadow 代理, 浅层语义正常", () => {
-      const rawObj = { user: { name: "John" }, count: 0 };
+  describe('先 deep 后 shadow', () => {
+    test('shadowObservable(raw) 返回独立的 shadow 代理, 浅层语义正常', () => {
+      const rawObj = { user: { name: 'John' }, count: 0 };
       const o = observable(rawObj);
       const s = shadowObservable(rawObj);
 
@@ -108,7 +108,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(rootCalls).toBe(1);
 
       // 浅层语义: 嵌套对象内部属性变更不触发
-      s.user.name = "Jane";
+      s.user.name = 'Jane';
       expect(nestedCalls).toBe(1);
 
       // 根级别属性变更触发
@@ -116,7 +116,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(rootCalls).toBe(2);
     });
 
-    test("deep 代理的深层响应不受 shadow 创建影响", () => {
+    test('deep 代理的深层响应不受 shadow 创建影响', () => {
       const rawObj = { nested: { a: 1 } };
       const o = observable(rawObj);
       shadowObservable(rawObj);
@@ -133,8 +133,8 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
     });
   });
 
-  describe("同一 raw 的两个代理互不串扰", () => {
-    test("每种模式各自缓存: 重复调用返回各自的缓存代理", () => {
+  describe('同一 raw 的两个代理互不串扰', () => {
+    test('每种模式各自缓存: 重复调用返回各自的缓存代理', () => {
       const rawObj = { a: 1 };
       const s1 = shadowObservable(rawObj);
       const o1 = observable(rawObj);
@@ -146,7 +146,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(s1).not.toBe(o1);
     });
 
-    test("两个代理上的依赖都被触发", () => {
+    test('两个代理上的依赖都被触发', () => {
       const rawObj = { count: 0 };
       const s = shadowObservable(rawObj);
       const o = observable(rawObj);
@@ -174,7 +174,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(deepCalls).toBe(3);
     });
 
-    test("shadow 依赖在 deep 代理创建后仍然存活 (连接表不得被重置)", () => {
+    test('shadow 依赖在 deep 代理创建后仍然存活 (连接表不得被重置)', () => {
       const rawObj = { count: 0 };
       const s = shadowObservable(rawObj);
 
@@ -193,7 +193,7 @@ describe("#6 rawToProxy 按深度模式分桶", () => {
       expect(calls).toBe(2);
     });
 
-    test("raw() 对两个代理都返回原对象", () => {
+    test('raw() 对两个代理都返回原对象', () => {
       const rawObj = { a: 1 };
       const s = shadowObservable(rawObj);
       const o = observable(rawObj);

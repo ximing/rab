@@ -8,13 +8,8 @@
  * - 作用域隔离，同一作用域链下每个服务只能在一个地方注册
  */
 
-import type {
-  Container,
-  ServiceIdentifier,
-  ServiceFactory,
-  ServiceClass,
-} from "@rabjs/service";
-import type { ReactNode, ComponentType } from "react";
+import type { Container, ServiceIdentifier, ServiceFactory, ServiceClass } from '@rabjs/service';
+import type { ReactNode, ComponentType } from 'react';
 
 // 重新导出从 @rabjs/service 导入的类型，供 domain 模块内部使用
 
@@ -82,8 +77,4 @@ export interface DomainContextValue {
   container: Container;
 }
 
-export {
-  type ServiceIdentifier,
-  type ServiceFactory,
-  type ServiceClass,
-} from "@rabjs/service";
+export { type ServiceIdentifier, type ServiceFactory, type ServiceClass } from '@rabjs/service';

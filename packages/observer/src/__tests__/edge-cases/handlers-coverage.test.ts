@@ -3,14 +3,14 @@
  * 目标: 覆盖 collectionHandler 和 shadowCollectionHandler 中未覆盖的代码路径
  */
 
-import { observable } from "../../observable";
-import { shadowObservable } from "../../shadow-observable";
-import { observe } from "../../observer";
-import { proxyToRaw } from "../../internals/proxy-raw-map";
+import { observable } from '../../observable';
+import { shadowObservable } from '../../shadow-observable';
+import { observe } from '../../observer';
+import { proxyToRaw } from '../../internals/proxy-raw-map';
 
-describe("handlers - 边界情况覆盖", () => {
-  describe("collectionHandler - 错误处理", () => {
-    test("has 方法在无效 target 时应该返回 false", () => {
+describe('handlers - 边界情况覆盖', () => {
+  describe('collectionHandler - 错误处理', () => {
+    test('has 方法在无效 target 时应该返回 false', () => {
       const map = observable(new Map());
       const proxy = map as any;
 
@@ -19,7 +19,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 has 应该返回 false
-      const result = proxy.has("key");
+      const result = proxy.has('key');
       expect(result).toBe(false);
 
       // 恢复映射
@@ -28,8 +28,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("get 方法在无效 target 时应该返回 undefined", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('get 方法在无效 target 时应该返回 undefined', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -37,7 +37,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 get 应该返回 undefined
-      const result = proxy.get("key");
+      const result = proxy.get('key');
       expect(result).toBeUndefined();
 
       // 恢复映射
@@ -46,7 +46,7 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("add 方法在无效 target 时应该返回 this", () => {
+    test('add 方法在无效 target 时应该返回 this', () => {
       const set = observable(new Set());
       const proxy = set as any;
 
@@ -55,7 +55,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 add 应该返回 this
-      const result = proxy.add("value");
+      const result = proxy.add('value');
       expect(result).toBe(proxy);
 
       // 恢复映射
@@ -64,7 +64,7 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("set 方法在无效 target 时应该返回 this", () => {
+    test('set 方法在无效 target 时应该返回 this', () => {
       const map = observable(new Map());
       const proxy = map as any;
 
@@ -73,7 +73,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 set 应该返回 this
-      const result = proxy.set("key", "value");
+      const result = proxy.set('key', 'value');
       expect(result).toBe(proxy);
 
       // 恢复映射
@@ -82,8 +82,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("delete 方法在无效 target 时应该返回 false", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('delete 方法在无效 target 时应该返回 false', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -91,7 +91,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 delete 应该返回 false
-      const result = proxy.delete("key");
+      const result = proxy.delete('key');
       expect(result).toBe(false);
 
       // 恢复映射
@@ -100,8 +100,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("clear 方法在无效 target 时应该直接返回", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('clear 方法在无效 target 时应该直接返回', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -117,8 +117,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("forEach 方法在无效 target 时应该直接返回", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('forEach 方法在无效 target 时应该直接返回', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -141,8 +141,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("keys 方法在无效 target 时应该返回空迭代器", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('keys 方法在无效 target 时应该返回空迭代器', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -159,8 +159,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("values 方法在无效 target 时应该返回空迭代器", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('values 方法在无效 target 时应该返回空迭代器', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -177,8 +177,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("entries 方法在无效 target 时应该返回空迭代器", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('entries 方法在无效 target 时应该返回空迭代器', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -195,8 +195,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("Symbol.iterator 在无效 target 时应该返回空迭代器", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('Symbol.iterator 在无效 target 时应该返回空迭代器', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -213,8 +213,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("size getter 在无效 target 时应该返回 0", () => {
-      const map = observable(new Map([["key", "value"]]));
+    test('size getter 在无效 target 时应该返回 0', () => {
+      const map = observable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -231,8 +231,8 @@ describe("handlers - 边界情况覆盖", () => {
     });
   });
 
-  describe("shadowCollectionHandler - 错误处理", () => {
-    test("has 方法在无效 target 时应该返回 false", () => {
+  describe('shadowCollectionHandler - 错误处理', () => {
+    test('has 方法在无效 target 时应该返回 false', () => {
       const map = shadowObservable(new Map());
       const proxy = map as any;
 
@@ -241,7 +241,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 has 应该返回 false
-      const result = proxy.has("key");
+      const result = proxy.has('key');
       expect(result).toBe(false);
 
       // 恢复映射
@@ -250,8 +250,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("get 方法在无效 target 时应该返回 undefined", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('get 方法在无效 target 时应该返回 undefined', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -259,7 +259,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 get 应该返回 undefined
-      const result = proxy.get("key");
+      const result = proxy.get('key');
       expect(result).toBeUndefined();
 
       // 恢复映射
@@ -268,7 +268,7 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("add 方法在无效 target 时应该返回 this", () => {
+    test('add 方法在无效 target 时应该返回 this', () => {
       const set = shadowObservable(new Set());
       const proxy = set as any;
 
@@ -277,7 +277,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 add 应该返回 this
-      const result = proxy.add("value");
+      const result = proxy.add('value');
       expect(result).toBe(proxy);
 
       // 恢复映射
@@ -286,7 +286,7 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("set 方法在无效 target 时应该返回 this", () => {
+    test('set 方法在无效 target 时应该返回 this', () => {
       const map = shadowObservable(new Map());
       const proxy = map as any;
 
@@ -295,7 +295,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 set 应该返回 this
-      const result = proxy.set("key", "value");
+      const result = proxy.set('key', 'value');
       expect(result).toBe(proxy);
 
       // 恢复映射
@@ -304,8 +304,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("delete 方法在无效 target 时应该返回 false", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('delete 方法在无效 target 时应该返回 false', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -313,7 +313,7 @@ describe("handlers - 边界情况覆盖", () => {
       proxyToRaw.delete(proxy);
 
       // 调用 delete 应该返回 false
-      const result = proxy.delete("key");
+      const result = proxy.delete('key');
       expect(result).toBe(false);
 
       // 恢复映射
@@ -322,8 +322,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("clear 方法在无效 target 时应该直接返回", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('clear 方法在无效 target 时应该直接返回', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -339,8 +339,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("forEach 方法在无效 target 时应该直接返回", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('forEach 方法在无效 target 时应该直接返回', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -363,8 +363,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("keys 方法在无效 target 时应该返回空迭代器", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('keys 方法在无效 target 时应该返回空迭代器', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -381,8 +381,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("values 方法在无效 target 时应该返回空迭代器", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('values 方法在无效 target 时应该返回空迭代器', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -399,8 +399,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("entries 方法在无效 target 时应该返回空迭代器", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('entries 方法在无效 target 时应该返回空迭代器', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -417,8 +417,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("Symbol.iterator 在无效 target 时应该返回空迭代器", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('Symbol.iterator 在无效 target 时应该返回空迭代器', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -435,8 +435,8 @@ describe("handlers - 边界情况覆盖", () => {
       }
     });
 
-    test("size getter 在无效 target 时应该返回 0", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('size getter 在无效 target 时应该返回 0', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
       const proxy = map as any;
 
       // 清除 proxyToRaw 映射
@@ -453,8 +453,8 @@ describe("handlers - 边界情况覆盖", () => {
     });
   });
 
-  describe("WeakMap 和 WeakSet 的特殊情况", () => {
-    test("WeakMap 的 get 方法应该正常工作", () => {
+  describe('WeakMap 和 WeakSet 的特殊情况', () => {
+    test('WeakMap 的 get 方法应该正常工作', () => {
       const key = {};
       const weakMap = observable(new WeakMap([[key, { value: 1 }]]));
 
@@ -467,7 +467,7 @@ describe("handlers - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
     });
 
-    test("WeakMap 的 set 方法应该触发 reactions", () => {
+    test('WeakMap 的 set 方法应该触发 reactions', () => {
       const key1 = {};
       const key2 = {};
       const weakMap = observable(new WeakMap([[key1, { value: 1 }]]));
@@ -485,7 +485,7 @@ describe("handlers - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
     });
 
-    test("WeakSet 的 add 方法应该正常工作", () => {
+    test('WeakSet 的 add 方法应该正常工作', () => {
       const obj1 = {};
       const obj2 = {};
       const weakSet = observable(new WeakSet([obj1]));
@@ -503,7 +503,7 @@ describe("handlers - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
     });
 
-    test("WeakMap 的 delete 方法应该正常工作", () => {
+    test('WeakMap 的 delete 方法应该正常工作', () => {
       const key = {};
       const weakMap = observable(new WeakMap([[key, { value: 1 }]]));
 
@@ -512,7 +512,7 @@ describe("handlers - 边界情况覆盖", () => {
       expect(weakMap.has(key)).toBe(false);
     });
 
-    test("WeakSet 的 delete 方法应该正常工作", () => {
+    test('WeakSet 的 delete 方法应该正常工作', () => {
       const obj = {};
       const weakSet = observable(new WeakSet([obj]));
 
@@ -522,9 +522,9 @@ describe("handlers - 边界情况覆盖", () => {
     });
   });
 
-  describe("迭代器的 done 状态", () => {
-    test("values 迭代器应该正确处理 done 状态", () => {
-      const map = observable(new Map([["key", { nested: 1 }]]));
+  describe('迭代器的 done 状态', () => {
+    test('values 迭代器应该正确处理 done 状态', () => {
+      const map = observable(new Map([['key', { nested: 1 }]]));
       const iterator = map.values();
 
       const result1 = iterator.next();
@@ -535,8 +535,8 @@ describe("handlers - 边界情况覆盖", () => {
       expect(result2.done).toBe(true);
     });
 
-    test("entries 迭代器应该正确处理 done 状态", () => {
-      const map = observable(new Map([["key", { nested: 1 }]]));
+    test('entries 迭代器应该正确处理 done 状态', () => {
+      const map = observable(new Map([['key', { nested: 1 }]]));
       const iterator = map.entries();
 
       const result1 = iterator.next();
@@ -548,7 +548,7 @@ describe("handlers - 边界情况覆盖", () => {
       expect(result2.done).toBe(true);
     });
 
-    test("Symbol.iterator 应该正确处理 done 状态", () => {
+    test('Symbol.iterator 应该正确处理 done 状态', () => {
       const set = observable(new Set([1, 2]));
       const iterator = set[Symbol.iterator]();
 

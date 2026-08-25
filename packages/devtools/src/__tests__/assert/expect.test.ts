@@ -28,10 +28,7 @@ const mockPrintAssertResult = printAssertResult as jest.MockedFunction<typeof pr
 /**
  * 创建一个 RSExpectBuilder，使用固定的 instance 字典
  */
-function makeBuilder(
-  instances: Record<string, object>,
-  instanceId: string
-): RSExpectBuilder {
+function makeBuilder(instances: Record<string, object>, instanceId: string): RSExpectBuilder {
   return new RSExpectBuilder(instanceId, (id: string) => instances[id]);
 }
 
@@ -185,7 +182,9 @@ describe('RSExpectBuilder - 对象和数组断言', () => {
   });
 
   it('toHaveSome 记录 some 断言', () => {
-    const result = builder().toHaveSome('list', { path: 'status', op: 'eq', expected: 'loading' }).run();
+    const result = builder()
+      .toHaveSome('list', { path: 'status', op: 'eq', expected: 'loading' })
+      .run();
     expect(result.results[0]?.op).toBe('some');
     expect(result.results[0]?.passed).toBe(true);
   });
@@ -202,10 +201,7 @@ describe('RSExpectBuilder - 对象和数组断言', () => {
 describe('RSExpectBuilder.run()', () => {
   it('全部通过时 passed=true，summary 正确', () => {
     const inst = { a: 1, b: 'hello' };
-    const result = makeBuilder({ svc: inst }, 'svc')
-      .toBe('a', 1)
-      .toBeType('b', 'string')
-      .run();
+    const result = makeBuilder({ svc: inst }, 'svc').toBe('a', 1).toBeType('b', 'string').run();
 
     expect(result.passed).toBe(true);
     expect(result.summary.passed).toBe(2);
@@ -244,10 +240,7 @@ describe('RSExpectBuilder.run()', () => {
   });
 
   it('instanceId 不存在时所有断言标记失败', () => {
-    const result = makeBuilder({}, 'nonExistent')
-      .toBe('val', 1)
-      .toExist('other')
-      .run();
+    const result = makeBuilder({}, 'nonExistent').toBe('val', 1).toExist('other').run();
 
     expect(result.passed).toBe(false);
     expect(result.summary.passed).toBe(0);
@@ -321,7 +314,7 @@ describe('RSExpectBuilder.expect()', () => {
     const inst = { a: 1, b: 2 };
     try {
       makeBuilder({ svc: inst }, 'svc')
-        .toBe('a', 1)  // 通过
+        .toBe('a', 1) // 通过
         .toBe('b', 999) // 失败
         .expect();
     } catch (e) {
@@ -405,17 +398,13 @@ describe('rsExpect(instance)', () => {
 describe('RSExpectBuilder.assert() - 低阶 API', () => {
   it('直接传 op 和 expected', () => {
     const inst = { val: 42 };
-    const result = makeBuilder({ svc: inst }, 'svc')
-      .assert('val', 'eq', 42)
-      .run();
+    const result = makeBuilder({ svc: inst }, 'svc').assert('val', 'eq', 42).run();
     expect(result.results[0]?.passed).toBe(true);
   });
 
   it('message 正确传递', () => {
     const inst = { val: 42 };
-    const result = makeBuilder({ svc: inst }, 'svc')
-      .assert('val', 'eq', 42, '自定义消息')
-      .run();
+    const result = makeBuilder({ svc: inst }, 'svc').assert('val', 'eq', 42, '自定义消息').run();
     expect(result.results[0]?.message).toBe('自定义消息');
   });
 });

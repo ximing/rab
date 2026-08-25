@@ -10,11 +10,11 @@
  *   - add: 必需 (触发路径调用);
  *   - delete: 可选 —— 实现了则在 unobserve 时被调用 (如 Set), 未实现则跳过。
  */
-import { observable, observe, unobserve } from "../main";
-import type { Reaction, ReactionScheduler } from "../main";
+import { observable, observe, unobserve } from '../main';
+import type { Reaction, ReactionScheduler } from '../main';
 
-describe("只有 add 的对象型 scheduler", () => {
-  test("observe/触发/unobserve 全程不抛错 (触发路径只要求 add)", () => {
+describe('只有 add 的对象型 scheduler', () => {
+  test('observe/触发/unobserve 全程不抛错 (触发路径只要求 add)', () => {
     const obj = observable({ count: 0 });
     const queued: Array<() => void> = [];
     let runs = 0;
@@ -44,7 +44,7 @@ describe("只有 add 的对象型 scheduler", () => {
     expect(runs).toBe(1);
   });
 
-  test("实现了 delete 的对象型 scheduler 在 unobserve 时仍被调用", () => {
+  test('实现了 delete 的对象型 scheduler 在 unobserve 时仍被调用', () => {
     const obj = observable({ count: 0 });
     const deleted: Array<unknown> = [];
 

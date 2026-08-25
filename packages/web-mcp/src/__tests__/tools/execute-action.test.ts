@@ -91,7 +91,9 @@ describe('executeAction', () => {
 
   it('方法抛出 Error 时，返回 error 信息', async () => {
     const svc = makeMockService({
-      failMethod: () => { throw new Error('业务逻辑错误'); },
+      failMethod: () => {
+        throw new Error('业务逻辑错误');
+      },
     });
     const map = makeMap([svc]);
 
@@ -108,7 +110,9 @@ describe('executeAction', () => {
 
   it('方法抛出非 Error 对象时，转换为字符串', async () => {
     const svc = makeMockService({
-      failMethod: () => { throw '字符串错误'; },
+      failMethod: () => {
+        throw '字符串错误';
+      },
     });
     const map = makeMap([svc]);
 
@@ -204,11 +208,11 @@ describe('createExecuteActionTool', () => {
     const map = makeMap([svc]);
     const tool = createExecuteActionTool(map);
 
-    const result = await tool.execute({
+    const result = (await tool.execute({
       instanceId: 'MockService#0',
       action: 'sayHello',
       args: [],
-    }) as { result: unknown };
+    })) as { result: unknown };
 
     expect(result.result).toBe('Hello!');
   });
@@ -221,11 +225,11 @@ describe('createExecuteActionTool', () => {
     const tool = createExecuteActionTool(map);
 
     // args 未传 (undefined)
-    const result = await tool.execute({
+    const result = (await tool.execute({
       instanceId: 'MockService#0',
       action: 'noArgs',
       args: undefined,
-    }) as { result: unknown };
+    })) as { result: unknown };
 
     expect(result.result).toBe('no-args-result');
   });

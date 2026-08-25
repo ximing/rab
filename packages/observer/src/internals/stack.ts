@@ -87,10 +87,7 @@ export class Stack<T> {
    * @param callback - 对每个元素执行的回调函数
    * @param thisArg - 回调函数中 this 的值
    */
-  forEach(
-    callback: (value: T, index: number, stack: this) => void,
-    thisArg?: unknown
-  ): void {
+  forEach(callback: (value: T, index: number, stack: this) => void, thisArg?: unknown): void {
     const context = thisArg ?? this;
     const l = this.items.length;
     for (let i = 0; i < l; i++) {
@@ -147,7 +144,7 @@ export class Stack<T> {
    * 转换为字符串
    */
   toString(): string {
-    return this.toArray().join(",");
+    return this.toArray().join(',');
   }
 
   /**

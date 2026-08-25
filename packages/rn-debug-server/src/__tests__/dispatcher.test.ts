@@ -2,7 +2,9 @@ import { createCommandDispatcher } from '../command-dispatcher';
 import type { DeviceRegistry } from '../types';
 import { waitFor } from './wait-for';
 
-function makeRegistry(ids: string[]): DeviceRegistry & { sockets: Map<string, { sent: string[] }> } {
+function makeRegistry(
+  ids: string[]
+): DeviceRegistry & { sockets: Map<string, { sent: string[] }> } {
   const sockets = new Map<string, { sent: string[] }>();
   const devices = new Map();
   const reg = {
@@ -62,7 +64,10 @@ describe('CommandDispatcher', () => {
     const first = JSON.parse(reg.sockets.get('dev-1')!.sent[0]);
     dispatcher.handleResult({ kind: 'result', id: first.id, status: 'ok', result: null });
     await p1;
-    await waitFor(() => reg.sockets.get('dev-1')!.sent.length === 2, 'second queued command flushed');
+    await waitFor(
+      () => reg.sockets.get('dev-1')!.sent.length === 2,
+      'second queued command flushed'
+    );
     expect(reg.sockets.get('dev-1')!.sent).toHaveLength(2);
   });
 

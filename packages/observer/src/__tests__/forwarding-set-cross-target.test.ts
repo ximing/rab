@@ -12,7 +12,7 @@
  * - 场景B: 原型链赋值 child.count=1 单次通知 (转发链上定义回 child 不重复通知)
  *   这正是"记录单个转发 target"方案翻车的地方, 必须用栈。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 function defineValue(obj: object, key: string, value: number) {
   Object.defineProperty(obj, key, {
@@ -23,8 +23,8 @@ function defineValue(obj: object, key: string, value: number) {
   });
 }
 
-describe("set 转发标记按 target 区分 (base handler)", () => {
-  test("场景A: 自有属性赋值只通知一次", () => {
+describe('set 转发标记按 target 区分 (base handler)', () => {
+  test('场景A: 自有属性赋值只通知一次', () => {
     const obj = observable({ count: 0 });
     let calls = 0;
     observe(() => {
@@ -38,7 +38,7 @@ describe("set 转发标记按 target 区分 (base handler)", () => {
     expect(obj.count).toBe(1);
   });
 
-  test("场景B: 原型链赋值只通知一次 (child = observable(Object.create(parent)))", () => {
+  test('场景B: 原型链赋值只通知一次 (child = observable(Object.create(parent)))', () => {
     const parent = observable({ count: 0 });
     const child = observable(Object.create(parent) as { count: number });
     let calls = 0;
@@ -55,16 +55,14 @@ describe("set 转发标记按 target 区分 (base handler)", () => {
     expect(parent.count).toBe(0);
   });
 
-  test("场景C: 原型链 setter 内对另一个 observable defineProperty, 对方 reaction 必须触发", () => {
+  test('场景C: 原型链 setter 内对另一个 observable defineProperty, 对方 reaction 必须触发', () => {
     const other = observable({ x: 0 });
     const proto = observable({
       set flag(v: number) {
-        defineValue(other, "x", v);
+        defineValue(other, 'x', v);
       },
     });
-    const child = observable(
-      Object.create(proto) as { flag: number }
-    );
+    const child = observable(Object.create(proto) as { flag: number });
     let calls = 0;
     observe(() => {
       void other.x;
@@ -81,7 +79,7 @@ describe("set 转发标记按 target 区分 (base handler)", () => {
     const other = observable({ x: 0 });
     const obj = observable({
       set flag(v: number) {
-        defineValue(other, "x", v);
+        defineValue(other, 'x', v);
       },
     });
     let calls = 0;
@@ -97,17 +95,17 @@ describe("set 转发标记按 target 区分 (base handler)", () => {
   });
 });
 
-describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉同 target 异 key 的 defineProperty (base handler)", () => {
+describe('转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉同 target 异 key 的 defineProperty (base handler)', () => {
   // 第 1 轮对抗审查发现: target 栈方案下, 转发窗口内对"栈中 target"的无关 key
   // defineProperty 仍被静默吞掉 (值已变、reaction 未通知)。
   // Reflect.set 路由回的 defineProperty 必然携带 set 帧正在写的同一个 key,
   // 因此栈元素必须是 {target, key} 对, 而不是裸 target。
 
-  test("自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知", () => {
+  test('自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知', () => {
     const obj = observable({
       cache: 0,
       set flag(v: number) {
-        defineValue(obj, "cache", v);
+        defineValue(obj, 'cache', v);
       },
     });
     let calls = 0;
@@ -122,11 +120,11 @@ describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉
     expect(calls).toBe(2); // 裸 target 栈会误判为转发而丢通知 (calls 停在 1)
   });
 
-  test("三层链 setter 内对中间层 observable 的异 key defineProperty: 必须通知", () => {
+  test('三层链 setter 内对中间层 observable 的异 key defineProperty: 必须通知', () => {
     const middle = observable({ side: 0 });
     const parent = observable({
       set flag(v: number) {
-        defineValue(middle, "side", v);
+        defineValue(middle, 'side', v);
       },
     });
     Object.setPrototypeOf(middle, parent);
@@ -143,11 +141,11 @@ describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉
     expect(sideCalls).toBe(2); // middle 的 target 因写入链路过而在栈中, 但 key 不同, 不得吞掉
   });
 
-  test("自有 setter 内对自身另一个 key defineProperty: 必须通知", () => {
+  test('自有 setter 内对自身另一个 key defineProperty: 必须通知', () => {
     const parent = observable({
       side: 0,
       set flag(v: number) {
-        defineValue(parent, "side", v);
+        defineValue(parent, 'side', v);
       },
     });
     let calls = 0;
@@ -162,7 +160,7 @@ describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉
     expect(calls).toBe(2);
   });
 
-  test("child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知", () => {
+  test('child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知', () => {
     const child2 = observable({ a: 0 }) as {
       a: number;
       b?: number;
@@ -170,7 +168,7 @@ describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉
     };
     const proto2 = observable({
       set flag(v: number) {
-        defineValue(child2, "b", v);
+        defineValue(child2, 'b', v);
       },
     });
     Object.setPrototypeOf(child2, proto2);
@@ -187,8 +185,8 @@ describe("转发检测必须按 {target, key} 匹配, 不得按裸 target 吞掉
   });
 });
 
-describe("set 转发标记按 target 区分 (shadow handler)", () => {
-  test("场景A: 自有属性赋值只通知一次", () => {
+describe('set 转发标记按 target 区分 (shadow handler)', () => {
+  test('场景A: 自有属性赋值只通知一次', () => {
     const obj = shadowObservable({ count: 0 });
     let calls = 0;
     observe(() => {
@@ -202,16 +200,14 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
     expect(obj.count).toBe(1);
   });
 
-  test("场景C: 原型链 setter 内对另一个 shadowObservable defineProperty, 对方 reaction 必须触发", () => {
+  test('场景C: 原型链 setter 内对另一个 shadowObservable defineProperty, 对方 reaction 必须触发', () => {
     const other = shadowObservable({ x: 0 });
     const proto = shadowObservable({
       set flag(v: number) {
-        defineValue(other, "x", v);
+        defineValue(other, 'x', v);
       },
     });
-    const child = shadowObservable(
-      Object.create(proto) as { flag: number }
-    );
+    const child = shadowObservable(Object.create(proto) as { flag: number });
     let calls = 0;
     observe(() => {
       void other.x;
@@ -224,11 +220,9 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
     expect(calls).toBe(2);
   });
 
-  test("场景B: 原型链赋值只通知一次 (child = shadowObservable(Object.create(parent)))", () => {
+  test('场景B: 原型链赋值只通知一次 (child = shadowObservable(Object.create(parent)))', () => {
     const parent = shadowObservable({ count: 0 });
-    const child = shadowObservable(
-      Object.create(parent) as { count: number }
-    );
+    const child = shadowObservable(Object.create(parent) as { count: number });
     let calls = 0;
     observe(() => {
       void child.count;
@@ -242,11 +236,11 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
     expect(parent.count).toBe(0);
   });
 
-  test("自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知", () => {
+  test('自有 setter 内对同 target 另一个 key defineProperty: 被观察 key 必须通知', () => {
     const obj = shadowObservable({
       cache: 0,
       set flag(v: number) {
-        defineValue(obj, "cache", v);
+        defineValue(obj, 'cache', v);
       },
     });
     let calls = 0;
@@ -261,7 +255,7 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
     expect(calls).toBe(2); // 裸 target 栈会误判为转发而丢通知 (calls 停在 1)
   });
 
-  test("child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知", () => {
+  test('child 的 set 帧在栈中时, setter 内对 child 自身异 key defineProperty: 必须通知', () => {
     const child2 = shadowObservable({ a: 0 }) as {
       a: number;
       b?: number;
@@ -269,7 +263,7 @@ describe("set 转发标记按 target 区分 (shadow handler)", () => {
     };
     const proto2 = shadowObservable({
       set flag(v: number) {
-        defineValue(child2, "b", v);
+        defineValue(child2, 'b', v);
       },
     });
     Object.setPrototypeOf(child2, proto2);

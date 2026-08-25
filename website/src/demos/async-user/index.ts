@@ -1,7 +1,7 @@
-import UserDemo from "./UserDemo";
+import UserDemo from './UserDemo';
 
 export default UserDemo;
-export { UserService } from "./UserService";
+export { UserService } from './UserService';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

@@ -32,7 +32,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
     | [
         ServiceIdentifier | ServiceClass,
         ServiceClass | ServiceFactory | RegisterOptions,
-        RegisterOptions
+        RegisterOptions,
       ]
     | ServiceClass
   )[],
@@ -145,11 +145,7 @@ type BindServiceRegistration =
   | [ServiceClass]
   | [ServiceClass, RegisterOptions]
   | [ServiceIdentifier | ServiceClass, ServiceClass | ServiceFactory]
-  | [
-      ServiceIdentifier | ServiceClass,
-      ServiceClass | ServiceFactory,
-      RegisterOptions
-    ];
+  | [ServiceIdentifier | ServiceClass, ServiceClass | ServiceFactory, RegisterOptions];
 
 type BindServicesFactory<P extends Record<string, any>> = (
   container: Container,
@@ -164,7 +160,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
   Comp: ComponentType<P>,
   servicesList: BindServiceRegistration[] | BindServicesFactory<P>,
   options?: { name?: string }
-)
+);
 ```
 
 ### 兼容性说明
@@ -222,9 +218,7 @@ function normalizeServicesList<P extends Record<string, any>>(
   props: Readonly<P>,
   servicesList: BindServiceRegistration[] | BindServicesFactory<P>
 ): BindServiceRegistration[] {
-  return typeof servicesList === "function"
-    ? servicesList(container, props)
-    : servicesList;
+  return typeof servicesList === 'function' ? servicesList(container, props) : servicesList;
 }
 ```
 
@@ -253,10 +247,7 @@ if (!admRef.current) {
 建议将 `createADM` 改为接收初始化 props：
 
 ```ts
-function createADM(
-  parent: Container = getGlobalContainer(),
-  initialProps: Readonly<P>
-) {
+function createADM(parent: Container = getGlobalContainer(), initialProps: Readonly<P>) {
   const container = new Container({
     name: `${compName}_${++containerId}`,
   });
@@ -264,9 +255,7 @@ function createADM(
   container.setParent(parent);
 
   const registrations =
-    typeof servicesList === "function"
-      ? servicesList(container, initialProps)
-      : servicesList;
+    typeof servicesList === 'function' ? servicesList(container, initialProps) : servicesList;
 
   for (const params of registrations) {
     Array.isArray(params)
@@ -315,12 +304,9 @@ class ProductService extends Service {
   }
 }
 
-export const ProductPage = bindServices(
-  Page,
-  (container, props: ProductPageProps) => [
-    [ProductService, () => new ProductService({ productId: props.productId })],
-  ]
-);
+export const ProductPage = bindServices(Page, (container, props: ProductPageProps) => [
+  [ProductService, () => new ProductService({ productId: props.productId })],
+]);
 ```
 
 语义：
@@ -331,16 +317,11 @@ export const ProductPage = bindServices(
 ### 示例二：基于父级容器中的服务决定注册项
 
 ```ts
-export const ChildPage = bindServices(
-  Page,
-  (container, props) => {
-    const appService = container.resolve(AppService);
+export const ChildPage = bindServices(Page, (container, props) => {
+  const appService = container.resolve(AppService);
 
-    return appService.enableExtra
-      ? [BaseService, ExtraService]
-      : [BaseService];
-  }
-);
+  return appService.enableExtra ? [BaseService, ExtraService] : [BaseService];
+});
 ```
 
 语义：

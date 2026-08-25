@@ -1,7 +1,7 @@
-import CounterDemo from "./CounterDemo";
+import CounterDemo from './CounterDemo';
 
 export default CounterDemo;
-export { CounterService } from "./CounterService";
+export { CounterService } from './CounterService';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

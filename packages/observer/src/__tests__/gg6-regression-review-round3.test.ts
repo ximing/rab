@@ -9,15 +9,15 @@
  * - entry 删空后由其他 reaction 重建, 旧 reaction 不复活、无分裂 Set
  */
 
-import { observable } from "../observable";
-import { shadowObservable } from "../shadow-observable";
-import { observe, unobserve } from "../observer";
-import { getConnectionsCount } from "../internals/reaction-track";
-import { baseProxyHandler } from "../internals/handlers/base-proxy-handler";
-import type { Reaction } from "../internals/types";
+import { observable } from '../observable';
+import { shadowObservable } from '../shadow-observable';
+import { observe, unobserve } from '../observer';
+import { getConnectionsCount } from '../internals/reaction-track';
+import { baseProxyHandler } from '../internals/handlers/base-proxy-handler';
+import type { Reaction } from '../internals/types';
 
-describe("GG6 review round 3 hardening", () => {
-  test("对象型 scheduler: flush 前 unobserve, 残留队列运行不重注册、entry 归零", () => {
+describe('GG6 review round 3 hardening', () => {
+  test('对象型 scheduler: flush 前 unobserve, 残留队列运行不重注册、entry 归零', () => {
     const rawObj = { v: 1 };
     const o = observable(rawObj);
     const pending = new Set<Reaction>();
@@ -49,14 +49,14 @@ describe("GG6 review round 3 hardening", () => {
     expect(calls).toBe(1);
   });
 
-  test("共享 Set 的批内抛错隔离: 剩余依赖 entry 保留, 逐个释放后归零", () => {
+  test('共享 Set 的批内抛错隔离: 剩余依赖 entry 保留, 逐个释放后归零', () => {
     const rawObj = { v: 1 };
     const o = observable(rawObj);
     let boom = false;
     let okCalls = 0;
     const bad = observe(() => {
       o.v;
-      if (boom) throw new Error("boom");
+      if (boom) throw new Error('boom');
     });
     const ok = observe(() => {
       o.v;
@@ -66,7 +66,7 @@ describe("GG6 review round 3 hardening", () => {
     boom = true;
     expect(() => {
       o.v = 2;
-    }).toThrow("boom"); // bad 抛错被隔离后 rethrow, ok 照常执行
+    }).toThrow('boom'); // bad 抛错被隔离后 rethrow, ok 照常执行
     expect(okCalls).toBe(2);
 
     boom = false;
@@ -79,7 +79,7 @@ describe("GG6 review round 3 hardening", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("shadow 替换根属性通知 deep 侧嵌套 reader (共享连接表, 根 key 变更)", () => {
+  test('shadow 替换根属性通知 deep 侧嵌套 reader (共享连接表, 根 key 变更)', () => {
     const root: { nested: { a: number } } = { nested: { a: 1 } };
     const s = shadowObservable(root);
     const o = observable(root);
@@ -96,18 +96,13 @@ describe("GG6 review round 3 hardening", () => {
     expect(root.nested.a).toBe(2);
   });
 
-  test("deep 的自定义 proxyHandlers 只作用于 deep 代理 (per-proxy 语义)", () => {
+  test('deep 的自定义 proxyHandlers 只作用于 deep 代理 (per-proxy 语义)', () => {
     const rawObj = { count: 0 };
     let setTrapCalls = 0;
     const o = observable(rawObj, {
       proxyHandlers: {
         ...baseProxyHandler,
-        set(
-          target: Record<string, number>,
-          key: string | symbol,
-          value: number,
-          receiver: object
-        ) {
+        set(target: Record<string, number>, key: string | symbol, value: number, receiver: object) {
           setTrapCalls++;
           return Reflect.set(target, key, value, receiver);
         },
@@ -127,7 +122,7 @@ describe("GG6 review round 3 hardening", () => {
     expect(calls).toBe(3); // 但通知经共享连接表两侧都到达
   });
 
-  test("entry 删空后由其他 reaction 重建: 旧 reaction 不复活、新依赖正常触发", () => {
+  test('entry 删空后由其他 reaction 重建: 旧 reaction 不复活、新依赖正常触发', () => {
     const rawObj: Record<string, number> = { a: 1 };
     const o = observable(rawObj);
     let c1 = 0;

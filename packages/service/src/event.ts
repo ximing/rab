@@ -1,13 +1,13 @@
-import EventEmitter from "eventemitter3";
+import EventEmitter from 'eventemitter3';
 
-import { Container, getGlobalContainer } from "./ioc";
+import { Container, getGlobalContainer } from './ioc';
 
 /**
  * 事件作用域类型
  * - 'global': 全局事件，使用全局容器的事件系统
  * - 'container': 容器级别事件，使用当前容器的事件系统
  */
-export type EventScope = "global" | "container";
+export type EventScope = 'global' | 'container';
 
 /**
  * 事件系统配置选项
@@ -81,14 +81,14 @@ export const EventSystem = {
    * @returns 对应的事件发射器实例
    */
   getEmitter(scope: EventScope, container?: Container): EventEmitter {
-    if (scope === "global") {
+    if (scope === 'global') {
       return this.getGlobalEvents();
     }
 
     if (!container) {
       throw new Error(
         'Container is required when using "container" scope. ' +
-          "Make sure the service is resolved from a container."
+          'Make sure the service is resolved from a container.'
       );
     }
 

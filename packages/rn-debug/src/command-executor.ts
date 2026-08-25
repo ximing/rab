@@ -6,9 +6,9 @@ export interface CommandExecutor {
   execute(command: CommandMessage, send: (msg: ResultMessage) => void): Promise<void>;
 }
 
-export function createCommandExecutor(
-  options?: { handlers?: Record<string, DebugHandler> }
-): CommandExecutor {
+export function createCommandExecutor(options?: {
+  handlers?: Record<string, DebugHandler>;
+}): CommandExecutor {
   const handlers = new Map<string, DebugHandler>(Object.entries(options?.handlers ?? {}));
   let queue: Promise<void> = Promise.resolve();
 
@@ -59,9 +59,7 @@ export function createCommandExecutor(
     },
     execute(command, send) {
       // 保险丝：任何未预见的异常都不能把 queue 打成永久 rejected（否则设备从此对一切指令静默）
-      queue = queue
-        .then(() => runOne(command, send))
-        .catch(() => undefined);
+      queue = queue.then(() => runOne(command, send)).catch(() => undefined);
       return queue;
     },
   };

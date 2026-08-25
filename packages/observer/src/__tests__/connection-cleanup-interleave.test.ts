@@ -7,12 +7,12 @@
  * 抛错 reaction), 全部必须保持依赖不丢失、不复活、entry 归零。
  */
 
-import { observable } from "../observable";
-import { observe, unobserve } from "../observer";
-import { getConnectionsCount } from "../internals/reaction-track";
+import { observable } from '../observable';
+import { observe, unobserve } from '../observer';
+import { getConnectionsCount } from '../internals/reaction-track';
 
-describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
-  test("批量触发中 R1 体内写另一 key 同步触发 R2, 双方依赖不丢失", () => {
+describe('#12 空 entry 清理 × 同步嵌套 reaction', () => {
+  test('批量触发中 R1 体内写另一 key 同步触发 R2, 双方依赖不丢失', () => {
     const rawObj: Record<string, number> = { a: 1, b: 1 };
     const o = observable(rawObj);
 
@@ -44,11 +44,11 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("R1 体内手动重跑 R2 且 R2 切换依赖 (k→l), 旧 entry 清理且双方依赖正确", () => {
+  test('R1 体内手动重跑 R2 且 R2 切换依赖 (k→l), 旧 entry 清理且双方依赖正确', () => {
     const rawObj: Record<string, number> = { k: 1, l: 1 };
     const o = observable(rawObj);
 
-    let r2Target = "k";
+    let r2Target = 'k';
     let r1Calls = 0;
     let r2Calls = 0;
     let r1First = true;
@@ -61,7 +61,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
       r1Calls++;
       if (r1First) {
         r1First = false;
-        r2Target = "l";
+        r2Target = 'l';
         // 手动重跑 r2: release 使 k 的 Set 删空 → entry 被清理,
         // 随后 r2 重新注册到 l
         (r2 as unknown as () => void)();
@@ -82,7 +82,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("三层嵌套手动重跑 (同 key), 依赖不丢失", () => {
+  test('三层嵌套手动重跑 (同 key), 依赖不丢失', () => {
     const rawObj: Record<string, number> = { k: 1 };
     const o = observable(rawObj);
 
@@ -121,7 +121,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("reaction 重跑时 unobserve 自己后立刻写同 key: 不复活、entry 归零", () => {
+  test('reaction 重跑时 unobserve 自己后立刻写同 key: 不复活、entry 归零', () => {
     const rawObj: Record<string, number> = { k: 1 };
     const o = observable(rawObj);
 
@@ -146,23 +146,26 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(calls).toBe(2); // 不得复活
   });
 
-  test("自 unobserve 后继续读新 key: 不复活、entry 归零 (第2轮审查 issue 1)", () => {
+  test('自 unobserve 后继续读新 key: 不复活、entry 归零 (第2轮审查 issue 1)', () => {
     const rawObj: Record<string, number> = {};
     const o = observable(rawObj);
 
     let runs = 0;
     const holder: { r?: ReturnType<typeof observe> } = {};
-    holder.r = observe(() => {
-      o.a;
-      runs++;
-      if (runs === 1) {
-        unobserve(holder.r as ReturnType<typeof observe>);
-        // unobserve 之后仍在自身运行中, 继续读一个新 key:
-        // 不得为已 unobserve 的 reaction 建立新依赖 (否则写入会复活它,
-        // 且该连接无人释放, entry 永久搁浅)
-        o.b;
-      }
-    }, { lazy: true });
+    holder.r = observe(
+      () => {
+        o.a;
+        runs++;
+        if (runs === 1) {
+          unobserve(holder.r as ReturnType<typeof observe>);
+          // unobserve 之后仍在自身运行中, 继续读一个新 key:
+          // 不得为已 unobserve 的 reaction 建立新依赖 (否则写入会复活它,
+          // 且该连接无人释放, entry 永久搁浅)
+          o.b;
+        }
+      },
+      { lazy: true }
+    );
     (holder.r as unknown as () => void)();
 
     expect(runs).toBe(1);
@@ -176,7 +179,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(getConnectionsCount(rawObj)).toBe(0); // 无搁浅 entry
   });
 
-  test("批内 unobserve 另一 reaction: 该 reaction 至多再跑一次 (批内已有), 之后不复活", () => {
+  test('批内 unobserve 另一 reaction: 该 reaction 至多再跑一次 (批内已有), 之后不复活', () => {
     const rawObj: Record<string, number> = { v: 1 };
     const p = observable(rawObj);
 
@@ -210,7 +213,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("重跑时抛错的 reaction: 依赖保持, unobserve 后 entry 归零", () => {
+  test('重跑时抛错的 reaction: 依赖保持, unobserve 后 entry 归零', () => {
     const rawObj: Record<string, number> = { v: 1 };
     const q = observable(rawObj);
 
@@ -220,7 +223,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
       q.v;
       boom++;
       if (armed) {
-        throw new Error("boom" + boom);
+        throw new Error('boom' + boom);
       }
     });
     expect(getConnectionsCount(rawObj)).toBe(1); // 依赖已建立
@@ -228,7 +231,7 @@ describe("#12 空 entry 清理 × 同步嵌套 reaction", () => {
     armed = true;
     expect(() => {
       q.v = 2;
-    }).toThrow("boom2"); // 批内隔离后 rethrow, 依赖重建
+    }).toThrow('boom2'); // 批内隔离后 rethrow, 依赖重建
     expect(boom).toBe(2);
     expect(getConnectionsCount(rawObj)).toBe(1);
 

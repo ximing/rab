@@ -105,22 +105,22 @@ const Component = observer(() => {
 
 ```typescript
 // 响应式组件
-observer(Component)              // 函数组件 → 响应式组件
-view(Component)                  // 函数/类组件 → 响应式组件
+observer(Component); // 函数组件 → 响应式组件
+view(Component); // 函数/类组件 → 响应式组件
 
 // 服务相关
-useService(ServiceClass)         // 获取服务实例
-useObserverService(ServiceClass, selector) // 获取服务 + 追踪特定字段
-useContainer()                   // 获取当前容器
-useContainerEvents()             // 获取事件发射器
+useService(ServiceClass); // 获取服务实例
+useObserverService(ServiceClass, selector); // 获取服务 + 追踪特定字段
+useContainer(); // 获取当前容器
+useContainerEvents(); // 获取事件发射器
 
 // 状态追踪
-useObserver(fn)                  // 追踪 fn 中访问的 observable
-useLocalObservable(initializer)  // 创建组件本地 observable
+useObserver(fn); // 追踪 fn 中访问的 observable
+useLocalObservable(initializer); // 创建组件本地 observable
 
 // 副作用
-useReaction(effect, options)     // 响应式副作用
+useReaction(effect, options); // 响应式副作用
 
 // 容器绑定
-bindServices(Component, services) // 创建容器并注册服务
+bindServices(Component, services); // 创建容器并注册服务
 ```

@@ -1,7 +1,7 @@
-import TodoDemo from "./TodoDemo";
+import TodoDemo from './TodoDemo';
 
 export default TodoDemo;
-export { TodoService } from "./TodoService";
+export { TodoService } from './TodoService';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

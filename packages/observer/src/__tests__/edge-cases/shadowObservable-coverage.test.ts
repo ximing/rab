@@ -3,13 +3,13 @@
  * 目标: 覆盖 shadowObservable.ts 中未覆盖的代码路径
  */
 
-import { shadowObservable } from "../../shadow-observable";
-import { observe } from "../../observer";
-import { proxyToRaw, rawToProxy } from "../../internals/proxy-raw-map";
+import { shadowObservable } from '../../shadow-observable';
+import { observe } from '../../observer';
+import { proxyToRaw, rawToProxy } from '../../internals/proxy-raw-map';
 
-describe("shadowObservable - 边界情况覆盖", () => {
-  describe("已存在的 observable", () => {
-    test("应该返回已存在的 observable 而不是创建新的", () => {
+describe('shadowObservable - 边界情况覆盖', () => {
+  describe('已存在的 observable', () => {
+    test('应该返回已存在的 observable 而不是创建新的', () => {
       const obj = { count: 0 };
       const observable1 = shadowObservable(obj);
       const observable2 = shadowObservable(obj);
@@ -18,7 +18,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(observable1).toBe(observable2);
     });
 
-    test("传入已经是 observable 的对象应该直接返回", () => {
+    test('传入已经是 observable 的对象应该直接返回', () => {
       const obj = { count: 0 };
       const observable1 = shadowObservable(obj);
       const observable2 = shadowObservable(observable1);
@@ -27,7 +27,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(observable1).toBe(observable2);
     });
 
-    test("应该正确处理缓存的 observable", () => {
+    test('应该正确处理缓存的 observable', () => {
       const obj = { value: 1 };
       const observable1 = shadowObservable(obj);
 
@@ -41,8 +41,8 @@ describe("shadowObservable - 边界情况覆盖", () => {
     });
   });
 
-  describe("不应该被包装的对象", () => {
-    test("Date 对象不应该被包装", () => {
+  describe('不应该被包装的对象', () => {
+    test('Date 对象不应该被包装', () => {
       const date = new Date();
       const result = shadowObservable(date as any);
 
@@ -50,7 +50,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(result).toBe(date);
     });
 
-    test("RegExp 对象不应该被包装", () => {
+    test('RegExp 对象不应该被包装', () => {
       const regex = /test/;
       const result = shadowObservable(regex as any);
 
@@ -58,7 +58,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(result).toBe(regex);
     });
 
-    test("Promise 对象不应该被包装", () => {
+    test('Promise 对象不应该被包装', () => {
       const promise = Promise.resolve(1);
       const result = shadowObservable(promise as any);
 
@@ -66,8 +66,8 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(result).toBe(promise);
     });
 
-    test("Error 对象不应该被包装", () => {
-      const error = new Error("test");
+    test('Error 对象不应该被包装', () => {
+      const error = new Error('test');
       const result = shadowObservable(error as any);
 
       // Error 对象不应该被包装
@@ -75,9 +75,9 @@ describe("shadowObservable - 边界情况覆盖", () => {
     });
   });
 
-  describe("集合类型的浅层响应式", () => {
-    test("Map 应该使用 shadowCollectionHandlers", () => {
-      const map = shadowObservable(new Map([["key", { nested: 1 }]]));
+  describe('集合类型的浅层响应式', () => {
+    test('Map 应该使用 shadowCollectionHandlers', () => {
+      const map = shadowObservable(new Map([['key', { nested: 1 }]]));
       let callCount = 0;
 
       observe(() => {
@@ -88,15 +88,15 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
 
       // 修改 Map 应该触发 reaction
-      map.set("key2", { nested: 2 });
+      map.set('key2', { nested: 2 });
       expect(callCount).toBe(2);
 
       // 获取的值不应该是 observable
-      const value = map.get("key");
+      const value = map.get('key');
       expect(proxyToRaw.has(value as any)).toBe(false);
     });
 
-    test("Set 应该使用 shadowCollectionHandlers", () => {
+    test('Set 应该使用 shadowCollectionHandlers', () => {
       const set = shadowObservable(new Set([{ id: 1 }]));
       let callCount = 0;
 
@@ -112,7 +112,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(callCount).toBe(2);
     });
 
-    test("WeakMap 应该使用 shadowCollectionHandlers", () => {
+    test('WeakMap 应该使用 shadowCollectionHandlers', () => {
       const key1 = {};
       const key2 = {};
       const weakMap = shadowObservable(new WeakMap([[key1, { value: 1 }]]));
@@ -135,7 +135,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(proxyToRaw.has(value as any)).toBe(false);
     });
 
-    test("WeakSet 应该使用 shadowCollectionHandlers", () => {
+    test('WeakSet 应该使用 shadowCollectionHandlers', () => {
       const obj1 = {};
       const obj2 = {};
       const weakSet = shadowObservable(new WeakSet([obj1]));
@@ -155,12 +155,12 @@ describe("shadowObservable - 边界情况覆盖", () => {
     });
   });
 
-  describe("集合类型的特殊方法", () => {
-    test("Map 的 forEach 应该返回原始值", () => {
-      const map = shadowObservable(new Map([["key", { nested: 1 }]]));
+  describe('集合类型的特殊方法', () => {
+    test('Map 的 forEach 应该返回原始值', () => {
+      const map = shadowObservable(new Map([['key', { nested: 1 }]]));
       const values: any[] = [];
 
-      map.forEach((value) => {
+      map.forEach(value => {
         values.push(value);
       });
 
@@ -168,31 +168,31 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(proxyToRaw.has(values[0])).toBe(false);
     });
 
-    test("Map 的 values 迭代器应该返回原始值", () => {
-      const map = shadowObservable(new Map([["key", { nested: 1 }]]));
+    test('Map 的 values 迭代器应该返回原始值', () => {
+      const map = shadowObservable(new Map([['key', { nested: 1 }]]));
       const values = Array.from(map.values());
 
       // 值不应该是 observable
       expect(proxyToRaw.has(values[0])).toBe(false);
     });
 
-    test("Map 的 entries 迭代器应该返回原始值", () => {
-      const map = shadowObservable(new Map([["key", { nested: 1 }]]));
+    test('Map 的 entries 迭代器应该返回原始值', () => {
+      const map = shadowObservable(new Map([['key', { nested: 1 }]]));
       const entries = Array.from(map.entries());
 
       // 值不应该是 observable
       expect(proxyToRaw.has(entries[0][1])).toBe(false);
     });
 
-    test("Map 的 Symbol.iterator 应该返回原始值", () => {
-      const map = shadowObservable(new Map([["key", { nested: 1 }]]));
+    test('Map 的 Symbol.iterator 应该返回原始值', () => {
+      const map = shadowObservable(new Map([['key', { nested: 1 }]]));
       const entries = [...map];
 
       // 值不应该是 observable
       expect(proxyToRaw.has(entries[0][1])).toBe(false);
     });
 
-    test("Set 的 values 迭代器应该返回原始值", () => {
+    test('Set 的 values 迭代器应该返回原始值', () => {
       const obj = { id: 1 };
       const set = shadowObservable(new Set([obj]));
       const values = Array.from(set.values());
@@ -202,7 +202,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(proxyToRaw.has(values[0])).toBe(false);
     });
 
-    test("Set 的 entries 迭代器应该返回原始值", () => {
+    test('Set 的 entries 迭代器应该返回原始值', () => {
       const obj = { id: 1 };
       const set = shadowObservable(new Set([obj]));
       const entries = Array.from(set.entries());
@@ -213,9 +213,9 @@ describe("shadowObservable - 边界情况覆盖", () => {
     });
   });
 
-  describe("普通对象的浅层响应式", () => {
-    test("应该使用 shadowProxyHandler", () => {
-      const obj = shadowObservable({ user: { name: "John" }, count: 0 });
+  describe('普通对象的浅层响应式', () => {
+    test('应该使用 shadowProxyHandler', () => {
+      const obj = shadowObservable({ user: { name: 'John' }, count: 0 });
       let callCount = 0;
 
       observe(() => {
@@ -233,8 +233,8 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(proxyToRaw.has(obj.user)).toBe(false);
     });
 
-    test("修改嵌套对象的属性不应该触发 reaction", () => {
-      const obj = shadowObservable({ user: { name: "John" } });
+    test('修改嵌套对象的属性不应该触发 reaction', () => {
+      const obj = shadowObservable({ user: { name: 'John' } });
       let callCount = 0;
 
       observe(() => {
@@ -245,12 +245,12 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
 
       // 修改嵌套对象的属性不应该触发 reaction
-      obj.user.name = "Jane";
+      obj.user.name = 'Jane';
       expect(callCount).toBe(1);
     });
 
-    test("替换整个嵌套对象应该触发 reaction", () => {
-      const obj = shadowObservable({ user: { name: "John" } });
+    test('替换整个嵌套对象应该触发 reaction', () => {
+      const obj = shadowObservable({ user: { name: 'John' } });
       let callCount = 0;
 
       observe(() => {
@@ -261,13 +261,13 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
 
       // 替换整个对象应该触发 reaction
-      obj.user = { name: "Jane" };
+      obj.user = { name: 'Jane' };
       expect(callCount).toBe(2);
     });
   });
 
-  describe("边界情况", () => {
-    test("空对象应该正常工作", () => {
+  describe('边界情况', () => {
+    test('空对象应该正常工作', () => {
       const obj = shadowObservable({});
       let callCount = 0;
 
@@ -279,7 +279,7 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(callCount).toBe(1);
     });
 
-    test("空 Map 应该正常工作", () => {
+    test('空 Map 应该正常工作', () => {
       const map = shadowObservable(new Map());
       let callCount = 0;
 
@@ -290,11 +290,11 @@ describe("shadowObservable - 边界情况覆盖", () => {
 
       expect(callCount).toBe(1);
 
-      map.set("key", "value");
+      map.set('key', 'value');
       expect(callCount).toBe(2);
     });
 
-    test("空 Set 应该正常工作", () => {
+    test('空 Set 应该正常工作', () => {
       const set = shadowObservable(new Set());
       let callCount = 0;
 
@@ -305,11 +305,11 @@ describe("shadowObservable - 边界情况覆盖", () => {
 
       expect(callCount).toBe(1);
 
-      set.add("value");
+      set.add('value');
       expect(callCount).toBe(2);
     });
 
-    test("应该正确处理 null 原型对象", () => {
+    test('应该正确处理 null 原型对象', () => {
       const obj = Object.create(null);
       obj.value = 1;
       const observable = shadowObservable(obj);
@@ -327,8 +327,8 @@ describe("shadowObservable - 边界情况覆盖", () => {
     });
   });
 
-  describe("createShadowCollectionProxyHandlers 的 get 方法", () => {
-    test("访问不存在的方法应该返回 undefined", () => {
+  describe('createShadowCollectionProxyHandlers 的 get 方法', () => {
+    test('访问不存在的方法应该返回 undefined', () => {
       const map = shadowObservable(new Map());
 
       // 访问一个不存在的方法
@@ -336,20 +336,20 @@ describe("shadowObservable - 边界情况覆盖", () => {
       expect(result).toBeUndefined();
     });
 
-    test("访问 Map 的原生方法应该通过 shadowCollectionHandlers", () => {
-      const map = shadowObservable(new Map([["key", "value"]]));
+    test('访问 Map 的原生方法应该通过 shadowCollectionHandlers', () => {
+      const map = shadowObservable(new Map([['key', 'value']]));
 
       // 这些方法应该正常工作
-      expect(map.has("key")).toBe(true);
-      expect(map.get("key")).toBe("value");
+      expect(map.has('key')).toBe(true);
+      expect(map.get('key')).toBe('value');
       expect(map.size).toBe(1);
     });
 
-    test("访问 Set 的原生方法应该通过 shadowCollectionHandlers", () => {
-      const set = shadowObservable(new Set(["value"]));
+    test('访问 Set 的原生方法应该通过 shadowCollectionHandlers', () => {
+      const set = shadowObservable(new Set(['value']));
 
       // 这些方法应该正常工作
-      expect(set.has("value")).toBe(true);
+      expect(set.has('value')).toBe(true);
       expect(set.size).toBe(1);
     });
   });

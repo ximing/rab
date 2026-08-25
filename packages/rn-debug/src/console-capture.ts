@@ -29,10 +29,12 @@ const noop: ConsoleFn = () => {};
  *   视为第三方 restore，弹历史回到上一个原方法，避免 current === intercept
  *   导致的无限递归
  */
-export function setupConsoleCapture(options: {
-  capacity?: number;
-  onLog?: (entry: ConsoleLogEntry) => void;
-} = {}): ConsoleCapture {
+export function setupConsoleCapture(
+  options: {
+    capacity?: number;
+    onLog?: (entry: ConsoleLogEntry) => void;
+  } = {}
+): ConsoleCapture {
   const capacity = options.capacity ?? 500;
   const buffer: ConsoleLogEntry[] = [];
   const restoreFns: Array<() => void> = [];
@@ -105,7 +107,7 @@ export function setupConsoleCapture(options: {
   return {
     getLogs(filter) {
       let logs: ConsoleLogEntry[] = buffer;
-      if (filter?.level) logs = logs.filter((l) => l.level === filter.level);
+      if (filter?.level) logs = logs.filter(l => l.level === filter.level);
       const limit = filter?.limit;
       return limit ? logs.slice(-limit) : [...logs];
     },

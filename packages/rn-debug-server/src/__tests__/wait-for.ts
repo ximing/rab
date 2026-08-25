@@ -19,7 +19,7 @@ export async function waitFor(
     } catch (err) {
       lastError = err;
     }
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 20));
   }
   const extra = lastError instanceof Error ? ` (last error: ${lastError.message})` : '';
   throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms${extra}`);
@@ -38,13 +38,13 @@ export async function waitForDevice(port: number, deviceId: string): Promise<voi
     const res = await httpFetch(`http://127.0.0.1:${port}/api/devices`);
     if (!res.ok) return false;
     const devices = (await res.json()) as Array<{ deviceId: string }>;
-    return devices.some((d) => d.deviceId === deviceId);
+    return devices.some(d => d.deviceId === deviceId);
   }, `device ${deviceId} registered on :${port}`);
 }
 
 export async function closeWs(ws: WebSocket): Promise<void> {
   if (ws.readyState === WebSocket.CLOSED) return;
-  await new Promise<void>((resolve) => {
+  await new Promise<void>(resolve => {
     ws.once('close', () => resolve());
     if (ws.readyState === WebSocket.CLOSING) return;
     ws.close();
@@ -56,6 +56,6 @@ export async function waitUntilDeviceGone(port: number, deviceId: string): Promi
     const res = await httpFetch(`http://127.0.0.1:${port}/api/devices`);
     if (!res.ok) return false;
     const devices = (await res.json()) as Array<{ deviceId: string }>;
-    return !devices.some((d) => d.deviceId === deviceId);
+    return !devices.some(d => d.deviceId === deviceId);
   }, `device ${deviceId} removed from :${port}`);
 }

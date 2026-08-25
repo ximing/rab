@@ -17,8 +17,8 @@
 ### 1. 定义服务
 
 ```typescript
-import { Service } from "@rabjs/service";
-import { observable } from "@rabjs/observer";
+import { Service } from '@rabjs/service';
+import { observable } from '@rabjs/observer';
 
 class MainPageService extends Service {
   @observable
@@ -105,7 +105,7 @@ function createDomain<P = any>(
 const { Provider, Component } = createDomain(
   MainPageComponent,
   [{ identifier: MainPageService, factory: MainPageService }],
-  { name: "MainPage", strict: true }
+  { name: 'MainPage', strict: true }
 );
 ```
 
@@ -273,13 +273,11 @@ const MainPageComponent = () => {
 ```typescript
 class MyService extends Service {
   getValue(): string {
-    return "value";
+    return 'value';
   }
 }
 
-const { Provider } = createDomain(Component, [
-  { identifier: MyService, factory: MyService },
-]);
+const { Provider } = createDomain(Component, [{ identifier: MyService, factory: MyService }]);
 ```
 
 ### 使用工厂函数
@@ -287,9 +285,9 @@ const { Provider } = createDomain(Component, [
 ```typescript
 const { Provider } = createDomain(Component, [
   {
-    identifier: "myService",
-    factory: (container) => ({
-      getValue: () => "value",
+    identifier: 'myService',
+    factory: container => ({
+      getValue: () => 'value',
     }),
   },
 ]);
@@ -298,11 +296,11 @@ const { Provider } = createDomain(Component, [
 ### 使用实例
 
 ```typescript
-const instance = { getValue: () => "value" };
+const instance = { getValue: () => 'value' };
 
 const { Provider } = createDomain(Component, [
   {
-    identifier: "myService",
+    identifier: 'myService',
     factory: instance,
   },
 ]);
@@ -343,9 +341,7 @@ const ChildComponent = () => {
 服务实例与 Provider 的生命周期一致。
 
 ```typescript
-const { Provider } = createDomain(Component, [
-  { identifier: MyService, factory: MyService },
-]);
+const { Provider } = createDomain(Component, [{ identifier: MyService, factory: MyService }]);
 
 // 当 Provider 挂载时，创建容器和服务实例
 // 当 Provider 卸载时，销毁容器和服务实例
@@ -456,7 +452,7 @@ const { Provider } = createDomain(Component, [
   { identifier: Service1, factory: Service1 },
   {
     identifier: Service2,
-    factory: (container) => {
+    factory: container => {
       const service1 = container.resolve(Service1);
       return new Service2(service1);
     },
@@ -490,7 +486,7 @@ test("should render", () => {
 A: 使用全局容器或通过 props 传递服务实例。
 
 ```typescript
-import { getGlobalContainer } from "@rabjs/service";
+import { getGlobalContainer } from '@rabjs/service';
 
 const globalContainer = getGlobalContainer();
 const service = globalContainer.resolve(MyService);

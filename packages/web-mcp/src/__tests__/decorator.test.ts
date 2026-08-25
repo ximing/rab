@@ -27,13 +27,19 @@ describe('mcpTool 装饰器', () => {
   it('多个方法都被标注时，全部可读取', () => {
     class CartService {
       @mcpTool({ description: '获取购物车' })
-      getCart() { return {}; }
+      getCart() {
+        return {};
+      }
 
       @mcpTool({ description: '添加商品' })
-      addItem(_id: string) { return true; }
+      addItem(_id: string) {
+        return true;
+      }
 
       @mcpTool({ description: '清空购物车' })
-      clearCart() { return; }
+      clearCart() {
+        return;
+      }
     }
 
     const metaList = getMcpToolMetadataList(CartService.prototype);
@@ -48,7 +54,9 @@ describe('mcpTool 装饰器', () => {
   it('自定义 name 选项', () => {
     class OrderService {
       @mcpTool({ description: '获取订单', name: 'custom_tool_name' })
-      fetchOrders() { return []; }
+      fetchOrders() {
+        return [];
+      }
     }
 
     const meta = getMcpToolMetadata(OrderService.prototype, 'fetchOrders');
@@ -64,7 +72,9 @@ describe('mcpTool 装饰器', () => {
           { type: 'number', description: '页码' },
         ],
       })
-      searchProducts(_keyword: string, _page: number) { return []; }
+      searchProducts(_keyword: string, _page: number) {
+        return [];
+      }
     }
 
     const meta = getMcpToolMetadata(ProductService.prototype, 'searchProducts');
@@ -76,9 +86,13 @@ describe('mcpTool 装饰器', () => {
   it('未被标注的方法不在元数据中', () => {
     class MixedService {
       @mcpTool({ description: '标注方法' })
-      annotatedMethod() { return; }
+      annotatedMethod() {
+        return;
+      }
 
-      normalMethod() { return; }
+      normalMethod() {
+        return;
+      }
     }
 
     const metaList = getMcpToolMetadataList(MixedService.prototype);
@@ -91,12 +105,16 @@ describe('mcpTool 装饰器', () => {
   it('子类和父类的元数据相互隔离', () => {
     class BaseService {
       @mcpTool({ description: '父类方法' })
-      parentMethod() { return; }
+      parentMethod() {
+        return;
+      }
     }
 
     class ChildService extends BaseService {
       @mcpTool({ description: '子类方法' })
-      childMethod() { return; }
+      childMethod() {
+        return;
+      }
     }
 
     // 子类自身 metadata 只包含 childMethod

@@ -10,11 +10,11 @@
  * - 全局注册表，支持通过名称快速获取容器
  */
 
-export { Container, createContainer } from "./container";
+export { Container, createContainer } from './container';
 
-export { getGlobalContainer, resetGlobalContainer } from "./globals";
+export { getGlobalContainer, resetGlobalContainer } from './globals';
 
-export { ServiceScope } from "./types";
+export { ServiceScope } from './types';
 
 export type {
   ServiceIdentifier,
@@ -24,4 +24,4 @@ export type {
   ContainerOptions,
   DestroyCallback,
   IContainer,
-} from "./types";
+} from './types';

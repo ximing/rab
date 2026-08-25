@@ -1,5 +1,5 @@
-import { observe, unobserve } from "@rabjs/observer";
-import type { Reaction } from "@rabjs/observer";
+import { observe, unobserve } from '@rabjs/observer';
+import type { Reaction } from '@rabjs/observer';
 
 /**
  * Memo 装饰器配置选项
@@ -87,9 +87,7 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
   ): PropertyDescriptor {
     if (!descriptor || !descriptor.get) {
       throw new Error(
-        `@Memo 装饰器只能用于 getter 方法，但 ${String(
-          propertyKey
-        )} 不是一个 getter`
+        `@Memo 装饰器只能用于 getter 方法，但 ${String(propertyKey)} 不是一个 getter`
       );
     }
 
@@ -226,12 +224,9 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
  * }
  * ```
  */
-export function invalidateMemo(
-  instance: any,
-  propertyKey: string | symbol
-): void {
+export function invalidateMemo(instance: any, propertyKey: string | symbol): void {
   const cleanupMethodName = `__cleanup_memo_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === "function") {
+  if (typeof instance[cleanupMethodName] === 'function') {
     instance[cleanupMethodName]();
   }
 }
@@ -263,7 +258,7 @@ export function cleanupAllMemos(instance: any): void {
 
   for (const propertyName of propertyNames) {
     const cleanupMethodName = `__cleanup_memo_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === "function") {
+    if (typeof instance[cleanupMethodName] === 'function') {
       instance[cleanupMethodName]();
     }
   }

@@ -20,16 +20,8 @@
  *   .expect(); // 失败时抛 RSAssertionError
  */
 
-import {
-  executeAssertions,
-  RSAssertionError,
-} from '@rabjs/shared';
-import type {
-  AssertOp,
-  Assertion,
-  AssertResult,
-  ElementAssertion,
-} from '@rabjs/shared';
+import { executeAssertions, RSAssertionError } from '@rabjs/shared';
+import type { AssertOp, Assertion, AssertResult, ElementAssertion } from '@rabjs/shared';
 
 import { printAssertResult } from './reporter';
 

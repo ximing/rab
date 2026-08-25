@@ -6,19 +6,19 @@
  * getConnectionsCount 是仅供测试使用的内部探针。
  */
 
-import { observable } from "../observable";
-import { observe, unobserve } from "../observer";
-import { getConnectionsCount } from "../internals/reaction-track";
-import type { Reaction } from "../internals/types";
+import { observable } from '../observable';
+import { observe, unobserve } from '../observer';
+import { getConnectionsCount } from '../internals/reaction-track';
+import type { Reaction } from '../internals/types';
 
-describe("#12 空 connection entry 清理", () => {
-  test("unobserve 后: N 个动态 key 的 connection entry 数归零", () => {
+describe('#12 空 connection entry 清理', () => {
+  test('unobserve 后: N 个动态 key 的 connection entry 数归零', () => {
     const rawObj: Record<string, number> = {};
     const obj = observable(rawObj);
 
     const reactions: Reaction[] = [];
     for (let i = 0; i < 50; i++) {
-      const key = "k" + i;
+      const key = 'k' + i;
       reactions.push(
         observe(() => {
           obj[key] as number;
@@ -33,7 +33,7 @@ describe("#12 空 connection entry 清理", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("同一 key 多个 reaction: 全部释放后才清除 entry", () => {
+  test('同一 key 多个 reaction: 全部释放后才清除 entry', () => {
     const rawObj = { v: 1 };
     const obj = observable(rawObj);
 
@@ -53,7 +53,7 @@ describe("#12 空 connection entry 清理", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("释放后再次 observe 同 key 正常工作 (无 stale)", () => {
+  test('释放后再次 observe 同 key 正常工作 (无 stale)', () => {
     const rawObj = { v: 1 };
     const obj = observable(rawObj);
 
@@ -82,17 +82,17 @@ describe("#12 空 connection entry 清理", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("reaction 重跑切换依赖后, 旧 key 的空 entry 被清除", () => {
+  test('reaction 重跑切换依赖后, 旧 key 的空 entry 被清除', () => {
     const rawObj: Record<string, number> = {};
     const obj = observable(rawObj);
 
-    let key = "a";
+    let key = 'a';
     const r = observe(() => {
       obj[key] as number;
     });
     expect(getConnectionsCount(rawObj)).toBe(1);
 
-    key = "b";
+    key = 'b';
     r();
     // 旧 "a" entry (已空) 被清除, 新 "b" entry 建立
     expect(getConnectionsCount(rawObj)).toBe(1);
@@ -101,7 +101,7 @@ describe("#12 空 connection entry 清理", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("集合对象 key (WeakRef 包装) 的 entry 同样被清理", () => {
+  test('集合对象 key (WeakRef 包装) 的 entry 同样被清理', () => {
     const rawMap = new Map();
     const m = observable(rawMap);
     const keyObj = { id: 1 };

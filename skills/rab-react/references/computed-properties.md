@@ -5,17 +5,14 @@
 计算属性会自动追踪依赖并在依赖变化时重新计算：
 
 ```typescript
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export class ShoppingCartService extends Service {
   items: Array<{ id: string; price: number; quantity: number }> = [];
 
   // 计算总价
   get total() {
-    return this.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    return this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }
 
   // 计算商品数量
@@ -29,7 +26,7 @@ export class ShoppingCartService extends Service {
   }
 
   addItem(id: string, price: number) {
-    const item = this.items.find((i) => i.id === id);
+    const item = this.items.find(i => i.id === id);
     if (item) {
       item.quantity++;
     } else {
@@ -38,7 +35,7 @@ export class ShoppingCartService extends Service {
   }
 
   removeItem(id: string) {
-    this.items = this.items.filter((i) => i.id !== id);
+    this.items = this.items.filter(i => i.id !== id);
   }
 }
 ```

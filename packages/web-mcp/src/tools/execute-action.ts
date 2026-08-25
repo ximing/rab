@@ -7,11 +7,7 @@
 
 import type { Service } from '@rabjs/service';
 
-import type {
-  ExecuteActionInput,
-  ExecuteActionResult,
-  WebMcpToolDefinition,
-} from '../types';
+import type { ExecuteActionInput, ExecuteActionResult, WebMcpToolDefinition } from '../types';
 import { executeAssertions } from '../utils/assert';
 
 /**
@@ -61,7 +57,9 @@ export async function executeAction(
   const modelState = (instance as any).$model?.[action];
   const loading = modelState?.loading ?? false;
   // 优先使用 $model 中的 error，其次使用执行时抛出的异常
-  const finalError = executeError ?? (modelState?.error ? String(modelState.error.message || modelState.error) : null);
+  const finalError =
+    executeError ??
+    (modelState?.error ? String(modelState.error.message || modelState.error) : null);
 
   const executeResult: ExecuteActionResult = {
     result,
@@ -81,12 +79,11 @@ export async function executeAction(
 /**
  * execute_action Tool 的 WebMCP 定义
  */
-export function createExecuteActionTool(
-  instanceMap: Map<string, Service>
-): WebMcpToolDefinition {
+export function createExecuteActionTool(instanceMap: Map<string, Service>): WebMcpToolDefinition {
   return {
     name: 'execute_action',
-    description: '执行指定 Service 实例的某个方法。需要先通过 list_services 获取 instanceId。支持可选的 assertAfter 参数，在一次调用内完成"操作 + 断言"',
+    description:
+      '执行指定 Service 实例的某个方法。需要先通过 list_services 获取 instanceId。支持可选的 assertAfter 参数，在一次调用内完成"操作 + 断言"',
     inputSchema: {
       type: 'object',
       properties: {
@@ -105,7 +102,8 @@ export function createExecuteActionTool(
         },
         assertAfter: {
           type: 'array',
-          description: '可选：执行方法后立即运行的断言列表，语义等同于 assert_state。当方法为异步时，等待 Promise resolve 后再执行断言',
+          description:
+            '可选：执行方法后立即运行的断言列表，语义等同于 assert_state。当方法为异步时，等待 Promise resolve 后再执行断言',
           items: {
             type: 'object',
             properties: {
@@ -116,13 +114,23 @@ export function createExecuteActionTool(
               op: {
                 type: 'string',
                 enum: [
-                  'eq', 'neq',
-                  'gt', 'gte', 'lt', 'lte',
-                  'exists', 'notExists',
-                  'includes', 'notIncludes',
+                  'eq',
+                  'neq',
+                  'gt',
+                  'gte',
+                  'lt',
+                  'lte',
+                  'exists',
+                  'notExists',
+                  'includes',
+                  'notIncludes',
                   'matches',
                   'type',
-                  'length', 'lengthGt', 'lengthGte', 'lengthLt', 'lengthLte',
+                  'length',
+                  'lengthGt',
+                  'lengthGte',
+                  'lengthLt',
+                  'lengthLte',
                   'deepEq',
                 ],
                 description: '断言操作符',

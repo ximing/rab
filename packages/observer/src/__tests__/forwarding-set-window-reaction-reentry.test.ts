@@ -9,10 +9,10 @@
  * - 两次写入都要被观察到 (otherCalls >= 2, childCalls >= 3);
  * - 不得出现双通知爆炸 (窗口内嵌套 set 不因外层在飞帧而重复通知: childCalls <= 4, otherCalls <= 3)。
  */
-import { observable, observe } from "../main";
+import { observable, observe } from '../main';
 
-describe("转发窗口内同步 reaction 重入写回 in-flight key", () => {
-  test("嵌套 setter 链收敛: 终值正确、两次写入均被观察、无双通知", () => {
+describe('转发窗口内同步 reaction 重入写回 in-flight key', () => {
+  test('嵌套 setter 链收敛: 终值正确、两次写入均被观察、无双通知', () => {
     const other = observable({ x: 0 });
     const proto = observable({
       set v(val: number) {
@@ -51,7 +51,7 @@ describe("转发窗口内同步 reaction 重入写回 in-flight key", () => {
     expect(otherCalls).toBeLessThanOrEqual(3);
   });
 
-  test("转发窗口内同步 reaction 对另一 observable 的 defineProperty 仍必须通知", () => {
+  test('转发窗口内同步 reaction 对另一 observable 的 defineProperty 仍必须通知', () => {
     const other = observable({ y: 0 });
     const target = observable({ z: 0 });
     const proto = observable({
@@ -66,7 +66,7 @@ describe("转发窗口内同步 reaction 重入写回 in-flight key", () => {
     observe(() => {
       zRan++;
       if (target.z > 0) {
-        Object.defineProperty(other, "y", {
+        Object.defineProperty(other, 'y', {
           value: target.z * 10,
           configurable: true,
           writable: true,

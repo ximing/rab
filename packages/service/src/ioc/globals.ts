@@ -2,7 +2,7 @@
  * IOC 容器全局管理
  * 包括全局容器实例、全局注册表等
  */
-import { Container } from "./container";
+import { Container } from './container';
 /**
  * 全局实例-容器映射表
  * 使用 WeakMap 建立 Service 实例和 Container 的关系
@@ -27,7 +27,7 @@ let currentInstantiatingContainer: Container | null = null;
 export const getGlobalContainer = (): any => {
   if (!globalContainer) {
     // 延迟导入以避免循环依赖
-    globalContainer = new Container({ name: "global" });
+    globalContainer = new Container({ name: 'global' });
   }
   return globalContainer;
 };
@@ -52,8 +52,6 @@ export const getCurrentInstantiatingContainer = (): Container | null => {
 /**
  * 设置当前正在实例化的容器
  */
-export const setCurrentInstantiatingContainer = (
-  container: Container | null
-): void => {
+export const setCurrentInstantiatingContainer = (container: Container | null): void => {
   currentInstantiatingContainer = container;
 };

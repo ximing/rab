@@ -1,9 +1,9 @@
-import { proxyToRaw } from "./proxy-raw-map";
+import { proxyToRaw } from './proxy-raw-map';
 
 export const hasOwnProperty = Object.prototype.hasOwnProperty;
 // Type guard to check if value is an object
 export function isObject(value: unknown): value is object {
-  return typeof value === "object" && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 export function isObservable(obj: unknown): boolean {
@@ -30,7 +30,7 @@ export function raw<T extends object>(obj: T): T {
  * 依然存在 (存 proxy 取 raw 失灵、依赖注册与通知落在不同身份上永久漏通知)。
  */
 export function toRawIfProxy<T>(value: T): T {
-  if (isObject(value) || typeof value === "function") {
+  if (isObject(value) || typeof value === 'function') {
     const rawValue = proxyToRaw.get(value);
     if (rawValue !== undefined) {
       return rawValue as T;
@@ -105,13 +105,9 @@ export function normalizeCollectionEntries(target: object): void {
  * 或赋入的 value 当落盘比较值 —— setter 忽略写入时本来就无从无副作用地
  * 获知落盘值)。
  */
-export function ownDataValue(
-  target: object,
-  key: PropertyKey,
-  fallback: unknown
-): unknown {
+export function ownDataValue(target: object, key: PropertyKey, fallback: unknown): unknown {
   const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
-  if (descriptor !== undefined && "value" in descriptor) {
+  if (descriptor !== undefined && 'value' in descriptor) {
     return descriptor.value;
   }
   return fallback;

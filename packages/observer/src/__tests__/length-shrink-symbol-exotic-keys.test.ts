@@ -12,11 +12,11 @@
  *    length 收缩不影响它的值。把它误匹配为被截断索引会产生与自身值无关
  *    的假通知。匹配前必须校验 key 是 canonical index。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", () => {
-  test("自定义 symbol key 依赖 + 数值收缩不应抛 TypeError", () => {
-    const s = Symbol("custom");
+describe('数组 length 收缩: symbol / 奇异 key 的安全与精确匹配', () => {
+  test('自定义 symbol key 依赖 + 数值收缩不应抛 TypeError', () => {
+    const s = Symbol('custom');
     const arr = observable([1, 2, 3, 4, 5]) as any;
     let runs = 0;
     observe(() => {
@@ -33,7 +33,7 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
   });
 
   test("自定义 symbol key 依赖 + 字符串收缩 (Reflect.set '3') 不应抛 TypeError", () => {
-    const s = Symbol("custom");
+    const s = Symbol('custom');
     const arr = observable([1, 2, 3, 4, 5]) as any;
     let runs = 0;
     observe(() => {
@@ -41,14 +41,14 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
       void arr[s];
     });
     expect(() => {
-      Reflect.set(arr, "length", "3");
+      Reflect.set(arr, 'length', '3');
     }).not.toThrow();
     expect(arr.length).toBe(3);
     expect(runs).toBe(1);
   });
 
-  test("自定义 symbol key 依赖 + defineProperty 收缩不应抛 TypeError", () => {
-    const s = Symbol("custom");
+  test('自定义 symbol key 依赖 + defineProperty 收缩不应抛 TypeError', () => {
+    const s = Symbol('custom');
     const arr = observable([1, 2, 3, 4, 5]) as any;
     let runs = 0;
     observe(() => {
@@ -56,14 +56,14 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
       void arr[s];
     });
     expect(() => {
-      Object.defineProperty(arr, "length", { value: 2 });
+      Object.defineProperty(arr, 'length', { value: 2 });
     }).not.toThrow();
     expect(arr.length).toBe(2);
     expect(runs).toBe(1);
   });
 
-  test("shadowObservable 数组: symbol key 依赖 + 收缩不应抛 TypeError", () => {
-    const s = Symbol("custom");
+  test('shadowObservable 数组: symbol key 依赖 + 收缩不应抛 TypeError', () => {
+    const s = Symbol('custom');
     const arr = shadowObservable([1, 2, 3, 4, 5]) as any;
     let runs = 0;
     observe(() => {
@@ -77,12 +77,12 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
     expect(runs).toBe(1);
   });
 
-  test("symbol 依赖与真实索引依赖共存时: 不抛错且索引依赖仍被正确通知", () => {
-    const s = Symbol("custom");
+  test('symbol 依赖与真实索引依赖共存时: 不抛错且索引依赖仍被正确通知', () => {
+    const s = Symbol('custom');
     const arr = observable([1, 2, 3, 4, 5]) as any;
     let symRuns = 0;
     let idxRuns = 0;
-    let idxLast: unknown = "initial";
+    let idxLast: unknown = 'initial';
     observe(() => {
       symRuns++;
       void arr[s];
@@ -102,7 +102,7 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
     let runs = 0;
     observe(() => {
       runs++;
-      void arr["03"]; // Number("03") === 3, 但 arr["03"] 是普通属性, 恒为 undefined
+      void arr['03']; // Number("03") === 3, 但 arr["03"] 是普通属性, 恒为 undefined
     });
     expect(runs).toBe(1);
     arr.length = 2;
@@ -113,10 +113,10 @@ describe("数组 length 收缩: symbol / 奇异 key 的安全与精确匹配", (
   test("canonical 字符串索引 key (如 '4') 仍应被收缩通知 (回归)", () => {
     const arr = observable([1, 2, 3, 4, 5]) as any;
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
-      last = arr["4"];
+      last = arr['4'];
     });
     arr.length = 3;
     expect(runs).toBe(2);

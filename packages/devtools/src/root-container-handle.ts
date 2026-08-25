@@ -16,10 +16,7 @@ import { RSExpectBuilder } from './assert/expect';
 /**
  * 递归遍历 Container 树，通过 instanceId 查找 Service 实例
  */
-function walkContainerForInstanceId(
-  container: Container,
-  instanceId: string
-): Service | undefined {
+function walkContainerForInstanceId(container: Container, instanceId: string): Service | undefined {
   for (const definition of container.getServiceDefinitions()) {
     if (!definition.instance) continue;
     const svc = definition.instance as Service;
@@ -35,10 +32,7 @@ function walkContainerForInstanceId(
 /**
  * 递归遍历 Container 树，通过 containerName 查找容器
  */
-function walkContainerForName(
-  container: Container,
-  containerName: string
-): Container | undefined {
+function walkContainerForName(container: Container, containerName: string): Container | undefined {
   if (String(container.getName()) === containerName) return container;
   for (const child of container.getChildren()) {
     const found = walkContainerForName(child, containerName);
@@ -183,8 +177,9 @@ export function createRSRootContainerHandle(): RSRootContainerHandle {
     },
 
     expect(instanceId: string) {
-      return new RSExpectBuilder(instanceId, (id: string) =>
-        walkContainerForInstanceId(rootContainer, id) as object | undefined
+      return new RSExpectBuilder(
+        instanceId,
+        (id: string) => walkContainerForInstanceId(rootContainer, id) as object | undefined
       );
     },
   };
@@ -204,5 +199,6 @@ export function createRSRootContainerHandle(): RSRootContainerHandle {
 export function setupWindowRootContainer(): void {
   // 在 Node.js（真实 SSR）环境中 window 不存在，安全跳过
   if (globalThis.window === undefined) return;
-  (globalThis.window as Window & typeof globalThis).__RS_ROOT_CONTAINER__ = createRSRootContainerHandle();
+  (globalThis.window as Window & typeof globalThis).__RS_ROOT_CONTAINER__ =
+    createRSRootContainerHandle();
 }

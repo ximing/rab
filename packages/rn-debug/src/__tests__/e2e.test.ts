@@ -18,7 +18,7 @@ class NodeWebSocketAdapter implements MinimalWebSocket {
   onerror: (() => void) | null = null;
   constructor(private readonly inner: WS) {
     inner.on('open', () => this.onopen?.());
-    inner.on('message', (data) => this.onmessage?.({ data: String(data) }));
+    inner.on('message', data => this.onmessage?.({ data: String(data) }));
     inner.on('close', () => this.onclose?.());
     inner.on('error', () => this.onerror?.());
   }
@@ -30,13 +30,11 @@ class NodeWebSocketAdapter implements MinimalWebSocket {
   }
 }
 
-
-
 async function waitFor(predicate: () => Promise<boolean>, timeoutMs = 5000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await predicate()) return;
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 50));
   }
   throw new Error('waitFor timeout');
 }
@@ -77,7 +75,7 @@ describe('e2e: SDK ⇄ server', () => {
 
       // 等设备注册
       await waitFor(async () => {
-        const devices = (await httpFetch(`${base}/api/devices`).then((r) => r.json())) as unknown[];
+        const devices = (await httpFetch(`${base}/api/devices`).then(r => r.json())) as unknown[];
         return devices.length === 1;
       });
       expect(session!.isConnected()).toBe(true);
@@ -86,7 +84,7 @@ describe('e2e: SDK ⇄ server', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'rab.listServices', payload: {} }),
-      }).then((r) => r.json())) as { status: string; result: unknown[] };
+      }).then(r => r.json())) as { status: string; result: unknown[] };
 
       expect(body.status).toBe('ok');
       expect(Array.isArray(body.result)).toBe(true);

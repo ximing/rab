@@ -5,9 +5,9 @@
  * useService 会按照 Provider 作用域链向上查找服务
  */
 
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
-import { bindServices } from "./bind";
+import { bindServices } from './bind';
 
 function RSRootInner({ children }: { children: ReactNode }) {
   return children;

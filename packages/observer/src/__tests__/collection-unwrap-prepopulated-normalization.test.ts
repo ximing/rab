@@ -17,16 +17,10 @@
  * pin 测试明确该边界，防止后续误判为回归。
  */
 
-import {
-  observable,
-  shadowObservable,
-  observe,
-  unobserve,
-  raw,
-} from "../main";
+import { observable, shadowObservable, observe, unobserve, raw } from '../main';
 
-describe("collection wrap-time normalization (G5 review round 3, issue 1)", () => {
-  test("Map 构造期存入 proxy key/value：包装时归一化为 raw，任一身份都可达", () => {
+describe('collection wrap-time normalization (G5 review round 3, issue 1)', () => {
+  test('Map 构造期存入 proxy key/value：包装时归一化为 raw，任一身份都可达', () => {
     const keyObj = { id: 1 };
     const valObj = { v: 1 };
     const box = observable({ keyObj, valObj });
@@ -49,7 +43,7 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
     expect(m.size).toBe(0);
   });
 
-  test("Map 构造期条目归一化后，混合写入不产生双条目", () => {
+  test('Map 构造期条目归一化后，混合写入不产生双条目', () => {
     const keyObj = { id: 2 };
     const box = observable({ keyObj });
     const proxyKey = box.keyObj;
@@ -65,7 +59,7 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
     expect(m.size).toBe(0);
   });
 
-  test("Map 构造期条目归一化后，依赖通知身份对齐", () => {
+  test('Map 构造期条目归一化后，依赖通知身份对齐', () => {
     const keyObj = { id: 3 };
     const box = observable({ keyObj });
     const proxyKey = box.keyObj;
@@ -84,7 +78,7 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
     unobserve(reaction);
   });
 
-  test("Set 构造期存入 proxy：包装时归一化，has(raw)/delete 双身份可达", () => {
+  test('Set 构造期存入 proxy：包装时归一化，has(raw)/delete 双身份可达', () => {
     const valObj = { id: 4 };
     const box = observable({ valObj });
     const proxyVal = box.valObj;
@@ -99,26 +93,26 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
     expect(s.size).toBe(0);
   });
 
-  test("Map 构造期 value 归一化：内部存 raw，get 返回缓存的 observable 包装", () => {
-    const valObjA = { v: "a" };
-    const valObjB = { v: "b" };
+  test('Map 构造期 value 归一化：内部存 raw，get 返回缓存的 observable 包装', () => {
+    const valObjA = { v: 'a' };
+    const valObjB = { v: 'b' };
     const box = observable({ valObjA, valObjB });
 
     const m = observable(
       new Map<string, unknown>([
-        ["a", box.valObjA],
-        ["b", box.valObjB],
+        ['a', box.valObjA],
+        ['b', box.valObjB],
       ])
     );
 
-    expect(raw(m).get("a")).toBe(valObjA);
-    expect(raw(m).get("b")).toBe(valObjB);
+    expect(raw(m).get('a')).toBe(valObjA);
+    expect(raw(m).get('b')).toBe(valObjB);
     // deep 集合 get 返回 observableChild 缓存的同一 proxy，往返身份保持
-    expect(m.get("a")).toBe(box.valObjA);
-    expect(m.get("b")).toBe(box.valObjB);
+    expect(m.get('a')).toBe(box.valObjA);
+    expect(m.get('b')).toBe(box.valObjB);
   });
 
-  test("shadowObservable 的 Map/Set 构造期条目同样归一化", () => {
+  test('shadowObservable 的 Map/Set 构造期条目同样归一化', () => {
     const keyObj = { id: 5 };
     const valObj = { v: 5 };
     const box = observable({ keyObj, valObj });
@@ -143,7 +137,7 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
     expect(ss.size).toBe(0);
   });
 
-  test("嵌套路径延迟包装的集合同样归一化（observableChild 懒包装）", () => {
+  test('嵌套路径延迟包装的集合同样归一化（observableChild 懒包装）', () => {
     const keyObj = { id: 6 };
     const box = observable({ keyObj, inner: null as unknown });
     const proxyKey = box.keyObj;
@@ -161,7 +155,7 @@ describe("collection wrap-time normalization (G5 review round 3, issue 1)", () =
   // ------------------------------------------------------------------
   // WeakMap/WeakSet 边界 pin（不可枚举 → 无法在包装时归一化）
   // ------------------------------------------------------------------
-  test("pin: WeakMap 构造期存入的 proxy key 不可达（不可枚举，固有权衡）", () => {
+  test('pin: WeakMap 构造期存入的 proxy key 不可达（不可枚举，固有权衡）', () => {
     const keyObj = { id: 7 };
     const box = observable({ keyObj });
     const proxyKey = box.keyObj;

@@ -11,7 +11,7 @@ pnpm add @rabjs/service
 ## 使用
 
 ```typescript
-import { Service } from "@rabjs/service";
+import { Service } from '@rabjs/service';
 ```
 
 ## 开发

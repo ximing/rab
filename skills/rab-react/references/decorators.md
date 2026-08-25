@@ -12,7 +12,7 @@ RSJS 的 Service 有两个重要的**默认语义**，理解它们之后，大�
 Service 中的所有方法默认都是 action：方法内对 observable 属性的多次修改会被批量合并，只触发一次 UI 更新。
 
 ```typescript
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export class CounterService extends Service {
   count = 0;
@@ -35,7 +35,7 @@ export class CounterService extends Service {
 Service 内部依赖另一个 Service 时，推荐用 getter + `this.resolve` 模式：
 
 ```typescript
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export class LoggerService extends Service {
   log(message: string) {
@@ -50,7 +50,7 @@ export class UserService extends Service {
   }
 
   async fetchUsers() {
-    this.loggerService.log("Fetching users");
+    this.loggerService.log('Fetching users');
     // ...
   }
 }
@@ -77,7 +77,7 @@ export default bindServices(UserPage, [LoggerService, UserService]);
 所有方法默认都是 action（批量更新）。如果某个方法需要每次修改立即生效（不使用批量更新），用 `@SyncAction` 标记：
 
 ```typescript
-import { Service, SyncAction } from "@rabjs/react";
+import { Service, SyncAction } from '@rabjs/react';
 
 export class UserService extends Service {
   @SyncAction
@@ -90,10 +90,10 @@ export class UserService extends Service {
 ## @Debounce - 防抖
 
 ```typescript
-import { Service, Debounce } from "@rabjs/react";
+import { Service, Debounce } from '@rabjs/react';
 
 export class SearchService extends Service {
-  query = "";
+  query = '';
   results: any[] = [];
 
   setQuery(q: string) {
@@ -117,7 +117,7 @@ export class SearchService extends Service {
 ## @Throttle - 节流
 
 ```typescript
-import { Service, Throttle } from "@rabjs/react";
+import { Service, Throttle } from '@rabjs/react';
 
 export class ScrollService extends Service {
   scrollPosition = 0;
@@ -153,19 +153,19 @@ export class DataService extends Service {
 ## @On - 自动监听事件
 
 ```typescript
-import { Service, On } from "@rabjs/react";
+import { Service, On } from '@rabjs/react';
 
 export class NotificationService extends Service {
   notifications: string[] = [];
 
   // 自动监听容器事件
-  @On("chat:message")
+  @On('chat:message')
   handleMessage(data: { text: string }) {
     this.notifications.push(data.text);
   }
 
   // 自动监听全局事件
-  @On("app:notification", { scope: "global" })
+  @On('app:notification', { scope: 'global' })
   handleGlobalNotification(data: { text: string }) {
     this.notifications.push(data.text);
   }
@@ -175,7 +175,7 @@ export class NotificationService extends Service {
 ## 完整示例
 
 ```typescript
-import { Service, Debounce, Throttle, Memo, On } from "@rabjs/react";
+import { Service, Debounce, Throttle, Memo, On } from '@rabjs/react';
 
 export class CompleteService extends Service {
   // ✅ 依赖其他 Service：getter + this.resolve
@@ -184,7 +184,7 @@ export class CompleteService extends Service {
   }
 
   data: any[] = [];
-  query = "";
+  query = '';
 
   // 防抖搜索（方法默认就是 action，无需 @Action）
   @Debounce(300)
@@ -197,7 +197,7 @@ export class CompleteService extends Service {
   // 节流滚动
   @Throttle(100)
   handleScroll() {
-    this.loggerService.log("Scrolling...");
+    this.loggerService.log('Scrolling...');
   }
 
   // 缓存计算
@@ -207,7 +207,7 @@ export class CompleteService extends Service {
   }
 
   // 监听事件
-  @On("data:refresh")
+  @On('data:refresh')
   handleRefresh() {
     this.search(this.query);
   }
@@ -223,7 +223,7 @@ export class CompleteService extends Service {
 `@Action` 只是给方法打上 `__isAction` 标记，而 Service 的方法**默认就是 action**，所以写它是多余的：
 
 ```typescript
-import { Service, Action } from "@rabjs/react";
+import { Service, Action } from '@rabjs/react';
 
 export class UserService extends Service {
   // ⚠️ 遗留写法：功能正常但多余，方法默认就是 action，直接删掉即可
@@ -239,7 +239,7 @@ export class UserService extends Service {
 `@Inject` 属性装饰器仍可从容器自动解析依赖，但推荐改用 getter + `this.resolve`：
 
 ```typescript
-import { Service, Inject } from "@rabjs/react";
+import { Service, Inject } from '@rabjs/react';
 
 export class UserService extends Service {
   // ⚠️ 遗留写法：仍可用，但不推荐
@@ -247,7 +247,7 @@ export class UserService extends Service {
   private logger!: LoggerService;
 
   async fetchUsers() {
-    this.logger.log("Fetching users");
+    this.logger.log('Fetching users');
   }
 }
 

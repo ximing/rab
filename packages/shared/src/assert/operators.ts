@@ -12,7 +12,13 @@ import type { Assertion, AssertionResult, AssertOp, ElementAssertion, AssertResu
  * 判断一个 op 是否为"长度类"断言操作符
  */
 function isLengthOp(op: AssertOp): boolean {
-  return op === 'length' || op === 'lengthGt' || op === 'lengthGte' || op === 'lengthLt' || op === 'lengthLte';
+  return (
+    op === 'length' ||
+    op === 'lengthGt' ||
+    op === 'lengthGte' ||
+    op === 'lengthLt' ||
+    op === 'lengthLte'
+  );
 }
 
 /**
@@ -64,22 +70,26 @@ export function executeAssertion(instance: object, assertion: Assertion): Assert
 
       // ─── 大小比较（数值）────────────────────────────
       case 'gt': {
-        passed = typeof rawValue === 'number' && typeof expected === 'number' && rawValue > expected;
+        passed =
+          typeof rawValue === 'number' && typeof expected === 'number' && rawValue > expected;
         actual = toSafeActual(rawValue);
         break;
       }
       case 'gte': {
-        passed = typeof rawValue === 'number' && typeof expected === 'number' && rawValue >= expected;
+        passed =
+          typeof rawValue === 'number' && typeof expected === 'number' && rawValue >= expected;
         actual = toSafeActual(rawValue);
         break;
       }
       case 'lt': {
-        passed = typeof rawValue === 'number' && typeof expected === 'number' && rawValue < expected;
+        passed =
+          typeof rawValue === 'number' && typeof expected === 'number' && rawValue < expected;
         actual = toSafeActual(rawValue);
         break;
       }
       case 'lte': {
-        passed = typeof rawValue === 'number' && typeof expected === 'number' && rawValue <= expected;
+        passed =
+          typeof rawValue === 'number' && typeof expected === 'number' && rawValue <= expected;
         actual = toSafeActual(rawValue);
         break;
       }
@@ -193,9 +203,11 @@ export function executeAssertion(instance: object, assertion: Assertion): Assert
       // ─── 对象 key 检查 ─────────────────────────────────
       case 'hasKeys': {
         // 支持单个 string 或 string[]
-        const keys = Array.isArray(expected) ? expected as string[] : [expected as string];
-        passed = rawValue !== null && typeof rawValue === 'object'
-          && keys.every(k => typeof k === 'string' && k in (rawValue as object));
+        const keys = Array.isArray(expected) ? (expected as string[]) : [expected as string];
+        passed =
+          rawValue !== null &&
+          typeof rawValue === 'object' &&
+          keys.every(k => typeof k === 'string' && k in (rawValue as object));
         actual = '[Object]';
         break;
       }
@@ -203,8 +215,10 @@ export function executeAssertion(instance: object, assertion: Assertion): Assert
       // ─── 对象结构浅层匹配 ──────────────────────────────
       case 'matchObject': {
         const subset = expected as Record<string, unknown>;
-        passed = rawValue !== null && typeof rawValue === 'object'
-          && isSubset(subset, rawValue as Record<string, unknown>);
+        passed =
+          rawValue !== null &&
+          typeof rawValue === 'object' &&
+          isSubset(subset, rawValue as Record<string, unknown>);
         actual = '[Object]';
         break;
       }
@@ -212,16 +226,18 @@ export function executeAssertion(instance: object, assertion: Assertion): Assert
       // ─── 数组元素断言 ───────────────────────────────────
       case 'some': {
         const subAssertion = expected as ElementAssertion;
-        passed = Array.isArray(rawValue)
-          && rawValue.some(item => executeScalarAssertion(item as object, subAssertion).passed);
+        passed =
+          Array.isArray(rawValue) &&
+          rawValue.some(item => executeScalarAssertion(item as object, subAssertion).passed);
         actual = `[Array(${Array.isArray(rawValue) ? rawValue.length : 0})]`;
         break;
       }
       case 'every': {
         const subAssertion = expected as ElementAssertion;
-        passed = Array.isArray(rawValue)
-          && rawValue.length > 0
-          && rawValue.every(item => executeScalarAssertion(item as object, subAssertion).passed);
+        passed =
+          Array.isArray(rawValue) &&
+          rawValue.length > 0 &&
+          rawValue.every(item => executeScalarAssertion(item as object, subAssertion).passed);
         actual = `[Array(${Array.isArray(rawValue) ? rawValue.length : 0})]`;
         break;
       }
@@ -279,7 +295,12 @@ export function executeAssertion(instance: object, assertion: Assertion): Assert
 function getLength(value: unknown): number | undefined {
   if (typeof value === 'string') return value.length;
   if (Array.isArray(value)) return value.length;
-  if (value !== null && typeof value === 'object' && 'length' in value && typeof (value as { length: unknown }).length === 'number') {
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'length' in value &&
+    typeof (value as { length: unknown }).length === 'number'
+  ) {
     return (value as { length: number }).length;
   }
   return undefined;
@@ -289,24 +310,27 @@ function getLength(value: unknown): number | undefined {
  * 浅层子集检查：subset 的所有键值对是否都存在于 target 中（值用 === 比较）
  * 仅用于 matchObject 内部；不递归，防止大对象 OOM
  */
-function isSubset(
-  subset: Record<string, unknown>,
-  target: Record<string, unknown>
-): boolean {
+function isSubset(subset: Record<string, unknown>, target: Record<string, unknown>): boolean {
   return Object.entries(subset).every(([k, v]) => target[k] === v);
 }
 
 /**
  * 针对 every/some 的标量子断言执行（限制为 ScalarAssertOp，防止 every/some 嵌套）
  */
-function executeScalarAssertion(
-  item: object,
-  assertion: ElementAssertion
-): { passed: boolean } {
+function executeScalarAssertion(item: object, assertion: ElementAssertion): { passed: boolean } {
   const SCALAR_OPS = new Set<string>([
-    'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
-    'exists', 'notExists', 'includes', 'notIncludes',
-    'matches', 'type',
+    'eq',
+    'neq',
+    'gt',
+    'gte',
+    'lt',
+    'lte',
+    'exists',
+    'notExists',
+    'includes',
+    'notIncludes',
+    'matches',
+    'type',
   ]);
   if (!SCALAR_OPS.has(assertion.op)) {
     return { passed: false };
@@ -325,10 +349,7 @@ function executeScalarAssertion(
  * @param assertions 断言列表
  * @returns 断言汇总结果
  */
-export function executeAssertions(
-  instance: object,
-  assertions: Assertion[]
-): AssertResult {
+export function executeAssertions(instance: object, assertions: Assertion[]): AssertResult {
   const results = assertions.map(assertion => executeAssertion(instance, assertion));
   const passedCount = results.filter(r => r.passed).length;
 

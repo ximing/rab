@@ -4,19 +4,14 @@
  * 底层的 Service 需要提供分层检索的能力，同时支持 注入 resolve的能力
  */
 
-import { Container } from "./ioc";
-import type {
-  ServiceIdentifier,
-  ServiceClass,
-  ServiceFactory,
-  RegisterOptions,
-} from "./ioc";
-import { getGlobalContainer } from "./ioc/globals";
-import { Service } from "./service";
+import { Container } from './ioc';
+import type { ServiceIdentifier, ServiceClass, ServiceFactory, RegisterOptions } from './ioc';
+import { getGlobalContainer } from './ioc/globals';
+import { Service } from './service';
 
 // 导出核心 Service 类和类型
-export { Service } from "./service";
-export type { MethodState, ExtractMethods } from "./service";
+export { Service } from './service';
+export type { MethodState, ExtractMethods } from './service';
 
 // 导出装饰器
 export {
@@ -41,7 +36,7 @@ export {
   setupEventListeners,
   cleanupEventListeners,
   cleanupAllEventListeners,
-} from "./decorators";
+} from './decorators';
 export type {
   InjectOptions,
   DebounceOptions,
@@ -49,21 +44,16 @@ export type {
   MemoOptions,
   OnOptions,
   OnceOptions,
-} from "./decorators";
+} from './decorators';
 
 // 导出事件系统
-export { EventSystem } from "./event";
-export type { EventScope, EventSystemOptions } from "./event";
+export { EventSystem } from './event';
+export type { EventScope, EventSystemOptions } from './event';
 
 // 导出 IOC 容器
-export * from "./ioc";
+export * from './ioc';
 
-export type {
-  ServiceIdentifier,
-  ServiceFactory,
-  ContainerOptions,
-  DestroyCallback,
-} from "./ioc";
+export type { ServiceIdentifier, ServiceFactory, ContainerOptions, DestroyCallback } from './ioc';
 
 /**
  * 全局注册服务
@@ -95,10 +85,7 @@ export type {
  */
 export function register<T extends Service = Service>(
   identifierOrClass: ServiceIdentifier<T> | ServiceClass<T>,
-  classOrFactoryOrOptions?:
-    | ServiceClass<T>
-    | ServiceFactory<T>
-    | RegisterOptions,
+  classOrFactoryOrOptions?: ServiceClass<T> | ServiceFactory<T> | RegisterOptions,
   optionsOrContainer?: RegisterOptions | Container,
   container?: Container
 ): Container {
@@ -111,8 +98,8 @@ export function register<T extends Service = Service>(
     targetContainer = optionsOrContainer;
   } else if (
     optionsOrContainer &&
-    typeof optionsOrContainer === "object" &&
-    !("factory" in optionsOrContainer)
+    typeof optionsOrContainer === 'object' &&
+    !('factory' in optionsOrContainer)
   ) {
     actualOptions = optionsOrContainer as RegisterOptions;
   }
@@ -122,11 +109,7 @@ export function register<T extends Service = Service>(
 
   // 调用容器的 register 方法
   if (actualOptions) {
-    finalContainer.register(
-      identifierOrClass,
-      classOrFactoryOrOptions as any,
-      actualOptions
-    );
+    finalContainer.register(identifierOrClass, classOrFactoryOrOptions as any, actualOptions);
   } else {
     finalContainer.register(identifierOrClass, classOrFactoryOrOptions as any);
   }
@@ -194,10 +177,7 @@ export function resolve<T extends Service = Service>(
  * }
  * ```
  */
-export function has(
-  identifier: ServiceIdentifier,
-  container?: Container
-): boolean {
+export function has(identifier: ServiceIdentifier, container?: Container): boolean {
   // 如果没有指定容器，使用全局容器
   const targetContainer = container || getGlobalContainer();
 
@@ -205,4 +185,4 @@ export function has(
   return targetContainer.has(identifier);
 }
 
-export { getGlobalContainer } from "./ioc/globals";
+export { getGlobalContainer } from './ioc/globals';

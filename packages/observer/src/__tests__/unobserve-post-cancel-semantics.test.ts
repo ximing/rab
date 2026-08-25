@@ -15,10 +15,10 @@
  * 已经在途的那一次执行"仍会落地。下游若需要彻底取消, 应在 unobserve 的
  * 同时自行清除 scheduler 侧的排期 (如 clearTimeout / scheduler.delete)。
  */
-import { observable, observe, unobserve } from "../main";
+import { observable, observe, unobserve } from '../main';
 
-describe("unobserve 之后的执行语义", () => {
-  test("unobserve 后手动调用 reaction 仍执行一次, 且执行期间不建立新依赖", () => {
+describe('unobserve 之后的执行语义', () => {
+  test('unobserve 后手动调用 reaction 仍执行一次, 且执行期间不建立新依赖', () => {
     const obj = observable({ count: 0 });
     let runs = 0;
     const r = observe(() => {
@@ -36,7 +36,7 @@ describe("unobserve 之后的执行语义", () => {
     expect(runs).toBe(2); // 但执行期间没有建立新依赖, 后续变更不再触发
   });
 
-  test("unobserve 前已被函数型 scheduler 排队的 reaction, 出队执行仍发生一次且不重建依赖", () => {
+  test('unobserve 前已被函数型 scheduler 排队的 reaction, 出队执行仍发生一次且不重建依赖', () => {
     const obj = observable({ count: 0 });
     const pending: Array<() => void> = [];
     let runs = 0;
@@ -46,7 +46,7 @@ describe("unobserve 之后的执行语义", () => {
         runs++;
       },
       {
-        scheduler: (rr) => pending.push(rr as unknown as () => void),
+        scheduler: rr => pending.push(rr as unknown as () => void),
       }
     );
 
@@ -66,7 +66,7 @@ describe("unobserve 之后的执行语义", () => {
     expect(runs).toBe(2); // 执行期间未建立新依赖
   });
 
-  test("unobserve 后已由 setTimeout 排期的 reaction 到点仍执行一次 (30ms 实测场景)", (done) => {
+  test('unobserve 后已由 setTimeout 排期的 reaction 到点仍执行一次 (30ms 实测场景)', done => {
     const obj = observable({ count: 0 });
     let runs = 0;
     const r = observe(
@@ -75,7 +75,7 @@ describe("unobserve 之后的执行语义", () => {
         runs++;
       },
       {
-        scheduler: (rr) => {
+        scheduler: rr => {
           setTimeout(rr as unknown as () => void, 30);
         },
       }

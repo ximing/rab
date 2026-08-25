@@ -15,7 +15,7 @@ export class TMSWorkbenchService extends Service {
     return this.resolve(OrderReceivingStoreService); // 返回 Service 对象
   }
   get poiOptions() {
-    return this.orderReceivingStoreService.options;  // 派生状态
+    return this.orderReceivingStoreService.options; // 派生状态
   }
 }
 ```
@@ -137,31 +137,31 @@ interface Assertion {
 
 type AssertOp =
   // ─── 相等 ───────────────────────────────────────
-  | 'eq'           // actual === expected
-  | 'neq'          // actual !== expected
+  | 'eq' // actual === expected
+  | 'neq' // actual !== expected
   // ─── 大小比较（数值）────────────────────────────
-  | 'gt'           // actual > expected
-  | 'gte'          // actual >= expected
-  | 'lt'           // actual < expected
-  | 'lte'          // actual <= expected
+  | 'gt' // actual > expected
+  | 'gte' // actual >= expected
+  | 'lt' // actual < expected
+  | 'lte' // actual <= expected
   // ─── 存在性 ─────────────────────────────────────
-  | 'exists'       // actual != null && actual !== undefined
-  | 'notExists'    // actual == null || actual === undefined
+  | 'exists' // actual != null && actual !== undefined
+  | 'notExists' // actual == null || actual === undefined
   // ─── 字符串 / 数组包含 ──────────────────────────
-  | 'includes'     // Array.includes(expected) 或 string.includes(expected)
+  | 'includes' // Array.includes(expected) 或 string.includes(expected)
   | 'notIncludes'
   // ─── 正则匹配 ────────────────────────────────────
-  | 'matches'      // new RegExp(expected).test(actual)
+  | 'matches' // new RegExp(expected).test(actual)
   // ─── 类型检查 ────────────────────────────────────
-  | 'type'         // typeof actual === expected
+  | 'type' // typeof actual === expected
   // ─── 长度断言（数组 / 字符串） ────────────────────
-  | 'length'       // actual.length === expected
-  | 'lengthGt'     // actual.length > expected
-  | 'lengthGte'    // actual.length >= expected
-  | 'lengthLt'     // actual.length < expected
-  | 'lengthLte'    // actual.length <= expected
+  | 'length' // actual.length === expected
+  | 'lengthGt' // actual.length > expected
+  | 'lengthGte' // actual.length >= expected
+  | 'lengthLt' // actual.length < expected
+  | 'lengthLte' // actual.length <= expected
   // ─── 深比对（仅用于已知小对象） ──────────────────
-  | 'deepEq';      // JSON.stringify(actual) === JSON.stringify(expected)
+  | 'deepEq'; // JSON.stringify(actual) === JSON.stringify(expected)
 ```
 
 #### 输出
@@ -449,12 +449,24 @@ Agent 拿到 `scalarState` 后可直接写 `eq` 断言，拿到 `objectState` �
   "summary": { "passed": 3, "total": 4 },
   "results": [
     { "path": "isInitialized", "op": "eq", "expected": true, "actual": true, "passed": true },
-    { "path": "activeStep", "op": "eq", "expected": "loading", "actual": "route-plan", "passed": false,
-      "error": "Expected activeStep to eq \"loading\", but got \"route-plan\"" },
+    {
+      "path": "activeStep",
+      "op": "eq",
+      "expected": "loading",
+      "actual": "route-plan",
+      "passed": false,
+      "error": "Expected activeStep to eq \"loading\", but got \"route-plan\""
+    },
     { "path": "ladingMonitorData", "op": "exists", "actual": true, "passed": true },
-    { "path": "ladingMonitorData.list.length", "op": "gte", "expected": 1, "actual": 0, "passed": false,
+    {
+      "path": "ladingMonitorData.list.length",
+      "op": "gte",
+      "expected": 1,
+      "actual": 0,
+      "passed": false,
       "message": "运单列表不应为空",
-      "error": "Expected ladingMonitorData.list.length to gte 1, but got 0" }
+      "error": "Expected ladingMonitorData.list.length to gte 1, but got 0"
+    }
   ]
 }
 ```
@@ -467,13 +479,13 @@ Agent 拿到 `scalarState` 后可直接写 `eq` 断言，拿到 `objectState` �
 
 路径采用 **`dot-prop` 兼容语法**，支持以下形式：
 
-| 语法 | 含义 | 示例 |
-|------|------|------|
-| `field` | 顶层直接属性 | `isInitialized` |
-| `a.b.c` | 嵌套属性（点分） | `ladingMonitorData.list.length` |
-| `arr.0` | 数组下标（`.数字` 形式） | `ladingMonitorData.list.0.status` |
-| `arr.0.field` | 下标 + 属性 | `ladingMonitorData.list.0.waybillCode` |
-| `obj.key with space` | 含空格的 key（`\\.` 转义点） | 少见，暂不支持 |
+| 语法                 | 含义                         | 示例                                   |
+| -------------------- | ---------------------------- | -------------------------------------- |
+| `field`              | 顶层直接属性                 | `isInitialized`                        |
+| `a.b.c`              | 嵌套属性（点分）             | `ladingMonitorData.list.length`        |
+| `arr.0`              | 数组下标（`.数字` 形式）     | `ladingMonitorData.list.0.status`      |
+| `arr.0.field`        | 下标 + 属性                  | `ladingMonitorData.list.0.waybillCode` |
+| `obj.key with space` | 含空格的 key（`\\.` 转义点） | 少见，暂不支持                         |
 
 > **说明**：数组下标统一使用 `.数字` 语法（`list.0`），而非 `[0]` 方括号语法。
 > 这是 `dot-prop` 的标准形式，工具链一致、实现简单、无歧义。
@@ -502,13 +514,13 @@ routePlanData.statistic.containerNotFullLoadWaybillCount  → 3
 
 #### 候选库对比
 
-| 库 | 版本 | 周下载量 | 体积（min+gz） | 零依赖 | ESM | 数组下标语法 | 特点 |
-|---|---|---|---|---|---|---|---|
-| **`dot-prop`** | 10.x | ~3000万/周 | ~1.5 KB | ✅（依赖 type-fest，纯 TS 类型） | ✅ | `.0`（点数字） | 最流行、TypeScript 原生、ESM-only |
-| **`object-path`** | 0.11.x | ~1200万/周 | ~2 KB | ✅ | ❌（CJS） | `.0` / `[0]` 均支持 | 支持 `[0]` 方括号；有 `coerceNumbers` 选项；CJS-only |
-| **`lodash.get`** | 4.x | ~5000万/周 | ~4 KB | ✅ | ❌（CJS） | `[0]` / `.0` 均支持 | 最广泛；但体积偏大；CJS-only；lodash 整体维护减缓 |
-| **`dlv`** | 1.x | ~200万/周 | **0.3 KB** | ✅ | ✅ | `.0` | 极简实现（15行）；只支持 get；无方括号语法 |
-| **`just-safe-get`** | 4.x | ~50万/周 | ~0.5 KB | ✅ | ✅ | `.0` | just 工具集成员；极简 |
+| 库                  | 版本   | 周下载量   | 体积（min+gz） | 零依赖                           | ESM       | 数组下标语法        | 特点                                                 |
+| ------------------- | ------ | ---------- | -------------- | -------------------------------- | --------- | ------------------- | ---------------------------------------------------- |
+| **`dot-prop`**      | 10.x   | ~3000万/周 | ~1.5 KB        | ✅（依赖 type-fest，纯 TS 类型） | ✅        | `.0`（点数字）      | 最流行、TypeScript 原生、ESM-only                    |
+| **`object-path`**   | 0.11.x | ~1200万/周 | ~2 KB          | ✅                               | ❌（CJS） | `.0` / `[0]` 均支持 | 支持 `[0]` 方括号；有 `coerceNumbers` 选项；CJS-only |
+| **`lodash.get`**    | 4.x    | ~5000万/周 | ~4 KB          | ✅                               | ❌（CJS） | `[0]` / `.0` 均支持 | 最广泛；但体积偏大；CJS-only；lodash 整体维护减缓    |
+| **`dlv`**           | 1.x    | ~200万/周  | **0.3 KB**     | ✅                               | ✅        | `.0`                | 极简实现（15行）；只支持 get；无方括号语法           |
+| **`just-safe-get`** | 4.x    | ~50万/周   | ~0.5 KB        | ✅                               | ✅        | `.0`                | just 工具集成员；极简                                |
 
 #### 选型结论：使用 `dot-prop`
 
@@ -552,6 +564,7 @@ export function resolvePath(instance: object, path: string): unknown {
 ```
 
 `dot-prop` 的安全语义：
+
 - 中间节点为 `null` / `undefined` → 返回 `undefined`，不抛错
 - 路径不存在 → 返回 `undefined`
 - 只做属性访问，不调用 getter 以外的任何函数（getter 正常触发）
@@ -562,12 +575,12 @@ export function resolvePath(instance: object, path: string): unknown {
 
 所有从 Service 取出的值，在传给 Agent 前按以下规则转为"安全摘要"：
 
-| 实际类型 | 安全摘要 | 说明 |
-|---------|---------|------|
-| `string` / `number` / `boolean` / `null` / `undefined` | 原值 | 基本类型直接传出 |
-| `Array` | `"[Array(N)]"` | N 为数组长度 |
-| `object`（非 null） | `"[Object]"` | 不展开 |
-| `function` | `"[Function]"` | 不暴露 |
+| 实际类型                                               | 安全摘要       | 说明             |
+| ------------------------------------------------------ | -------------- | ---------------- |
+| `string` / `number` / `boolean` / `null` / `undefined` | 原值           | 基本类型直接传出 |
+| `Array`                                                | `"[Array(N)]"` | N 为数组长度     |
+| `object`（非 null）                                    | `"[Object]"`   | 不展开           |
+| `function`                                             | `"[Function]"` | 不暴露           |
 
 **例外**：`length` / `lengthGt` 等长度操作符，`actual` 返回的是 `.length` 的数字值（而非数组摘要），
 因为操作符本身只关心长度，且数字可安全传输。
@@ -603,14 +616,14 @@ export function resolvePath(instance: object, path: string): unknown {
 
 ## 关键设计决策
 
-| 决策点 | 方案 | 原因 |
-|--------|------|------|
-| 断言在哪里执行 | **浏览器内部执行**，只传出标量结果 | 彻底规避大对象序列化 crash；数据安全 |
-| `actual` 值的处理 | 基本类型原样返回，对象/数组返回摘要字符串 | Agent 看到 `"[Object]"` 知道字段存在，但不会触发反序列化 |
-| 路径语法 | **`dot-prop` 语法**：`.` 分隔 + `.数字` 下标（`list.0`） | 统一、无歧义；放弃 `[0]` 方括号语法，避免双重解析逻辑 |
-| 路径解析库 | **`dot-prop@10.x`** | ESM 原生、零运行时依赖（type-fest 纯类型）、TypeScript 原生、最流行（3000万周下载） |
-| `assertAfter` 合并 | 在 `execute_action` 内部完成 | 减少 Agent 调用轮次；异步方法 await 后再断言，避免竞态 |
-| `list_services` 分类 | `scalarState` 与 `objectState` 分开 | Agent 可以快速知道哪些字段可以直接 `eq`，哪些需要用点分路径深入 |
-| `get_state` 保留但降级 | 保留，仅返回标量和摘要 | 向下兼容；仍适合初步探索 Service 状态的场景 |
-| 断言结果格式 | `passed` + `summary` + `results[]` | 一次调用多断言；失败时提供差异报告，Agent 无需逐条解析 |
-| `deepEq` 操作符 | 保留，但文档标注"仅用于已知小对象" | 提供逃生门，不强制限制；由 Agent 自行承担风险 |
+| 决策点                 | 方案                                                     | 原因                                                                                |
+| ---------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 断言在哪里执行         | **浏览器内部执行**，只传出标量结果                       | 彻底规避大对象序列化 crash；数据安全                                                |
+| `actual` 值的处理      | 基本类型原样返回，对象/数组返回摘要字符串                | Agent 看到 `"[Object]"` 知道字段存在，但不会触发反序列化                            |
+| 路径语法               | **`dot-prop` 语法**：`.` 分隔 + `.数字` 下标（`list.0`） | 统一、无歧义；放弃 `[0]` 方括号语法，避免双重解析逻辑                               |
+| 路径解析库             | **`dot-prop@10.x`**                                      | ESM 原生、零运行时依赖（type-fest 纯类型）、TypeScript 原生、最流行（3000万周下载） |
+| `assertAfter` 合并     | 在 `execute_action` 内部完成                             | 减少 Agent 调用轮次；异步方法 await 后再断言，避免竞态                              |
+| `list_services` 分类   | `scalarState` 与 `objectState` 分开                      | Agent 可以快速知道哪些字段可以直接 `eq`，哪些需要用点分路径深入                     |
+| `get_state` 保留但降级 | 保留，仅返回标量和摘要                                   | 向下兼容；仍适合初步探索 Service 状态的场景                                         |
+| 断言结果格式           | `passed` + `summary` + `results[]`                       | 一次调用多断言；失败时提供差异报告，Agent 无需逐条解析                              |
+| `deepEq` 操作符        | 保留，但文档标注"仅用于已知小对象"                       | 提供逃生门，不强制限制；由 Agent 自行承担风险                                       |

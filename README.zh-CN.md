@@ -50,13 +50,13 @@ pnpm install
 
 ## 核心包
 
-| 包 | 职责 |
-| --- | --- |
-| [`@rabjs/observer`](./packages/observer) | 细粒度的可观察依赖跟踪与反应。 |
-| [`@rabjs/service`](./packages/service) | 可观察的 Services、依赖容器、生命周期、actions 和方法模型。 |
-| [`@rabjs/react`](./packages/react) | 用于响应式渲染和 Service 解析的 React 绑定。 |
-| [`@rabjs/devtools`](./packages/devtools) | 对实时容器树的检查和断言访问。 |
-| [`@rabjs/web-mcp`](./packages/web-mcp) | 将活动 Services 作为工具暴露给浏览器代理的 WebMCP 桥接器。 |
+| 包                                       | 职责                                                        |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| [`@rabjs/observer`](./packages/observer) | 细粒度的可观察依赖跟踪与反应。                              |
+| [`@rabjs/service`](./packages/service)   | 可观察的 Services、依赖容器、生命周期、actions 和方法模型。 |
+| [`@rabjs/react`](./packages/react)       | 用于响应式渲染和 Service 解析的 React 绑定。                |
+| [`@rabjs/devtools`](./packages/devtools) | 对实时容器树的检查和断言访问。                              |
+| [`@rabjs/web-mcp`](./packages/web-mcp)   | 将活动 Services 作为工具暴露给浏览器代理的 WebMCP 桥接器。  |
 
 ## AI First 工作流
 
@@ -79,7 +79,7 @@ React UI, DevTools, and assertions observe the same update
 这是最小化的 React Service 模式：
 
 ```tsx
-import { Service, bindServices, observer, useService } from "@rabjs/react";
+import { Service, bindServices, observer, useService } from '@rabjs/react';
 
 class CounterService extends Service {
   count = 0;
@@ -104,7 +104,7 @@ Service 属性默认可观察，Service 方法默认是 Action。此模式无需
 当响应式状态不依赖 React 时，直接使用 `@rabjs/observer`：
 
 ```ts
-import { observable, observe, unobserve } from "@rabjs/observer";
+import { observable, observe, unobserve } from '@rabjs/observer';
 
 const state = observable({ count: 0 });
 
@@ -128,11 +128,11 @@ unobserve(reaction);
 
 RAB 在 [`skills/`](./skills) 下提供一组 [Agent Skills](https://code.claude.com/docs/en/claude-code/skills)，教编程 Agent 按 RAB 的正确约定写代码，并调试运行中的应用：
 
-| Skill | 作用 |
-| --- | --- |
-| [`rab-react`](./skills/rab-react) | 按 `@rabjs/react` 的约定写代码（`observer`、`useService`、`bindServices`、Service 生命周期等）。 |
-| [`rab-cdp-debug`](./skills/rab-cdp-debug) | 通过 Chrome DevTools MCP 检查、调用、断言运行中 rab 应用的 Service 实例。 |
-| [`rab-rn-debug`](./skills/rab-rn-debug) | 通过 `@rabjs/rn-debug-server` 桥接调试真机上的 React Native 应用。 |
+| Skill                                     | 作用                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [`rab-react`](./skills/rab-react)         | 按 `@rabjs/react` 的约定写代码（`observer`、`useService`、`bindServices`、Service 生命周期等）。 |
+| [`rab-cdp-debug`](./skills/rab-cdp-debug) | 通过 Chrome DevTools MCP 检查、调用、断言运行中 rab 应用的 Service 实例。                        |
+| [`rab-rn-debug`](./skills/rab-rn-debug)   | 通过 `@rabjs/rn-debug-server` 桥接调试真机上的 React Native 应用。                               |
 
 这些 skill 是纯 `SKILL.md` 文档，零运行时依赖，同一份文件可在各个编程工具中通用。各工具安装方式不同——如果同时使用多个工具，请分别为每个工具安装。
 
@@ -228,8 +228,8 @@ pnpm --filter @rabjs/website build
 
 文档站的生产环境 JavaScript bundle 会由 Vite 进行 minify 压缩。执行生产构建（`pnpm --filter @rabjs/website build`）当前得到：
 
-| 资源 | minify 后大小 | gzip 后大小 |
-| --- | ---: | ---: |
+| 资源                             |              minify 后大小 |                gzip 后大小 |
+| -------------------------------- | -------------------------: | -------------------------: |
 | `website/dist/assets/index-*.js` | 448,651 bytes（448.65 kB） | 140,928 bytes（140.93 kB） |
 
 gzip 大小采用 Vite 生产构建输出中的统计值。

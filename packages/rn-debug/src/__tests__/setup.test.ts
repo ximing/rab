@@ -75,30 +75,37 @@ describe('setupRNDebug', () => {
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
     ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} }));
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c2', type: 'device.info', payload: {} }));
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c3', type: 'console.getLogs', payload: { limit: 10 } }));
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c2', type: 'device.info', payload: {} })
+    );
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c3', type: 'console.getLogs', payload: { limit: 10 } })
+    );
     await waitFor(
-      () => ws.sent.map((s) => JSON.parse(s)).filter((m) => m.kind === 'result').length >= 3,
+      () => ws.sent.map(s => JSON.parse(s)).filter(m => m.kind === 'result').length >= 3,
       'three command results'
     );
-    const results = ws.sent
-      .map((s) => JSON.parse(s))
-      .filter((m) => m.kind === 'result');
-    expect(results.find((r) => r.id === 'c1')).toMatchObject({ status: 'ok', result: { pong: true } });
-    expect(results.find((r) => r.id === 'c2')?.result).toMatchObject({ appName: 'TestApp' });
-    expect(results.find((r) => r.id === 'c3')).toMatchObject({ status: 'ok', result: [] });
+    const results = ws.sent.map(s => JSON.parse(s)).filter(m => m.kind === 'result');
+    expect(results.find(r => r.id === 'c1')).toMatchObject({
+      status: 'ok',
+      result: { pong: true },
+    });
+    expect(results.find(r => r.id === 'c2')?.result).toMatchObject({ appName: 'TestApp' });
+    expect(results.find(r => r.id === 'c3')).toMatchObject({ status: 'ok', result: [] });
   });
 
   it('handlers 选项注册自定义指令', async () => {
     setup({ handlers: { 'app.ping': () => 'pong-app' } });
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'app.ping', payload: {} }));
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c1', type: 'app.ping', payload: {} })
+    );
     await waitFor(
-      () => ws.sent.some((s) => JSON.parse(s).kind === 'result'),
+      () => ws.sent.some(s => JSON.parse(s).kind === 'result'),
       'custom handler result'
     );
-    expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
+    expect(JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c1',
       status: 'ok',
       result: 'pong-app',
@@ -111,12 +118,14 @@ describe('setupRNDebug', () => {
     expect(() => registerHandler('app.late', () => 43)).toThrow(/already registered/);
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
-    ws.simulateMessage(JSON.stringify({ kind: 'command', id: 'c9', type: 'app.late', payload: {} }));
+    ws.simulateMessage(
+      JSON.stringify({ kind: 'command', id: 'c9', type: 'app.late', payload: {} })
+    );
     await waitFor(
-      () => ws.sent.some((s) => JSON.parse(s).kind === 'result'),
+      () => ws.sent.some(s => JSON.parse(s).kind === 'result'),
       'late-registered handler result'
     );
-    expect(JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!)).toMatchObject({
+    expect(JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!)).toMatchObject({
       id: 'c9',
       status: 'ok',
       result: 42,

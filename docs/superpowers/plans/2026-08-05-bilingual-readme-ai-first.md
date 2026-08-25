@@ -30,9 +30,11 @@
 ### Task 1: Create the AI First architecture SVG
 
 **Files:**
+
 - Create: `docs/assets/ai-first-state.svg`
 
 **Interfaces:**
+
 - Produces a self-contained SVG that can be rendered from Markdown with `![RAB AI First architecture](docs/assets/ai-first-state.svg)`.
 - Visual labels include `Human`, `Shared Reactive State`, `AI`, `React UI`, `DevTools`, `Observable`, `Service Container`, `Actions / Events`, `Agent`, `Web MCP`, and `Skills`.
 
@@ -74,9 +76,11 @@ git commit -m "docs: add AI first state architecture graphic"
 ### Task 2: Rewrite the English README
 
 **Files:**
+
 - Modify: `README.md`
 
 **Interfaces:**
+
 - Consumes `docs/assets/ai-first-state.svg` through a repository-relative Markdown image path.
 - Produces the English canonical project narrative and API examples.
 
@@ -94,17 +98,29 @@ Include these exact top-level sections and content responsibilities:
 ![RAB AI First architecture](docs/assets/ai-first-state.svg)
 
 ## Why RAB
+
 ## Architecture
+
 ## Quick Start
+
 ## Core Packages
+
 ## The AI-First Workflow
+
 ## Service Example
+
 ## Observer Example
+
 ## Web MCP and DevTools
+
 ## Repository Structure
+
 ## Development
+
 ## Documentation
+
 ## Contributing
+
 ## License
 ```
 
@@ -115,7 +131,7 @@ Describe the architecture in plain language: `@rabjs/observer` tracks dependenci
 Use the current API conventions, including no obsolete `@Injectable` requirement and no unnecessary `@Action` decoration:
 
 ```tsx
-import { Service, bindServices, observer, useService } from "@rabjs/react";
+import { Service, bindServices, observer, useService } from '@rabjs/react';
 
 class CounterService extends Service {
   count = 0;
@@ -171,9 +187,11 @@ git commit -m "docs: rewrite README around AI first architecture"
 ### Task 3: Create the Chinese README mirror
 
 **Files:**
+
 - Create: `README.zh-CN.md`
 
 **Interfaces:**
+
 - Consumes the same SVG path and project facts as `README.md`.
 - Produces a complete Chinese document with the same top-level sections and code behavior.
 
@@ -225,9 +243,11 @@ git commit -m "docs: add Chinese README"
 ### Task 4: Update GitHub About with gh
 
 **Files:**
+
 - External: GitHub About for `ximing/rab`
 
 **Interfaces:**
+
 - Uses authenticated `gh` CLI against `origin` repository `ximing/rab`.
 - Sets description, homepage, and discoverability topics.
 
@@ -263,6 +283,7 @@ Expected: description and homepage match the requested values; topics contain al
 ### Task 5: Final validation
 
 **Files:**
+
 - Verify: `README.md`
 - Verify: `README.zh-CN.md`
 - Verify: `docs/assets/ai-first-state.svg`

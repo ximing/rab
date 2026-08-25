@@ -7,11 +7,7 @@
 
 import type { Service } from '@rabjs/service';
 
-import type {
-  SetStateInput,
-  SetStateResult,
-  WebMcpToolDefinition,
-} from '../types';
+import type { SetStateInput, SetStateResult, WebMcpToolDefinition } from '../types';
 import { getStateKeys } from '../utils/serialize';
 
 /**
@@ -21,10 +17,7 @@ import { getStateKeys } from '../utils/serialize';
  * @param input 工具输入参数
  * @returns 修改结果
  */
-export function setState(
-  instanceMap: Map<string, Service>,
-  input: SetStateInput
-): SetStateResult {
+export function setState(instanceMap: Map<string, Service>, input: SetStateInput): SetStateResult {
   const { instanceId, patch } = input;
 
   // 查找实例
@@ -58,11 +51,20 @@ export function setState(
       // 给出更详细的拒绝原因
       const rawValue = (instance as any)[key];
       if (typeof rawValue === 'function') {
-        rejected.push({ key, reason: `"${key}" is a method, not a state property. Use execute_action to call methods.` });
+        rejected.push({
+          key,
+          reason: `"${key}" is a method, not a state property. Use execute_action to call methods.`,
+        });
       } else if (key.startsWith('_') || key.startsWith('$')) {
-        rejected.push({ key, reason: `"${key}" is a private property and cannot be modified externally.` });
+        rejected.push({
+          key,
+          reason: `"${key}" is a private property and cannot be modified externally.`,
+        });
       } else {
-        rejected.push({ key, reason: `"${key}" does not exist on this Service instance. Check stateKeys from list_services.` });
+        rejected.push({
+          key,
+          reason: `"${key}" does not exist on this Service instance. Check stateKeys from list_services.`,
+        });
       }
       continue;
     }
@@ -87,12 +89,11 @@ export function setState(
 /**
  * set_state Tool 的 WebMCP 定义
  */
-export function createSetStateTool(
-  instanceMap: Map<string, Service>
-): WebMcpToolDefinition {
+export function createSetStateTool(instanceMap: Map<string, Service>): WebMcpToolDefinition {
   return {
     name: 'set_state',
-    description: '直接修改指定 Service 实例的状态属性值。仅允许修改已存在的公开状态属性（非函数、非私有）。修改会触发响应式更新，驱动页面重渲染。',
+    description:
+      '直接修改指定 Service 实例的状态属性值。仅允许修改已存在的公开状态属性（非函数、非私有）。修改会触发响应式更新，驱动页面重渲染。',
     inputSchema: {
       type: 'object',
       properties: {

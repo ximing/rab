@@ -12,10 +12,7 @@ import type { Service } from '@rabjs/service';
 /**
  * 创建 mock Service 实例（带状态字段）
  */
-function makeMockService(
-  state: Record<string, unknown>,
-  instanceId = 'MockService#0'
-): Service {
+function makeMockService(state: Record<string, unknown>, instanceId = 'MockService#0'): Service {
   return {
     instanceId,
     ...state,
@@ -192,9 +189,7 @@ describe('assertState', () => {
 
     const result = assertState(map, {
       instanceId: 'MockService#0',
-      assertions: [
-        { path: 'ladingMonitorData.list', op: 'notExists' },
-      ],
+      assertions: [{ path: 'ladingMonitorData.list', op: 'notExists' }],
     });
 
     expect(result.passed).toBe(true);
@@ -425,9 +420,7 @@ describe('assertState', () => {
 
     const result = assertState(map, {
       instanceId: 'MockService#0',
-      assertions: [
-        { path: 'paging', op: 'hasKeys', expected: 'offset' },
-      ],
+      assertions: [{ path: 'paging', op: 'hasKeys', expected: 'offset' }],
     });
 
     expect(result.results[0]?.actual).toBe('[Object]');
@@ -505,7 +498,10 @@ describe('createAssertStateTool', () => {
     const props = schema['properties'] as Record<string, unknown>;
     const assertions = props['assertions'] as Record<string, unknown>;
     const items = assertions['items'] as Record<string, unknown>;
-    const opProps = (items['properties'] as Record<string, unknown>)['op'] as Record<string, unknown>;
+    const opProps = (items['properties'] as Record<string, unknown>)['op'] as Record<
+      string,
+      unknown
+    >;
     const opEnum = opProps['enum'] as string[];
 
     expect(opEnum).toContain('between');

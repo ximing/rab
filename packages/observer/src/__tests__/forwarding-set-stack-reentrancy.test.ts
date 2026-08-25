@@ -7,7 +7,7 @@
  *   defineProperty 通知不受另一 handler 模块栈的干扰;
  * - 转发窗口内对另一 observable 的普通赋值 (set trap 路径) 单次通知。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 function defineValue(obj: object, key: string, value: number) {
   Object.defineProperty(obj, key, {
@@ -18,18 +18,18 @@ function defineValue(obj: object, key: string, value: number) {
   });
 }
 
-describe("set 转发 target 栈: 重入与异常安全", () => {
-  test("setter 抛异常后, defineProperty 通知与普通赋值立即恢复 (栈不残留)", () => {
+describe('set 转发 target 栈: 重入与异常安全', () => {
+  test('setter 抛异常后, defineProperty 通知与普通赋值立即恢复 (栈不残留)', () => {
     const obj = observable({ x: 0 });
     const proto = observable({
       set boom(v: number) {
-        throw new Error("setter boom");
+        throw new Error('setter boom');
       },
     });
     const child = observable(Object.create(proto) as { boom: number });
     expect(() => {
       child.boom = 1;
-    }).toThrow("setter boom");
+    }).toThrow('setter boom');
 
     // 异常后正常 defineProperty 通知 (若栈残留会误判为转发而静默)
     let calls = 0;
@@ -37,7 +37,7 @@ describe("set 转发 target 栈: 重入与异常安全", () => {
       void obj.x;
       calls++;
     });
-    defineValue(obj, "x", 5);
+    defineValue(obj, 'x', 5);
     expect(calls).toBe(2);
 
     // 异常后普通赋值仍单次通知
@@ -51,7 +51,7 @@ describe("set 转发 target 栈: 重入与异常安全", () => {
     expect(calls2).toBe(2);
   });
 
-  test("三层原型链赋值仍单次通知, 值落在最外层 receiver", () => {
+  test('三层原型链赋值仍单次通知, 值落在最外层 receiver', () => {
     const gp = observable({ v: 0 });
     const p = observable(Object.create(gp) as { v: number });
     const c = observable(Object.create(p) as { v: number });
@@ -67,11 +67,11 @@ describe("set 转发 target 栈: 重入与异常安全", () => {
     expect(gp.v).toBe(0);
   });
 
-  test("shadow setter 内对 base observable defineProperty: 两模块栈互不干扰", () => {
+  test('shadow setter 内对 base observable defineProperty: 两模块栈互不干扰', () => {
     const baseOther = observable({ x: 0 });
     const sproto = shadowObservable({
       set flag(v: number) {
-        defineValue(baseOther, "x", v);
+        defineValue(baseOther, 'x', v);
       },
     });
     const schild = shadowObservable(Object.create(sproto) as { flag: number });
@@ -85,7 +85,7 @@ describe("set 转发 target 栈: 重入与异常安全", () => {
     expect(calls).toBe(2);
   });
 
-  test("转发窗口内对另一 observable 普通赋值 (set trap 路径) 单次通知", () => {
+  test('转发窗口内对另一 observable 普通赋值 (set trap 路径) 单次通知', () => {
     const other = observable({ x: 0 });
     const proto = observable({
       set flag(v: number) {

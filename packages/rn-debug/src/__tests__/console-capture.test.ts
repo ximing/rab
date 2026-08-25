@@ -32,8 +32,8 @@ describe('ConsoleCapture', () => {
     console.warn = originalWarn;
     console.error = originalError;
 
-    expect(capture.getLogs({ level: 'warn' }).map((l) => l.args[0])).toEqual(['w1', 'w2']);
-    expect(capture.getLogs({ limit: 2 }).map((l) => l.args[0])).toEqual(['e1', 'w2']);
+    expect(capture.getLogs({ level: 'warn' }).map(l => l.args[0])).toEqual(['w1', 'w2']);
+    expect(capture.getLogs({ limit: 2 }).map(l => l.args[0])).toEqual(['e1', 'w2']);
     capture.restore();
   });
 
@@ -43,13 +43,13 @@ describe('ConsoleCapture', () => {
     console.log = () => {};
     for (let i = 0; i < 5; i++) console.log(`m${i}`);
     console.log = orig;
-    expect(capture.getLogs().map((l) => l.args[0])).toEqual(['m2', 'm3', 'm4']);
+    expect(capture.getLogs().map(l => l.args[0])).toEqual(['m2', 'm3', 'm4']);
     capture.restore();
   });
 
   it('onLog 实时回调', () => {
     const seen: string[] = [];
-    const capture = setupConsoleCapture({ onLog: (entry) => seen.push(String(entry.args[0])) });
+    const capture = setupConsoleCapture({ onLog: entry => seen.push(String(entry.args[0])) });
     const orig = console.info;
     console.info = () => {};
     console.info('live');
@@ -67,7 +67,7 @@ describe('ConsoleCapture', () => {
     };
     console.log = orig; // 还原时赋回的是 intercept，不得造成 current === intercept
     expect(() => console.log('after-restore')).not.toThrow();
-    expect(capture.getLogs().map((l) => l.args[0])).toContain('after-restore');
+    expect(capture.getLogs().map(l => l.args[0])).toContain('after-restore');
     capture.restore();
   });
 
@@ -81,7 +81,7 @@ describe('ConsoleCapture', () => {
     console.log = () => {};
     console.log('still-works');
     console.log = orig;
-    expect(outer.getLogs().map((l) => l.args[0])).toContain('still-works');
+    expect(outer.getLogs().map(l => l.args[0])).toContain('still-works');
     outer.restore();
   });
 
@@ -93,9 +93,10 @@ describe('ConsoleCapture', () => {
     if (savedProto) delete proto.debug;
     try {
       const capture = setupConsoleCapture({ capacity: 10 });
-      expect(() => (console as unknown as Record<string, (...a: unknown[]) => void>).debug('x'))
-        .not.toThrow();
-      expect(capture.getLogs().map((l) => l.args[0])).toEqual(['x']);
+      expect(() =>
+        (console as unknown as Record<string, (...a: unknown[]) => void>).debug('x')
+      ).not.toThrow();
+      expect(capture.getLogs().map(l => l.args[0])).toEqual(['x']);
       capture.restore();
     } finally {
       if (savedOwn) Object.defineProperty(console, 'debug', savedOwn);

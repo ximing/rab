@@ -43,7 +43,10 @@ describe('getStateKeys', () => {
   });
 
   it('过滤 $ 开头的属性（除 $model 外）', () => {
-    const svc = makeMockService({ $internal: 'hidden', $model: { fetchData: { loading: false, error: null } } });
+    const svc = makeMockService({
+      $internal: 'hidden',
+      $model: { fetchData: { loading: false, error: null } },
+    });
     const keys = getStateKeys(svc);
     expect(keys).not.toContain('$internal');
     // $model 是特殊属性，不在 state 中暴露，但也不会出现在 getStateKeys 返回值
@@ -109,9 +112,17 @@ describe('serializeState', () => {
   });
 
   it('处理嵌套数组', () => {
-    const svc = makeMockService({ matrix: [[1, 2], [3, 4]] });
+    const svc = makeMockService({
+      matrix: [
+        [1, 2],
+        [3, 4],
+      ],
+    });
     const state = serializeState(svc);
-    expect(state['matrix']).toEqual([[1, 2], [3, 4]]);
+    expect(state['matrix']).toEqual([
+      [1, 2],
+      [3, 4],
+    ]);
   });
 
   it('null 值正常序列化', () => {

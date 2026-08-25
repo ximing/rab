@@ -1,17 +1,12 @@
-import { observableChild } from "../observable-child";
-import { proxyToRaw } from "../proxy-raw-map";
+import { observableChild } from '../observable-child';
+import { proxyToRaw } from '../proxy-raw-map';
 import {
   registerRunningReactionForOperation,
   queueReactionsForOperation,
   hasOperationOldValueConsumer,
-} from "../reaction-runner";
-import {
-  Collection,
-  CollectionHandlers,
-  IteratorResult,
-  PatchableIterator,
-} from "../types";
-import { toRawIfProxy } from "../utils";
+} from '../reaction-runner';
+import { Collection, CollectionHandlers, IteratorResult, PatchableIterator } from '../types';
+import { toRawIfProxy } from '../utils';
 
 /*
  * #7/#9: 集合身份判定不能只靠 instanceof ——
@@ -45,35 +40,24 @@ export function isPlainMapOrSetTarget(target: object): boolean {
 }
 
 export function isMapTarget(target: object): target is Map<unknown, unknown> {
-  return target instanceof Map || objectToString.call(target) === "[object Map]";
+  return target instanceof Map || objectToString.call(target) === '[object Map]';
 }
 
 export function isSetTarget(target: object): target is Set<unknown> {
-  return target instanceof Set || objectToString.call(target) === "[object Set]";
+  return target instanceof Set || objectToString.call(target) === '[object Set]';
 }
 
-export function isWeakMapTarget(
-  target: object
-): target is WeakMap<object, unknown> {
-  return (
-    target instanceof WeakMap ||
-    objectToString.call(target) === "[object WeakMap]"
-  );
+export function isWeakMapTarget(target: object): target is WeakMap<object, unknown> {
+  return target instanceof WeakMap || objectToString.call(target) === '[object WeakMap]';
 }
 
 export function isWeakSetTarget(target: object): target is WeakSet<object> {
-  return (
-    target instanceof WeakSet ||
-    objectToString.call(target) === "[object WeakSet]"
-  );
+  return target instanceof WeakSet || objectToString.call(target) === '[object WeakSet]';
 }
 
 export function isAnyCollectionTarget(target: object): target is Collection {
   return (
-    isMapTarget(target) ||
-    isSetTarget(target) ||
-    isWeakMapTarget(target) ||
-    isWeakSetTarget(target)
+    isMapTarget(target) || isSetTarget(target) || isWeakMapTarget(target) || isWeakSetTarget(target)
   );
 }
 
@@ -132,7 +116,7 @@ export const collectionHandlers = {
     registerRunningReactionForOperation({
       target,
       key: key as PropertyKey,
-      type: "has",
+      type: 'has',
     });
     // 调用原始 Map/Set 的 has 方法
     return target.has(key as object);
@@ -147,7 +131,7 @@ export const collectionHandlers = {
     registerRunningReactionForOperation({
       target,
       key: key as PropertyKey,
-      type: "get",
+      type: 'get',
     });
     return observableChild(target.get(key as object), target);
   },
@@ -158,9 +142,7 @@ export const collectionHandlers = {
     if (!target || !(isSetTarget(target) || isWeakSetTarget(target))) {
       return this;
     }
-    const hadKey = (target as Set<unknown> | WeakSet<object>).has(
-      key as object
-    );
+    const hadKey = (target as Set<unknown> | WeakSet<object>).has(key as object);
     // forward the operation before queueing reactions
     (target as Set<unknown> | WeakSet<object>).add(key as object);
     if (!hadKey) {
@@ -168,7 +150,7 @@ export const collectionHandlers = {
         target,
         key: key as PropertyKey,
         value: key,
-        type: "add",
+        type: 'add',
       });
     }
     return this;
@@ -185,23 +167,18 @@ export const collectionHandlers = {
     if (!target || !(isMapTarget(target) || isWeakMapTarget(target))) {
       return this;
     }
-    const hadKey = (
-      target as Map<unknown, unknown> | WeakMap<object, unknown>
-    ).has(key as object);
+    const hadKey = (target as Map<unknown, unknown> | WeakMap<object, unknown>).has(key as object);
     const oldValue = (target as Map<unknown, unknown>).get
       ? (target as Map<unknown, unknown>).get(key)
       : undefined;
     // forward the operation before queueing reactions
-    (target as Map<unknown, unknown> | WeakMap<object, unknown>).set(
-      key as object,
-      value
-    );
+    (target as Map<unknown, unknown> | WeakMap<object, unknown>).set(key as object, value);
     if (!hadKey) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,
         value,
-        type: "add",
+        type: 'add',
       });
     } else if (!Object.is(value, oldValue)) {
       queueReactionsForOperation({
@@ -209,7 +186,7 @@ export const collectionHandlers = {
         key: key as PropertyKey,
         value,
         oldValue,
-        type: "set",
+        type: 'set',
       });
     }
     return this;
@@ -229,18 +206,14 @@ export const collectionHandlers = {
       : undefined;
     // forward the operation before queueing reactions
     const result = (
-      target as
-        | Map<unknown, unknown>
-        | Set<unknown>
-        | WeakMap<object, unknown>
-        | WeakSet<object>
+      target as Map<unknown, unknown> | Set<unknown> | WeakMap<object, unknown> | WeakSet<object>
     ).delete(key as object);
     if (hadKey) {
       queueReactionsForOperation({
         target,
         key: key as PropertyKey,
         oldValue,
-        type: "delete",
+        type: 'delete',
       });
     }
     return result;
@@ -260,16 +233,10 @@ export const collectionHandlers = {
     // hasOperationOldValueConsumer 检查之后、queue 之前, 会被通知但拿不到
     // 拷贝。plain Map/Set 没有用户代码能在这个窗口运行, 维持惰性检查;
     // constructor 非 Map/Set 的 (子类 / 跨 realm) 保守视为有消费者, 始终拷贝。
-    const operation = { target, key: "" as PropertyKey, type: "clear" as const };
+    const operation = { target, key: '' as PropertyKey, type: 'clear' as const };
     let oldTarget: Map<unknown, unknown> | Set<unknown> | undefined;
-    if (
-      hadItems &&
-      (!isPlainMapOrSetTarget(target) ||
-        hasOperationOldValueConsumer(operation))
-    ) {
-      oldTarget = isMapTarget(target)
-        ? new Map(target)
-        : new Set(target);
+    if (hadItems && (!isPlainMapOrSetTarget(target) || hasOperationOldValueConsumer(operation))) {
+      oldTarget = isMapTarget(target) ? new Map(target) : new Set(target);
     }
     // forward the operation before queueing reactions
     target.clear();
@@ -282,11 +249,7 @@ export const collectionHandlers = {
   },
   forEach(
     this: Collection,
-    callback: (
-      value: unknown,
-      key: unknown,
-      map: Map<unknown, unknown>
-    ) => void,
+    callback: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void,
     thisArg?: unknown
   ): void {
     const target = proxyToRaw.get(this);
@@ -295,21 +258,14 @@ export const collectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     // 将回调参数中的值转换为 observable
     // 确保用户在回调中访问的是响应式的值
     const wrappedCallback = (value: unknown, key: unknown): void =>
-      callback(
-        observableChild(value, target),
-        key,
-        target as Map<unknown, unknown>
-      );
-    (target as Map<unknown, unknown> | Set<unknown>).forEach(
-      wrappedCallback as any,
-      thisArg
-    );
+      callback(observableChild(value, target), key, target as Map<unknown, unknown>);
+    (target as Map<unknown, unknown> | Set<unknown>).forEach(wrappedCallback as any, thisArg);
   },
   keys(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
@@ -318,8 +274,8 @@ export const collectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     // TODO: 考虑一下是否需要 patchIterator  对比 vue Reactive Mobx 看一下大家是怎么决策的
     // 现状（有意的不对称, G5 审查 issue #5 留档）: 集合内部只存 raw 身份,
@@ -337,8 +293,8 @@ export const collectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target.values() as PatchableIterator<unknown>;
     return patchIterator(iterator, target, false) as IterableIterator<unknown>;
@@ -350,13 +306,11 @@ export const collectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target.entries() as PatchableIterator<[unknown, unknown]>;
-    return patchIterator(iterator, target, true) as IterableIterator<
-      [unknown, unknown]
-    >;
+    return patchIterator(iterator, target, true) as IterableIterator<[unknown, unknown]>;
   },
   [Symbol.iterator](this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
@@ -365,15 +319,11 @@ export const collectionHandlers = {
     }
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     const iterator = target[Symbol.iterator]() as PatchableIterator<unknown>;
-    return patchIterator(
-      iterator,
-      target,
-      isMapTarget(target)
-    ) as IterableIterator<unknown>;
+    return patchIterator(iterator, target, isMapTarget(target)) as IterableIterator<unknown>;
   },
   get size(): number {
     // In getter context, 'this' refers to the proxy (Collection instance)
@@ -386,8 +336,8 @@ export const collectionHandlers = {
     // 迭代依赖
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     return target.size;
   },
@@ -411,15 +361,12 @@ const builtinCollectionPrototypes: object[] = [
   WeakSet.prototype,
 ];
 
-export function isBuiltinCollectionPrototypeMethod(
-  key: PropertyKey,
-  value: unknown
-): boolean {
-  if (typeof value !== "function") {
+export function isBuiltinCollectionPrototypeMethod(key: PropertyKey, value: unknown): boolean {
+  if (typeof value !== 'function') {
     return false;
   }
   // constructor 恒等性必须保持: map.constructor === Map, 不做转发包装
-  if (key === "constructor") {
+  if (key === 'constructor') {
     return false;
   }
   for (const proto of builtinCollectionPrototypes) {
@@ -443,16 +390,14 @@ export function forwardBuiltinCollectionMethod(
   return function (this: unknown, ...args: unknown[]): unknown {
     registerRunningReactionForOperation({
       target,
-      key: "" as PropertyKey,
-      type: "iterate",
+      key: '' as PropertyKey,
+      type: 'iterate',
     });
     return Reflect.apply(fn, target, args.map(toRawIfProxy));
   };
 }
 
-export const createCollectionProxyHandlers = (
-  customCollectionHandlers?: CollectionHandlers
-) => {
+export const createCollectionProxyHandlers = (customCollectionHandlers?: CollectionHandlers) => {
   return {
     get(target: object, key: PropertyKey, receiver: unknown): unknown {
       // instrument methods and property accessors to be reactive
@@ -478,23 +423,17 @@ export const createCollectionProxyHandlers = (
       // receiver 调用, 内部槽位 brand-check 抛错 (GG7 第 3 轮 issue #1/#4)。
       const value = Reflect.get(target, key, receiver);
       if (isBuiltinCollectionPrototypeMethod(key, value)) {
-        return forwardBuiltinCollectionMethod(
-          target,
-          value as (...args: unknown[]) => unknown
-        );
+        return forwardBuiltinCollectionMethod(target, value as (...args: unknown[]) => unknown);
       }
       return value;
     },
   };
 };
 
-const defaultProxyHandlers: ProxyHandler<object> =
-  createCollectionProxyHandlers();
+const defaultProxyHandlers: ProxyHandler<object> = createCollectionProxyHandlers();
 
 const globalObj: Record<string, unknown> = (
-  typeof globalThis.window === "object"
-    ? globalThis
-    : new Function("return this")()
+  typeof globalThis.window === 'object' ? globalThis : new Function('return this')()
 ) as Record<string, unknown>;
 
 // Type for handler values
@@ -506,10 +445,10 @@ type HandlerValue = ProxyHandler<object> | false;
  *   - 跨 realm 集合的 tag 与本 realm 一致, constructor 比较会漏。
  * */
 const collectionHandlersByTag = new Map<string, HandlerValue>([
-  ["[object Map]", defaultProxyHandlers],
-  ["[object Set]", defaultProxyHandlers],
-  ["[object WeakMap]", defaultProxyHandlers],
-  ["[object WeakSet]", defaultProxyHandlers],
+  ['[object Map]', defaultProxyHandlers],
+  ['[object Set]', defaultProxyHandlers],
+  ['[object WeakMap]', defaultProxyHandlers],
+  ['[object WeakSet]', defaultProxyHandlers],
 ]);
 
 /*
@@ -534,10 +473,7 @@ function safeObjectTag(obj: object): string | undefined {
 
 function isCollectionByPrototype(obj: object): boolean {
   return (
-    obj instanceof Map ||
-    obj instanceof Set ||
-    obj instanceof WeakMap ||
-    obj instanceof WeakSet
+    obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof WeakSet
   );
 }
 
@@ -549,11 +485,11 @@ function isCollectionByPrototype(obj: object): boolean {
 // 不满足, 回落 base handler, 其自有属性获得正常追踪与通知。
 const nativeFunctionToString = Function.prototype.toString;
 function isNativeLikeFunction(fn: unknown): boolean {
-  if (typeof fn !== "function") {
+  if (typeof fn !== 'function') {
     return false;
   }
   try {
-    return nativeFunctionToString.call(fn).includes("[native code]");
+    return nativeFunctionToString.call(fn).includes('[native code]');
   } catch {
     return false;
   }
@@ -563,15 +499,13 @@ function passesCollectionDuckCheck(obj: object, tag: string): boolean {
   const o = obj as Record<string, unknown>;
   try {
     switch (tag) {
-      case "[object Map]":
-      case "[object WeakMap]":
+      case '[object Map]':
+      case '[object WeakMap]':
         return (
-          isNativeLikeFunction(o.get) &&
-          isNativeLikeFunction(o.set) &&
-          isNativeLikeFunction(o.has)
+          isNativeLikeFunction(o.get) && isNativeLikeFunction(o.set) && isNativeLikeFunction(o.has)
         );
-      case "[object Set]":
-      case "[object WeakSet]":
+      case '[object Set]':
+      case '[object WeakSet]':
         return (
           isNativeLikeFunction(o.add) &&
           isNativeLikeFunction(o.has) &&
@@ -585,11 +519,9 @@ function passesCollectionDuckCheck(obj: object, tag: string): boolean {
   }
 }
 
-function getCollectionRouteHandlers(
-  obj: object
-): ProxyHandler<object> | undefined {
+function getCollectionRouteHandlers(obj: object): ProxyHandler<object> | undefined {
   // 函数是一等 observable, 走 base 路径, 不参与集合路由
-  if (typeof obj === "function") {
+  if (typeof obj === 'function') {
     return undefined;
   }
   // 同 realm 集合 (含自定义 toStringTag 的子类 —— 其 tag 已不是
@@ -625,33 +557,26 @@ function getCollectionRouteHandlers(
  * 不做 carve-out, 维持黑名单拒绝。
  * */
 const blacklistTagLocalPrototypes = new Map<string, object | undefined>([
-  ["[object Date]", Date.prototype],
-  ["[object RegExp]", RegExp.prototype],
-  ["[object Error]", Error.prototype],
-  ["[object Promise]", Promise.prototype],
-  ["[object ArrayBuffer]", ArrayBuffer.prototype],
+  ['[object Date]', Date.prototype],
+  ['[object RegExp]', RegExp.prototype],
+  ['[object Error]', Error.prototype],
+  ['[object Promise]', Promise.prototype],
+  ['[object ArrayBuffer]', ArrayBuffer.prototype],
   [
-    "[object SharedArrayBuffer]",
-    typeof SharedArrayBuffer === "function"
-      ? SharedArrayBuffer.prototype
-      : undefined,
+    '[object SharedArrayBuffer]',
+    typeof SharedArrayBuffer === 'function' ? SharedArrayBuffer.prototype : undefined,
   ],
-  ["[object DataView]", DataView.prototype],
+  ['[object DataView]', DataView.prototype],
+  ['[object WeakRef]', typeof WeakRef === 'function' ? WeakRef.prototype : undefined],
   [
-    "[object WeakRef]",
-    typeof WeakRef === "function" ? WeakRef.prototype : undefined,
+    '[object FinalizationRegistry]',
+    typeof FinalizationRegistry === 'function' ? FinalizationRegistry.prototype : undefined,
   ],
-  [
-    "[object FinalizationRegistry]",
-    typeof FinalizationRegistry === "function"
-      ? FinalizationRegistry.prototype
-      : undefined,
-  ],
-  ["[object String]", String.prototype],
-  ["[object Number]", Number.prototype],
-  ["[object Boolean]", Boolean.prototype],
-  ["[object Symbol]", Symbol.prototype],
-  ["[object BigInt]", BigInt.prototype],
+  ['[object String]', String.prototype],
+  ['[object Number]', Number.prototype],
+  ['[object Boolean]', Boolean.prototype],
+  ['[object Symbol]', Symbol.prototype],
+  ['[object BigInt]', BigInt.prototype],
 ]);
 
 /*
@@ -668,34 +593,34 @@ const blacklistTagLocalPrototypes = new Map<string, object | undefined>([
  * (索引读写经 Reflect 转发可用), 保持既有行为。
  * */
 const nonInstrumentableTags = new Set([
-  "[object Date]",
-  "[object RegExp]",
-  "[object Error]",
-  "[object Promise]",
-  "[object ArrayBuffer]",
-  "[object SharedArrayBuffer]",
-  "[object DataView]",
-  "[object WeakRef]",
-  "[object FinalizationRegistry]",
-  "[object String]",
-  "[object Number]",
-  "[object Boolean]",
-  "[object Symbol]",
-  "[object BigInt]",
-  "[object Generator]",
-  "[object Map Iterator]",
-  "[object Set Iterator]",
-  "[object Array Iterator]",
-  "[object String Iterator]",
-  "[object RegExp String Iterator]",
-  "[object Module]",
-  "[object WebAssembly.Module]",
-  "[object WebAssembly.Instance]",
-  "[object WebAssembly.Memory]",
-  "[object WebAssembly.Table]",
-  "[object WebAssembly.Global]",
-  "[object WebAssembly.Tag]",
-  "[object WebAssembly.Exception]",
+  '[object Date]',
+  '[object RegExp]',
+  '[object Error]',
+  '[object Promise]',
+  '[object ArrayBuffer]',
+  '[object SharedArrayBuffer]',
+  '[object DataView]',
+  '[object WeakRef]',
+  '[object FinalizationRegistry]',
+  '[object String]',
+  '[object Number]',
+  '[object Boolean]',
+  '[object Symbol]',
+  '[object BigInt]',
+  '[object Generator]',
+  '[object Map Iterator]',
+  '[object Set Iterator]',
+  '[object Array Iterator]',
+  '[object String Iterator]',
+  '[object RegExp String Iterator]',
+  '[object Module]',
+  '[object WebAssembly.Module]',
+  '[object WebAssembly.Instance]',
+  '[object WebAssembly.Memory]',
+  '[object WebAssembly.Table]',
+  '[object WebAssembly.Global]',
+  '[object WebAssembly.Tag]',
+  '[object WebAssembly.Exception]',
 ]);
 
 // these stateful built-in objects can and should be wrapped by Proxies if they are part of a store
@@ -720,7 +645,7 @@ const handlers = new Map<Function, HandlerValue>([
 // wrapping them and calling their methods causes erros like: "TypeError: this is not a Date object."
 export function shouldInstrument(obj: object | Function): boolean {
   // functions are first-class observables in this system
-  if (typeof obj === "function") {
+  if (typeof obj === 'function') {
     return true;
   }
 
@@ -749,7 +674,7 @@ export function shouldInstrument(obj: object | Function): boolean {
         return false;
       }
       if (
-        typeof constructor === "function" &&
+        typeof constructor === 'function' &&
         !(constructor.name in globalObj && globalObj[constructor.name] === constructor) &&
         localPrototype.isPrototypeOf(obj)
       ) {
@@ -768,7 +693,7 @@ export function shouldInstrument(obj: object | Function): boolean {
 
   // other same-realm built-in objects should not be instrumented
   const isBuiltIn =
-    typeof constructor === "function" &&
+    typeof constructor === 'function' &&
     constructor.name in globalObj &&
     globalObj[constructor.name] === constructor;
   return !isBuiltIn;

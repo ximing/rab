@@ -4,69 +4,69 @@
  * 影子代理不会包装嵌套对象，只在顶层建立响应式
  */
 
-import { shadowObservable } from "../../shadow-observable";
-import { observe, unobserve, isObservable, raw } from "../../main";
+import { shadowObservable } from '../../shadow-observable';
+import { observe, unobserve, isObservable, raw } from '../../main';
 
-describe("shadowProxyHandler", () => {
-  describe("基础操作", () => {
-    test("应该处理 get 操作", () => {
-      const shadow = shadowObservable({ prop: "value" });
-      expect(shadow.prop).toBe("value");
+describe('shadowProxyHandler', () => {
+  describe('基础操作', () => {
+    test('应该处理 get 操作', () => {
+      const shadow = shadowObservable({ prop: 'value' });
+      expect(shadow.prop).toBe('value');
     });
 
-    test("应该处理 set 操作", () => {
+    test('应该处理 set 操作', () => {
       const shadow = shadowObservable({ count: 0 });
       shadow.count = 10;
       expect(shadow.count).toBe(10);
     });
 
-    test("应该处理 deleteProperty 操作", () => {
-      const shadow = shadowObservable({ prop: "value" } as any);
+    test('应该处理 deleteProperty 操作', () => {
+      const shadow = shadowObservable({ prop: 'value' } as any);
       delete shadow.prop;
       expect(shadow.prop).toBeUndefined();
     });
 
-    test("应该处理 has 操作", () => {
-      const shadow = shadowObservable({ prop: "value" });
-      expect("prop" in shadow).toBe(true);
-      expect("nonexistent" in shadow).toBe(false);
+    test('应该处理 has 操作', () => {
+      const shadow = shadowObservable({ prop: 'value' });
+      expect('prop' in shadow).toBe(true);
+      expect('nonexistent' in shadow).toBe(false);
     });
 
-    test("应该处理 ownKeys 操作", () => {
+    test('应该处理 ownKeys 操作', () => {
       const shadow = shadowObservable({ a: 1, b: 2 });
       const keys = Object.keys(shadow);
-      expect(keys).toEqual(["a", "b"]);
+      expect(keys).toEqual(['a', 'b']);
     });
   });
 
-  describe("Symbol 处理", () => {
-    test("应该处理 Symbol 属性", () => {
-      const sym = Symbol("test");
-      const shadow = shadowObservable({ [sym]: "value" });
-      expect(shadow[sym]).toBe("value");
+  describe('Symbol 处理', () => {
+    test('应该处理 Symbol 属性', () => {
+      const sym = Symbol('test');
+      const shadow = shadowObservable({ [sym]: 'value' });
+      expect(shadow[sym]).toBe('value');
     });
 
-    test("应该处理 well-known symbols", () => {
-      const shadow = shadowObservable({ [Symbol.toStringTag]: "CustomObject" });
-      expect(shadow[Symbol.toStringTag]).toBe("CustomObject");
+    test('应该处理 well-known symbols', () => {
+      const shadow = shadowObservable({ [Symbol.toStringTag]: 'CustomObject' });
+      expect(shadow[Symbol.toStringTag]).toBe('CustomObject');
     });
 
-    test("应该处理 Symbol.iterator", () => {
+    test('应该处理 Symbol.iterator', () => {
       const obj = {
         [Symbol.iterator]: function* () {
           yield 1;
         },
       };
       const shadow = shadowObservable(obj);
-      expect(typeof shadow[Symbol.iterator]).toBe("function");
+      expect(typeof shadow[Symbol.iterator]).toBe('function');
     });
   });
 
-  describe("属性描述符处理", () => {
-    test("应该处理 getter/setter", () => {
+  describe('属性描述符处理', () => {
+    test('应该处理 getter/setter', () => {
       let value = 0;
       const obj: any = {};
-      Object.defineProperty(obj, "prop", {
+      Object.defineProperty(obj, 'prop', {
         get() {
           return value;
         },
@@ -80,9 +80,9 @@ describe("shadowProxyHandler", () => {
       expect(shadow.prop).toBe(10);
     });
 
-    test("应该处理不可配置属性", () => {
+    test('应该处理不可配置属性', () => {
       const obj: any = {};
-      Object.defineProperty(obj, "frozen", {
+      Object.defineProperty(obj, 'frozen', {
         value: 42,
         writable: false,
         configurable: false,
@@ -91,9 +91,9 @@ describe("shadowProxyHandler", () => {
       expect(shadow.frozen).toBe(42);
     });
 
-    test("应该处理 Object.defineProperty", () => {
+    test('应该处理 Object.defineProperty', () => {
       const shadow = shadowObservable({} as any);
-      Object.defineProperty(shadow, "prop", {
+      Object.defineProperty(shadow, 'prop', {
         value: 42,
         writable: true,
         configurable: true,
@@ -101,43 +101,43 @@ describe("shadowProxyHandler", () => {
       expect(shadow.prop).toBe(42);
     });
 
-    test("应该处理 Object.getOwnPropertyDescriptor", () => {
-      const shadow = shadowObservable({ prop: "value" });
-      const descriptor = Object.getOwnPropertyDescriptor(shadow, "prop");
-      expect(descriptor?.value).toBe("value");
+    test('应该处理 Object.getOwnPropertyDescriptor', () => {
+      const shadow = shadowObservable({ prop: 'value' });
+      const descriptor = Object.getOwnPropertyDescriptor(shadow, 'prop');
+      expect(descriptor?.value).toBe('value');
     });
   });
 
-  describe("原型链处理", () => {
-    test("应该处理原型链中的 setter", () => {
+  describe('原型链处理', () => {
+    test('应该处理原型链中的 setter', () => {
       const parent = shadowObservable({ count: 0 });
       const child = shadowObservable(Object.create(parent));
       child.count = 10;
       expect(child.count).toBe(10);
     });
 
-    test("应该处理 receiver 不是 proxy 的 set 操作", () => {
+    test('应该处理 receiver 不是 proxy 的 set 操作', () => {
       const shadow = shadowObservable({ count: 0 });
       const obj = Object.create(shadow);
       obj.count = 10;
       expect(obj.count).toBe(10);
     });
 
-    test("应该处理 receiver 是 null 的情况", () => {
+    test('应该处理 receiver 是 null 的情况', () => {
       const shadow = shadowObservable({ count: 0 });
-      const result = Reflect.set(shadow, "count", 10, null as any);
-      expect(typeof result).toBe("boolean");
+      const result = Reflect.set(shadow, 'count', 10, null as any);
+      expect(typeof result).toBe('boolean');
     });
 
-    test("应该处理 receiver 是 undefined 的情况", () => {
+    test('应该处理 receiver 是 undefined 的情况', () => {
       const shadow = shadowObservable({ count: 0 });
-      const result = Reflect.set(shadow, "count", 10, undefined as any);
-      expect(typeof result).toBe("boolean");
+      const result = Reflect.set(shadow, 'count', 10, undefined as any);
+      expect(typeof result).toBe('boolean');
     });
   });
 
-  describe("construct 操作", () => {
-    test("应该处理 construct 操作", () => {
+  describe('construct 操作', () => {
+    test('应该处理 construct 操作', () => {
       class MyClass {
         value = 42;
       }
@@ -146,7 +146,7 @@ describe("shadowProxyHandler", () => {
       expect(instance.value).toBe(42);
     });
 
-    test("应该处理 newTarget 是 proxy 的情况", () => {
+    test('应该处理 newTarget 是 proxy 的情况', () => {
       class MyClass {
         value = 42;
       }
@@ -156,7 +156,7 @@ describe("shadowProxyHandler", () => {
       expect(instance instanceof MyClass).toBe(true);
     });
 
-    test("应该处理 receiver 是 proxy 的 set 操作", () => {
+    test('应该处理 receiver 是 proxy 的 set 操作', () => {
       const shadow = shadowObservable({ count: 0 });
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -168,7 +168,7 @@ describe("shadowProxyHandler", () => {
       unobserve(reaction);
     });
 
-    test("应该处理 receiver 不是 proxy 的 set 操作", () => {
+    test('应该处理 receiver 不是 proxy 的 set 操作', () => {
       const shadow = shadowObservable({ count: 0 });
       const child = Object.create(shadow);
       child.count = 10;
@@ -176,22 +176,22 @@ describe("shadowProxyHandler", () => {
     });
   });
 
-  describe("数组操作", () => {
-    test("应该处理数组的 length 属性", () => {
+  describe('数组操作', () => {
+    test('应该处理数组的 length 属性', () => {
       const arr = shadowObservable([1, 2, 3]);
       expect(arr.length).toBe(3);
       arr.length = 2;
       expect(arr.length).toBe(2);
     });
 
-    test("应该处理数组的索引访问", () => {
+    test('应该处理数组的索引访问', () => {
       const arr = shadowObservable([1, 2, 3]);
       expect(arr[0]).toBe(1);
       arr[0] = 10;
       expect(arr[0]).toBe(10);
     });
 
-    test("应该处理数组的 push 操作", () => {
+    test('应该处理数组的 push 操作', () => {
       const shadow = shadowObservable([1, 2, 3]);
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -203,7 +203,7 @@ describe("shadowProxyHandler", () => {
       unobserve(reaction);
     });
 
-    test("应该处理数组的索引访问响应式", () => {
+    test('应该处理数组的索引访问响应式', () => {
       const shadow = shadowObservable([1, 2, 3]);
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -216,62 +216,62 @@ describe("shadowProxyHandler", () => {
     });
   });
 
-  describe("Object 方法", () => {
-    test("应该处理 Object.assign", () => {
+  describe('Object 方法', () => {
+    test('应该处理 Object.assign', () => {
       const shadow = shadowObservable({ a: 1 } as any);
       Object.assign(shadow, { b: 2 });
       expect(shadow.a).toBe(1);
       expect(shadow.b).toBe(2);
     });
 
-    test("应该处理 for...in 循环", () => {
+    test('应该处理 for...in 循环', () => {
       const shadow = shadowObservable({ a: 1, b: 2 });
       const keys: string[] = [];
       for (const key in shadow) {
         keys.push(key);
       }
-      expect(keys).toContain("a");
-      expect(keys).toContain("b");
+      expect(keys).toContain('a');
+      expect(keys).toContain('b');
     });
   });
 
-  describe("序列化", () => {
-    test("应该处理 JSON.stringify", () => {
+  describe('序列化', () => {
+    test('应该处理 JSON.stringify', () => {
       const shadow = shadowObservable({ a: 1, b: 2 });
       const json = JSON.stringify(shadow);
       expect(json).toBe('{"a":1,"b":2}');
     });
 
-    test("应该处理 spread 操作符", () => {
+    test('应该处理 spread 操作符', () => {
       const shadow = shadowObservable({ a: 1, b: 2 });
       const spread = { ...shadow };
       expect(spread).toEqual({ a: 1, b: 2 });
     });
   });
 
-  describe("特殊对象处理", () => {
-    test("应该处理 Object.freeze 后的对象", () => {
-      const obj = Object.freeze({ prop: "value" });
+  describe('特殊对象处理', () => {
+    test('应该处理 Object.freeze 后的对象', () => {
+      const obj = Object.freeze({ prop: 'value' });
       const shadow = shadowObservable(obj);
-      expect(shadow.prop).toBe("value");
+      expect(shadow.prop).toBe('value');
     });
 
-    test("应该处理 Object.seal 后的对象", () => {
-      const obj = Object.seal({ prop: "value" });
+    test('应该处理 Object.seal 后的对象', () => {
+      const obj = Object.seal({ prop: 'value' });
       const shadow = shadowObservable(obj);
-      expect(shadow.prop).toBe("value");
+      expect(shadow.prop).toBe('value');
     });
   });
 
-  describe("嵌套对象处理", () => {
-    test("应该不包装嵌套对象", () => {
+  describe('嵌套对象处理', () => {
+    test('应该不包装嵌套对象', () => {
       const nested = { value: 1 };
       const shadow = shadowObservable({ nested });
       expect(isObservable(shadow.nested)).toBe(false);
       expect(shadow.nested).toBe(nested);
     });
 
-    test("应该支持替换嵌套对象", () => {
+    test('应该支持替换嵌套对象', () => {
       const shadow = shadowObservable({ nested: { value: 1 } } as any);
       const reactions: any[] = [];
       const reaction = observe(() => {
@@ -284,8 +284,8 @@ describe("shadowProxyHandler", () => {
     });
   });
 
-  describe("响应式追踪", () => {
-    test("应该处理相同值不触发 reactions", () => {
+  describe('响应式追踪', () => {
+    test('应该处理相同值不触发 reactions', () => {
       const shadow = shadowObservable({ count: 0 });
       const reactions: number[] = [];
       const reaction = observe(() => {
@@ -297,20 +297,20 @@ describe("shadowProxyHandler", () => {
       unobserve(reaction);
     });
 
-    test("应该处理新增属性", () => {
+    test('应该处理新增属性', () => {
       const shadow = shadowObservable({} as any);
       const reactions: number[] = [];
       const reaction = observe(() => {
         reactions.push(Object.keys(shadow).length);
       });
       expect(reactions).toEqual([0]);
-      shadow.newProp = "value";
+      shadow.newProp = 'value';
       expect(reactions).toEqual([0, 1]);
       unobserve(reaction);
     });
 
-    test("应该处理删除不存在的属性", () => {
-      const shadow = shadowObservable({ prop: "value" });
+    test('应该处理删除不存在的属性', () => {
+      const shadow = shadowObservable({ prop: 'value' });
       const reactions: number[] = [];
       const reaction = observe(() => {
         reactions.push(Object.keys(shadow).length);

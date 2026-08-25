@@ -1,6 +1,6 @@
-import { CodeBlock } from "../../components/CodeBlock";
-import { DemoCard } from "../../components/DemoCard";
-import ObserverLogDemo, { observerLogDemoCode } from "../../demos/observer-log";
+import { CodeBlock } from '../../components/CodeBlock';
+import { DemoCard } from '../../components/DemoCard';
+import ObserverLogDemo, { observerLogDemoCode } from '../../demos/observer-log';
 
 const observableCode = `import { observable, observe, unobserve } from "@rabjs/observer";
 
@@ -52,9 +52,8 @@ export default function ObserverPage() {
     <div>
       <h1>Observer 观察者</h1>
       <p>
-        <code>@rabjs/observer</code> 是底层的响应式引擎，完全不依赖 React：
-        两个概念就够——<code>observable</code> 让对象可追踪，<code>observe</code>{" "}
-        订阅变化。
+        <code>@rabjs/observer</code> 是底层的响应式引擎，完全不依赖 React： 两个概念就够——
+        <code>observable</code> 让对象可追踪，<code>observe</code> 订阅变化。
       </p>
 
       <h2>observable + observe</h2>
@@ -75,10 +74,9 @@ export default function ObserverPage() {
 
       <h2>动手试试</h2>
       <p>
-        下面的 demo 没用 Service、也没用 <code>observer</code> 组件：
-        一个模块级的 <code>observable</code> 对象，按钮直接改它，{" "}
-        <code>observe</code> 的回调把每次触发记成日志（日志本身是 React state，
-        只负责展示）。
+        下面的 demo 没用 Service、也没用 <code>observer</code> 组件： 一个模块级的{' '}
+        <code>observable</code> 对象，按钮直接改它， <code>observe</code>{' '}
+        的回调把每次触发记成日志（日志本身是 React state， 只负责展示）。
       </p>
       <DemoCard
         title="纯 observer 的响应式日志"
@@ -90,12 +88,12 @@ export default function ObserverPage() {
 
       <h2>和 @rabjs/react 的关系</h2>
       <p>
-        <code>@rabjs/react</code> 就是在这一层之上做的绑定：<code>observer</code> /{" "}
-        <code>view</code> / <code>useObserver</code> 内部都是把组件渲染函数包进一个{" "}
-        <code>observe</code> reaction，再把它接到 React 的强制更新上；<code>Service</code>{" "}
-        基类的响应式也是调用这里的 <code>observable()</code>。
-        所以在 React 项目里你通常不需要直接碰这个包——它重新导出了全部 API，
-        直接从 <code>@rabjs/react</code> import 也是一样的。
+        <code>@rabjs/react</code> 就是在这一层之上做的绑定：<code>observer</code> /{' '}
+        <code>view</code> / <code>useObserver</code> 内部都是把组件渲染函数包进一个{' '}
+        <code>observe</code> reaction，再把它接到 React 的强制更新上；<code>Service</code>{' '}
+        基类的响应式也是调用这里的 <code>observable()</code>。 所以在 React
+        项目里你通常不需要直接碰这个包——它重新导出了全部 API， 直接从 <code>@rabjs/react</code>{' '}
+        import 也是一样的。
       </p>
     </div>
   );

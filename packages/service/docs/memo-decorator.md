@@ -14,17 +14,17 @@
 ## 基础用法
 
 ```typescript
-import { Service, Memo } from "@rabjs/service";
+import { Service, Memo } from '@rabjs/service';
 
 class UserService extends Service {
   users = [
-    { id: 1, name: "Alice", age: 25 },
-    { id: 2, name: "Bob", age: 30 },
+    { id: 1, name: 'Alice', age: 25 },
+    { id: 2, name: 'Bob', age: 30 },
   ];
 
   @Memo()
   get totalAge() {
-    console.log("计算 totalAge");
+    console.log('计算 totalAge');
     return this.users.reduce((sum, user) => sum + user.age, 0);
   }
 
@@ -43,7 +43,7 @@ console.log(service.totalAge); // 输出: "计算 totalAge" 和 55
 console.log(service.totalAge); // 直接返回 55，不输出 "计算 totalAge"
 
 // 修改依赖数据
-service.users.push({ id: 3, name: "Charlie", age: 35 });
+service.users.push({ id: 3, name: 'Charlie', age: 35 });
 
 // 再次访问，会重新计算
 console.log(service.totalAge); // 输出: "计算 totalAge" 和 90
@@ -68,7 +68,7 @@ class CounterService extends Service {
 
 ```typescript
 class UserService extends Service {
-  user = { name: "Alice", age: 25 };
+  user = { name: 'Alice', age: 25 };
 
   @Memo()
   get greeting() {
@@ -82,18 +82,18 @@ class UserService extends Service {
 ```typescript
 class TodoService extends Service {
   todos = [
-    { id: 1, text: "Learn React", completed: false },
-    { id: 2, text: "Learn TypeScript", completed: true },
+    { id: 1, text: 'Learn React', completed: false },
+    { id: 2, text: 'Learn TypeScript', completed: true },
   ];
 
   @Memo()
   get completedCount() {
-    return this.todos.filter((todo) => todo.completed).length;
+    return this.todos.filter(todo => todo.completed).length;
   }
 
   @Memo()
   get pendingTodos() {
-    return this.todos.filter((todo) => !todo.completed);
+    return this.todos.filter(todo => !todo.completed);
   }
 }
 ```
@@ -156,14 +156,14 @@ console.log(service.quadrupled); // 80
 // quadrupledFromDoubled 的缓存不会自动失效
 // 需要先访问 doubled 或手动失效缓存
 console.log(service.doubled); // 40
-invalidateMemo(service, "quadrupledFromDoubled");
+invalidateMemo(service, 'quadrupledFromDoubled');
 console.log(service.quadrupledFromDoubled); // 80
 ```
 
 ### 手动失效缓存
 
 ```typescript
-import { Service, Memo, invalidateMemo } from "@rabjs/service";
+import { Service, Memo, invalidateMemo } from '@rabjs/service';
 
 class DataService extends Service {
   data = 10;
@@ -176,7 +176,7 @@ class DataService extends Service {
 
   forceRefresh() {
     // 手动失效缓存
-    invalidateMemo(this, "expensiveComputation");
+    invalidateMemo(this, 'expensiveComputation');
   }
 }
 ```
@@ -184,7 +184,7 @@ class DataService extends Service {
 ### 清理所有缓存
 
 ```typescript
-import { Service, Memo, cleanupAllMemos } from "@rabjs/service";
+import { Service, Memo, cleanupAllMemos } from '@rabjs/service';
 
 class DataService extends Service {
   @Memo()

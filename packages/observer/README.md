@@ -3,7 +3,7 @@
 `@rabjs/observer` 是 rab 的响应式内核：`observable` 把对象/数组/集合包装成细粒度可观察代理，`observe` 把普通函数变成 reaction——执行期间自动记录它读取了哪些属性，之后只有这些属性变化时才重新运行。
 
 ```ts
-import { observable, observe, unobserve } from "@rabjs/observer";
+import { observable, observe, unobserve } from '@rabjs/observer';
 
 const state = observable({ count: 0 });
 

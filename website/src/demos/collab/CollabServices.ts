@@ -1,6 +1,6 @@
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
-type Lang = "zh" | "en";
+type Lang = 'zh' | 'en';
 
 /**
  * 服务协作 demo 的两个 Service。
@@ -14,7 +14,7 @@ type Lang = "zh" | "en";
  */
 
 export class SettingsService extends Service {
-  lang: Lang = "zh";
+  lang: Lang = 'zh';
 
   setLang(lang: Lang) {
     this.lang = lang;
@@ -27,13 +27,11 @@ export class GreetingService extends Service {
     return this.resolve(SettingsService);
   }
 
-  name = "RAB";
+  name = 'RAB';
 
   // getter 跨服务读取：settings.lang 变化时 greeting 也会自动更新
   get greeting(): string {
-    return this.settings.lang === "zh"
-      ? `你好，${this.name}！`
-      : `Hello, ${this.name}!`;
+    return this.settings.lang === 'zh' ? `你好，${this.name}！` : `Hello, ${this.name}!`;
   }
 
   setName(name: string) {

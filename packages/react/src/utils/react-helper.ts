@@ -1,7 +1,5 @@
 // 标志：标记组件已被 observer 或 view 包裹
-export const IS_REACTIVE_COMPONENT = Symbol.for(
-  "@rabjs/react:isReactiveComponent"
-);
+export const IS_REACTIVE_COMPONENT = Symbol.for('@rabjs/react:isReactiveComponent');
 
 /**
  * 判断是否为类组件

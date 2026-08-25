@@ -5,7 +5,7 @@
 ## 创建 Observable
 
 ```typescript
-import { observable, raw, isObservable } from "@rabjs/react";
+import { observable, raw, isObservable } from '@rabjs/react';
 
 // 创建 observable 对象
 const state = observable({ count: 0 });
@@ -21,13 +21,13 @@ isObservable(rawObj); // false
 ## 观察者
 
 ```typescript
-import { observe, unobserve } from "@rabjs/react";
+import { observe, unobserve } from '@rabjs/react';
 
 const state = observable({ count: 0 });
 
 // 创建观察者
 const reaction = observe(() => {
-  console.log("Count:", state.count);
+  console.log('Count:', state.count);
 });
 
 // 停止观察
@@ -37,12 +37,12 @@ unobserve(reaction);
 ## 完整示例
 
 ```typescript
-import { observable, observe, unobserve } from "@rabjs/react";
+import { observable, observe, unobserve } from '@rabjs/react';
 
 // 创建响应式状态
 const state = observable({
   count: 0,
-  name: "Alice"
+  name: 'Alice',
 });
 
 // 创建观察者
@@ -52,7 +52,7 @@ const reaction = observe(() => {
 
 // 修改状态会自动触发观察者
 state.count++; // 输出: Alice: 1
-state.name = "Bob"; // 输出: Bob: 1
+state.name = 'Bob'; // 输出: Bob: 1
 
 // 停止观察
 unobserve(reaction);

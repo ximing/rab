@@ -1,4 +1,4 @@
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 /*
  * #10: clear() 此前无条件在通知前 new Map(target)/new Set(target) 做全量拷贝
@@ -14,14 +14,14 @@ import { observable, observe, shadowObservable } from "../main";
  * 注意 reaction 重注册会合法地 new Set(), 因此只看"带 target 参数"的构造。
  * */
 
-describe("#10 clear oldValue is only copied when a debugger consumes it", () => {
-  test("debugger receives a content copy of the pre-clear Map (deep)", () => {
-    const raw = new Map<string, number>([["a", 1]]);
+describe('#10 clear oldValue is only copied when a debugger consumes it', () => {
+  test('debugger receives a content copy of the pre-clear Map (deep)', () => {
+    const raw = new Map<string, number>([['a', 1]]);
     const m = observable(raw);
     const clearOps: Array<{ oldValue?: unknown }> = [];
-    observe(() => m.get("a"), {
-      debugger: (operation) => {
-        if (operation.type === "clear") {
+    observe(() => m.get('a'), {
+      debugger: operation => {
+        if (operation.type === 'clear') {
           clearOps.push({ oldValue: operation.oldValue });
         }
       },
@@ -31,16 +31,16 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
     m.clear();
     expect(clearOps).toHaveLength(1);
     expect(clearOps[0].oldValue).toEqual(before);
-    expect((clearOps[0].oldValue as Map<string, number>).get("a")).toBe(1);
+    expect((clearOps[0].oldValue as Map<string, number>).get('a')).toBe(1);
   });
 
-  test("debugger receives a content copy of the pre-clear Set (shadow path)", () => {
+  test('debugger receives a content copy of the pre-clear Set (shadow path)', () => {
     const raw = new Set<number>([1, 2]);
     const s = shadowObservable(raw);
     const clearOps: Array<{ oldValue?: unknown }> = [];
     observe(() => s.has(1), {
-      debugger: (operation) => {
-        if (operation.type === "clear") {
+      debugger: operation => {
+        if (operation.type === 'clear') {
           clearOps.push({ oldValue: operation.oldValue });
         }
       },
@@ -51,14 +51,14 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
     expect(clearOps[0].oldValue).toEqual(new Set([1, 2]));
   });
 
-  test("without a debugger consumer, Map clear performs no copy construction", () => {
+  test('without a debugger consumer, Map clear performs no copy construction', () => {
     const raw = new Map<string, number>([
-      ["a", 1],
-      ["b", 2],
+      ['a', 1],
+      ['b', 2],
     ]);
     const m = observable(raw);
     let dummy: number | undefined;
-    observe(() => (dummy = m.get("a")));
+    observe(() => (dummy = m.get('a')));
     expect(dummy).toBe(1);
 
     const RealMap = globalThis.Map;
@@ -69,7 +69,7 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
         ? new RealMap()
         : new RealMap(iterable as Iterable<readonly [unknown, unknown]>);
     } as unknown as MapConstructor;
-    Object.defineProperty(SpyMap, "prototype", { value: RealMap.prototype });
+    Object.defineProperty(SpyMap, 'prototype', { value: RealMap.prototype });
     (globalThis as { Map: MapConstructor }).Map = SpyMap;
     try {
       m.clear();
@@ -84,10 +84,10 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
     expect(ctorCalls.some(([arg]) => arg === raw)).toBe(false);
   });
 
-  test("positive control: with a debugger consumer, Map clear does copy", () => {
-    const raw = new Map<string, number>([["a", 1]]);
+  test('positive control: with a debugger consumer, Map clear does copy', () => {
+    const raw = new Map<string, number>([['a', 1]]);
     const m = observable(raw);
-    observe(() => m.get("a"), {
+    observe(() => m.get('a'), {
       debugger: () => {
         /* debugger 消费者存在 */
       },
@@ -101,7 +101,7 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
         ? new RealMap()
         : new RealMap(iterable as Iterable<readonly [unknown, unknown]>);
     } as unknown as MapConstructor;
-    Object.defineProperty(SpyMap, "prototype", { value: RealMap.prototype });
+    Object.defineProperty(SpyMap, 'prototype', { value: RealMap.prototype });
     (globalThis as { Map: MapConstructor }).Map = SpyMap;
     try {
       m.clear();
@@ -114,7 +114,7 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
     expect(ctorCalls.filter(([arg]) => arg === raw)).toHaveLength(1);
   });
 
-  test("Set clear without debugger also skips the copy", () => {
+  test('Set clear without debugger also skips the copy', () => {
     const raw = new Set<number>([1, 2, 3]);
     const s = observable(raw);
     let dummy: number | undefined;
@@ -125,11 +125,9 @@ describe("#10 clear oldValue is only copied when a debugger consumes it", () => 
     const ctorCalls: Array<Array<unknown>> = [];
     const SpySet = function (this: unknown, iterable?: unknown) {
       ctorCalls.push([iterable]);
-      return iterable === undefined
-        ? new RealSet()
-        : new RealSet(iterable as Iterable<unknown>);
+      return iterable === undefined ? new RealSet() : new RealSet(iterable as Iterable<unknown>);
     } as unknown as SetConstructor;
-    Object.defineProperty(SpySet, "prototype", { value: RealSet.prototype });
+    Object.defineProperty(SpySet, 'prototype', { value: RealSet.prototype });
     (globalThis as { Set: SetConstructor }).Set = SpySet;
     try {
       s.clear();

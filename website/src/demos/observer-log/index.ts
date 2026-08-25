@@ -1,4 +1,4 @@
-import ObserverLogDemo from "./ObserverLogDemo";
+import ObserverLogDemo from './ObserverLogDemo';
 
 export default ObserverLogDemo;
 

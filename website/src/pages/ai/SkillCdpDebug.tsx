@@ -1,4 +1,4 @@
-import { CodeBlock } from "../../components/CodeBlock";
+import { CodeBlock } from '../../components/CodeBlock';
 
 const installCode = `# 安装方式见「AI 用法总览」（支持 Claude Code / Codex / Cursor /
 # Grok / Kimi / OpenCode / Pi），通用兜底：
@@ -90,26 +90,23 @@ export default function SkillCdpDebug() {
     <div>
       <h1>rab-cdp-debug Skill</h1>
       <p>
-        <code>rab-cdp-debug</code> 是一个跨编程工具的 Agent skill，源文件在仓库{" "}
-        <code>skills/rab-cdp-debug/</code> 下。它教 AI 助手通过 Chrome
-        DevTools MCP 的 <code>evaluate_script</code> 工具，利用{" "}
-        <code>@rabjs/devtools</code> 挂载的{" "}
-        <code>window.__RS_ROOT_CONTAINER__</code> 句柄，对运行中的 rab
-        应用做 Service 层的功能验证与状态检查：枚举 Service、读状态、调方法、
-        跑断言。
+        <code>rab-cdp-debug</code> 是一个跨编程工具的 Agent skill，源文件在仓库{' '}
+        <code>skills/rab-cdp-debug/</code> 下。它教 AI 助手通过 Chrome DevTools MCP 的{' '}
+        <code>evaluate_script</code> 工具，利用 <code>@rabjs/devtools</code> 挂载的{' '}
+        <code>window.__RS_ROOT_CONTAINER__</code> 句柄，对运行中的 rab 应用做 Service
+        层的功能验证与状态检查：枚举 Service、读状态、调方法、 跑断言。
       </p>
 
       <h2>前置条件</h2>
       <ol>
         <li>
-          应用接入 <code>@rabjs/devtools</code> 并在入口显式初始化——{" "}
-          <code>window.__RS_ROOT_CONTAINER__</code>{" "}
-          <strong>不会自动挂载</strong>：
+          应用接入 <code>@rabjs/devtools</code> 并在入口显式初始化——{' '}
+          <code>window.__RS_ROOT_CONTAINER__</code> <strong>不会自动挂载</strong>：
           <CodeBlock language="tsx">{setupCode}</CodeBlock>
         </li>
         <li>
-          AI 助手侧配置好 Chrome DevTools MCP（skill 通过它的{" "}
-          <code>evaluate_script</code> 工具在页面里执行 JavaScript）。
+          AI 助手侧配置好 Chrome DevTools MCP（skill 通过它的 <code>evaluate_script</code>{' '}
+          工具在页面里执行 JavaScript）。
         </li>
         <li>安装 skill 本身：</li>
       </ol>
@@ -117,17 +114,15 @@ export default function SkillCdpDebug() {
 
       <h2>核心概念：容器树与调试句柄</h2>
       <p>
-        <code>setupWindowRootContainer()</code> 挂载的句柄暴露整棵容器树的查询
-        接口：根部是与 React 无关的 global 容器，下面依次是 RSRoot、页面级、
-        Domain 级的 <code>bindServices</code> 容器。
+        <code>setupWindowRootContainer()</code> 挂载的句柄暴露整棵容器树的查询 接口：根部是与 React
+        无关的 global 容器，下面依次是 RSRoot、页面级、 Domain 级的 <code>bindServices</code> 容器。
       </p>
       <CodeBlock language="ts" title="RSRootContainerHandle">
         {handleApiCode}
       </CodeBlock>
       <p>
-        <code>evaluate_script</code> 的返回值必须是 JSON
-        可序列化的——Service 实例不能跨进程传递，所以所有操作都在脚本内部完成，
-        只把基础类型、普通对象作为结果返回。
+        <code>evaluate_script</code> 的返回值必须是 JSON 可序列化的——Service
+        实例不能跨进程传递，所以所有操作都在脚本内部完成， 只把基础类型、普通对象作为结果返回。
       </p>
 
       <h2>典型验证流程</h2>
@@ -138,14 +133,12 @@ export default function SkillCdpDebug() {
 
       <h2>链式断言：RSExpectBuilder</h2>
       <p>
-        <code>@rabjs/devtools</code> 还提供链式断言 API，通过{" "}
-        <code>handle.expect(instanceId)</code> 创建（或独立函数{" "}
-        <code>rsExpect(instance)</code>）。断言是懒执行的，三种执行模式：
+        <code>@rabjs/devtools</code> 还提供链式断言 API，通过 <code>handle.expect(instanceId)</code>{' '}
+        创建（或独立函数 <code>rsExpect(instance)</code>）。断言是懒执行的，三种执行模式：
       </p>
       <ul>
         <li>
-          <code>.run()</code> — 返回结构化结果（可 JSON 序列化，适合
-          evaluate_script 回传）；
+          <code>.run()</code> — 返回结构化结果（可 JSON 序列化，适合 evaluate_script 回传）；
         </li>
         <li>
           <code>.check()</code> — 控制台输出彩色报告，返回 boolean；
@@ -157,9 +150,8 @@ export default function SkillCdpDebug() {
       </ul>
       <CodeBlock language="js">{assertCode}</CodeBlock>
       <p>
-        断言方法覆盖相等、数值比较、存在性、包含、正则、类型、长度、对象键 /
-        子集匹配、数组 some/every 等（<code>path</code>{" "}
-        参数支持点号路径深入嵌套属性），完整速查表见 skill 源文件。
+        断言方法覆盖相等、数值比较、存在性、包含、正则、类型、长度、对象键 / 子集匹配、数组
+        some/every 等（<code>path</code> 参数支持点号路径深入嵌套属性），完整速查表见 skill 源文件。
       </p>
 
       <h2>示例 prompt</h2>
@@ -172,8 +164,8 @@ export default function SkillCdpDebug() {
           加载，稍等重试；或应用没调用 <code>setupWindowRootContainer()</code>。
         </li>
         <li>
-          <code>getService</code> 找不到：只有被 <code>resolve</code>{" "}
-          实例化过的 Service 才会出现，先 <code>listServices()</code> 确认。
+          <code>getService</code> 找不到：只有被 <code>resolve</code> 实例化过的 Service
+          才会出现，先 <code>listServices()</code> 确认。
         </li>
         <li>
           返回值 undefined / 不完整：检查是否返回了 Service 实例或循环引用对象，

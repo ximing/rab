@@ -15,13 +15,13 @@
  * - 避免每次渲染都创建新实例
  */
 
-import type { Service } from "@rabjs/service";
-import { getGlobalContainer, ServiceScope } from "@rabjs/service";
-import { useContext, useRef } from "react";
+import type { Service } from '@rabjs/service';
+import { getGlobalContainer, ServiceScope } from '@rabjs/service';
+import { useContext, useRef } from 'react';
 
-import { useDomainContext } from "./domain-context";
-import { StrictContext } from "./strict-context";
-import type { ServiceIdentifier } from "./types";
+import { useDomainContext } from './domain-context';
+import { StrictContext } from './strict-context';
+import type { ServiceIdentifier } from './types';
 
 /**
  * useService Hook 的选项配置
@@ -46,9 +46,7 @@ export interface UseServiceOptions {
  * const domain1Service = useService(Domain1Service); // 自动推导为 Domain1Service 类型
  * ```
  */
-export function useService<T extends Service>(
-  identifier: new (...args: any[]) => T
-): T;
+export function useService<T extends Service>(identifier: new (...args: any[]) => T): T;
 
 /**
  * useService Hook (重载2: 传入字符串或 Symbol，需要显式指定泛型，不指定 scope)
@@ -62,9 +60,7 @@ export function useService<T extends Service>(
  * const domain1Service = useService<Domain1Service>('domain1Service'); // 需要显式指定泛型
  * ```
  */
-export function useService<T extends Service = Service>(
-  identifier: string | symbol
-): T;
+export function useService<T extends Service = Service>(identifier: string | symbol): T;
 
 /**
  * useService Hook (重载3: 传入类构造函数和选项)
@@ -135,7 +131,7 @@ export function useService<T extends Service = Service>(
     // 从 container 中 resolve，再非严格模式下，也会一层一层往上找，直到找到为止
     // 所以直接兼容 非严格模式下注册到 global上的case
     const resolvedService: T =
-      typeof identifier === "function"
+      typeof identifier === 'function'
         ? container.resolve(identifier as new (...args: any[]) => T)
         : container.resolve<T>(identifier as string | symbol);
 
@@ -147,13 +143,9 @@ export function useService<T extends Service = Service>(
     return resolvedService;
   } catch (error) {
     const containerName =
-      typeof container.getName === "function"
-        ? String(container.getName())
-        : "unknown";
+      typeof container.getName === 'function' ? String(container.getName()) : 'unknown';
     throw new Error(
-      `Failed to resolve service ${String(
-        identifier
-      )} in container "${containerName}". ` +
+      `Failed to resolve service ${String(identifier)} in container "${containerName}". ` +
         `Error: ${error instanceof Error ? error.message : String(error)}`
     );
   }

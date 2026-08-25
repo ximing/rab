@@ -9,7 +9,7 @@
  *   defineProperty 不受数组 set 帧 (index/length) 干扰;
  * - 转发窗口内嵌套写入 (setter 内再写同一 observable 的被观察 key) 单次通知。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 function defineValue(obj: object, key: string, value: number) {
   Object.defineProperty(obj, key, {
@@ -20,8 +20,8 @@ function defineValue(obj: object, key: string, value: number) {
   });
 }
 
-describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
-  test("类继承链 setter 内 super.x = v: 单次通知, 值经 super 翻倍落盘", () => {
+describe('转发窗口 {target,key} 帧匹配边界 (base handler)', () => {
+  test('类继承链 setter 内 super.x = v: 单次通知, 值经 super 翻倍落盘', () => {
     class Base {
       _v = 0;
       get v() {
@@ -53,7 +53,7 @@ describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
     expect(calls).toBe(2); // 单次通知
   });
 
-  test("setter 内对同一 observable 另一 key 普通赋值 (set trap 路径): 单次通知", () => {
+  test('setter 内对同一 observable 另一 key 普通赋值 (set trap 路径): 单次通知', () => {
     const obj = observable({ n: 0 });
     const proto = observable({
       set go(v: number) {
@@ -73,11 +73,11 @@ describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
     expect(calls).toBe(2);
   });
 
-  test("proto setter 把正在设置的同一个 key defineProperty 到 child: 恰好一次通知", () => {
+  test('proto setter 把正在设置的同一个 key defineProperty 到 child: 恰好一次通知', () => {
     const child = observable(Object.create(null) as { x: number });
     const proto = {
       set x(v: number) {
-        defineValue(child, "x", v);
+        defineValue(child, 'x', v);
       },
     };
     Object.setPrototypeOf(child, proto);
@@ -98,12 +98,12 @@ describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
     expect(calls).toBe(3);
   });
 
-  test("数组作为 receiver 走原型链 setter, setter 内对另一 observable defineProperty: 必须通知", () => {
+  test('数组作为 receiver 走原型链 setter, setter 内对另一 observable defineProperty: 必须通知', () => {
     const arr = observable([1, 2, 3]);
     const other = observable({ x: 0 });
     const proto = {
       set go(v: number) {
-        defineValue(other, "x", v);
+        defineValue(other, 'x', v);
       },
     };
     Object.setPrototypeOf(arr, proto);
@@ -119,7 +119,7 @@ describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
     expect(calls).toBe(2);
   });
 
-  test("setter 内嵌套写入被观察 key: 单次通知", () => {
+  test('setter 内嵌套写入被观察 key: 单次通知', () => {
     let depth = 0;
     const obj = observable({ n: 0 });
     const proto = {
@@ -144,8 +144,8 @@ describe("转发窗口 {target,key} 帧匹配边界 (base handler)", () => {
   });
 });
 
-describe("转发窗口 {target,key} 帧匹配边界 (shadow handler)", () => {
-  test("类继承链 setter 内 super.w = v: 单次通知, 值经 super 加一落盘", () => {
+describe('转发窗口 {target,key} 帧匹配边界 (shadow handler)', () => {
+  test('类继承链 setter 内 super.w = v: 单次通知, 值经 super 加一落盘', () => {
     class P {
       _w = 0;
       get w() {
@@ -174,11 +174,11 @@ describe("转发窗口 {target,key} 帧匹配边界 (shadow handler)", () => {
     expect(calls).toBe(2);
   });
 
-  test("proto setter 把正在设置的同一个 key defineProperty 到 shadow child: 恰好一次通知", () => {
+  test('proto setter 把正在设置的同一个 key defineProperty 到 shadow child: 恰好一次通知', () => {
     const child = shadowObservable(Object.create(null) as { x: number });
     const proto = {
       set x(v: number) {
-        defineValue(child, "x", v);
+        defineValue(child, 'x', v);
       },
     };
     Object.setPrototypeOf(child, proto);

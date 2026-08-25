@@ -11,10 +11,10 @@
  *   defineProperty trap, 必须命中 shadow 模块栈中由 shadow set trap 压入的外层帧;
  * - null 原型对象首写走 Receiver.[[DefineOwnProperty]] 直达路径, 单次通知。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("转发帧按 {target,key} 匹配: receiver 路由与混合链", () => {
-  test("Reflect.set(parent, key, v, child): 通知恰好落在 child 一次, parent 不通知", () => {
+describe('转发帧按 {target,key} 匹配: receiver 路由与混合链', () => {
+  test('Reflect.set(parent, key, v, child): 通知恰好落在 child 一次, parent 不通知', () => {
     const parent = observable({ count: 0 });
     const child = observable(Object.create(parent) as { count: number });
     let childCalls = 0;
@@ -30,7 +30,7 @@ describe("转发帧按 {target,key} 匹配: receiver 路由与混合链", () => 
     expect(childCalls).toBe(1);
     expect(parentCalls).toBe(1);
 
-    const ok = Reflect.set(parent, "count", 5, child);
+    const ok = Reflect.set(parent, 'count', 5, child);
     expect(ok).toBe(true);
     // 布尔方案下这里会是 childCalls=1 (通知被吞), 若 frame 误匹配则 3 (双通知)
     expect(childCalls).toBe(2);
@@ -39,8 +39,8 @@ describe("转发帧按 {target,key} 匹配: receiver 路由与混合链", () => 
     expect(parent.count).toBe(0);
   });
 
-  test("Symbol key 原型链转发: 单次通知且值落在 receiver", () => {
-    const sym = Symbol("tracked");
+  test('Symbol key 原型链转发: 单次通知且值落在 receiver', () => {
+    const sym = Symbol('tracked');
     const parent = observable({ [sym]: 0 });
     const child = observable(Object.create(parent));
     let calls = 0;
@@ -56,7 +56,7 @@ describe("转发帧按 {target,key} 匹配: receiver 路由与混合链", () => 
     expect((parent as Record<symbol, number>)[sym]).toBe(0);
   });
 
-  test("shadow child -> base parent 混合链: 单次通知 (shadow 模块栈命中外层帧)", () => {
+  test('shadow child -> base parent 混合链: 单次通知 (shadow 模块栈命中外层帧)', () => {
     const baseParent = observable({ v: 0 });
     const sChild = shadowObservable(Object.create(baseParent) as { v: number });
     let calls = 0;
@@ -72,7 +72,7 @@ describe("转发帧按 {target,key} 匹配: receiver 路由与混合链", () => 
     expect(baseParent.v).toBe(0);
   });
 
-  test("null 原型对象首写 (Receiver.[[DefineOwnProperty]] 直达路径): 单次通知", () => {
+  test('null 原型对象首写 (Receiver.[[DefineOwnProperty]] 直达路径): 单次通知', () => {
     const obj = observable(Object.create(null)) as { x?: number };
     let calls = 0;
     observe(() => {

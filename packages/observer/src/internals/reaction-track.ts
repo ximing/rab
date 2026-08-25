@@ -5,7 +5,7 @@
  * 清理依赖: reaction 结束时,清理过期的依赖关系
  * */
 
-import type { Operation, Reaction } from "./types";
+import type { Operation, Reaction } from './types';
 
 type StoredKey = PropertyKey | symbol | WeakRef<object>;
 type ConnectionMap = Map<StoredKey, Set<Reaction>>;
@@ -22,13 +22,13 @@ type ConnectionMap = Map<StoredKey, Set<Reaction>>;
  *
  * 兼容: 旧 RN JSC 等无 WeakRef 的环境退化为原来的强持有行为。
  * */
-const supportsWeakRef = typeof WeakRef === "function";
+const supportsWeakRef = typeof WeakRef === 'function';
 const keyToWeakRef: WeakMap<object, WeakRef<object>> | null = supportsWeakRef
   ? new WeakMap()
   : null;
 
 function wrapKey(key: PropertyKey | symbol): StoredKey {
-  if (!keyToWeakRef || typeof key !== "object" || key === null) {
+  if (!keyToWeakRef || typeof key !== 'object' || key === null) {
     return key;
   }
   let ref = keyToWeakRef.get(key);
@@ -41,7 +41,7 @@ function wrapKey(key: PropertyKey | symbol): StoredKey {
 
 function isDeadRef(storedKey: StoredKey): boolean {
   return (
-    typeof storedKey === "object" &&
+    typeof storedKey === 'object' &&
     storedKey !== null &&
     storedKey instanceof WeakRef &&
     storedKey.deref() === undefined
@@ -64,15 +64,12 @@ const connectionStore = new WeakMap<object, ConnectionMap>();
  * 永久残留 (实测 5 万动态 key 约 10MB, ~200B/key)。
  * WeakMap 弱持有 Set, 不影响其 GC。
  * */
-const setToOwner = new WeakMap<
-  Set<Reaction>,
-  { map: ConnectionMap; key: StoredKey }
->();
+const setToOwner = new WeakMap<Set<Reaction>, { map: ConnectionMap; key: StoredKey }>();
 
 /*
  * 作用: 用于标记"迭代操作"(如 for...of, forEach),用 Symbol 避免与真实的属性名冲突
  * */
-const ITERATION_KEY = Symbol("iteration key");
+const ITERATION_KEY = Symbol('iteration key');
 
 /*
  * 迭代操作的依赖键必须与通知时的查找键一致,否则依赖永不触发:
@@ -81,7 +78,7 @@ const ITERATION_KEY = Symbol("iteration key");
  *   注册和通知都统一使用 "length" 键,保证两者相交
  * */
 export function iterationKeyFor(target: object): PropertyKey | symbol {
-  return Array.isArray(target) ? "length" : ITERATION_KEY;
+  return Array.isArray(target) ? 'length' : ITERATION_KEY;
 }
 
 /*
@@ -121,7 +118,7 @@ export function registerReactionForOperation(
   // 数组用 "length"(见 iterationKeyFor 的说明),其他对象用 ITERATION_KEY
   // 其他操作(如 get, set)使用普通的属性键 key
   let actualKey: PropertyKey | symbol = key;
-  if (type === "iterate") {
+  if (type === 'iterate') {
     actualKey = iterationKeyFor(target);
   }
 
@@ -151,9 +148,7 @@ export function registerReactionForOperation(
 /*
  * 作用: 查询某个操作会触发哪些 reactions。
  * */
-export function getReactionsForOperation(
-  operation: Operation
-): Set<Reaction> {
+export function getReactionsForOperation(operation: Operation): Set<Reaction> {
   const { target, key, type } = operation;
   const reactionsForTarget = connectionStore.get(target);
   const reactionsForKey = new Set<Reaction>();
@@ -162,7 +157,7 @@ export function getReactionsForOperation(
     return reactionsForKey;
   }
 
-  if (type === "clear") {
+  if (type === 'clear') {
     /*
      * 清空集合时,需要触发所有属性的 reactions, 遍历所有 key,收集它们的 reactions
      * 顺带清除已死的 WeakRef 条目 (key 对象已被 GC 的依赖残留)
@@ -191,9 +186,9 @@ export function getReactionsForOperation(
      * */
     if (
       Array.isArray(target) &&
-      key === "length" &&
-      type === "set" &&
-      typeof operation.oldValue === "number" &&
+      key === 'length' &&
+      type === 'set' &&
+      typeof operation.oldValue === 'number' &&
       target.length < operation.oldValue
     ) {
       addReactionsForTruncatedArrayKeys(
@@ -205,12 +200,8 @@ export function getReactionsForOperation(
     }
   }
 
-  if (type === "add" || type === "delete" || type === "clear") {
-    addReactionsForKey(
-      reactionsForKey,
-      reactionsForTarget,
-      iterationKeyFor(target)
-    );
+  if (type === 'add' || type === 'delete' || type === 'clear') {
+    addReactionsForKey(reactionsForKey, reactionsForTarget, iterationKeyFor(target));
   }
 
   return reactionsForKey;
@@ -230,7 +221,7 @@ function addReactionsForTruncatedArrayKeys(
   for (const key of reactionsForTarget.keys()) {
     // symbol 不是数组索引 (Number(symbol) 会直接抛 TypeError), 必须先跳过。
     // 这同时覆盖了 ITERATION_KEY 之类的内部 symbol 键。
-    if (typeof key === "symbol") {
+    if (typeof key === 'symbol') {
       continue;
     }
     const index = Number(key);
@@ -276,10 +267,7 @@ export function releaseReaction(reaction: Reaction): void {
   reaction.cleaners = [];
 }
 
-function releaseReactionKeyConnection(
-  this: Reaction,
-  reactionsForKey: Set<Reaction>
-): void {
+function releaseReactionKeyConnection(this: Reaction, reactionsForKey: Set<Reaction>): void {
   reactionsForKey.delete(this);
   // #12: Set 已空时把 entry 从所属 ConnectionMap 里删掉, 避免空 entry 永久残留。
   //

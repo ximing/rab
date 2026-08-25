@@ -1,34 +1,30 @@
-import { observe, isObservable, raw } from "../main";
-import { observable } from "../internals/observable";
-import {
-  ProxyHandlers,
-  CollectionHandlers,
-  ReactionHandlers,
-} from "../internals/types";
-import { baseProxyHandler } from "../internals/handlers/base-proxy-handler";
-import { collectionHandlers } from "../internals/handlers/collection-handler";
+import { observe, isObservable, raw } from '../main';
+import { observable } from '../internals/observable';
+import { ProxyHandlers, CollectionHandlers, ReactionHandlers } from '../internals/types';
+import { baseProxyHandler } from '../internals/handlers/base-proxy-handler';
+import { collectionHandlers } from '../internals/handlers/collection-handler';
 
-describe("observable", () => {
-  test("should return a new observable when no argument is provided", () => {
+describe('observable', () => {
+  test('should return a new observable when no argument is provided', () => {
     const obs = observable();
     expect(isObservable(obs)).toBe(true);
   });
 
-  test("should return an observable wrapping of an object argument", () => {
-    const obj = { prop: "value" };
+  test('should return an observable wrapping of an object argument', () => {
+    const obj = { prop: 'value' };
     const obs = observable(obj);
     expect(obs).not.toBe(obj);
     expect(isObservable(obs)).toBe(true);
   });
 
-  test("should return an observable wrapping of a function argument", () => {
+  test('should return an observable wrapping of a function argument', () => {
     const fn = () => 10;
     const obs = observable(fn);
     expect(obs).not.toBe(fn);
     expect(isObservable(obs)).toBe(true);
   });
 
-  test("should return an observable instance when an observable class is instantiated", () => {
+  test('should return an observable instance when an observable class is instantiated', () => {
     class NestedClass {}
     class MyClass {
       static Nested = NestedClass;
@@ -46,28 +42,28 @@ describe("observable", () => {
     expect(isObservable(new ObsClass.Nested())).toBe(true);
   });
 
-  test("should return the argument if it is already an observable", () => {
+  test('should return the argument if it is already an observable', () => {
     const obs1 = observable();
     const obs2 = observable(obs1);
     expect(obs1).toBe(obs2);
   });
 
-  test("should return the same observable wrapper when called repeatedly with the same argument", () => {
-    const obj = { prop: "value" };
+  test('should return the same observable wrapper when called repeatedly with the same argument', () => {
+    const obj = { prop: 'value' };
     const obs1 = observable(obj);
     const obs2 = observable(obj);
     expect(obs1).toBe(obs2);
   });
 
-  test("should wrap nested data with observable at get time", () => {
+  test('should wrap nested data with observable at get time', () => {
     const obs = observable({ nested: { prop: 1 } });
     expect(isObservable(obs.nested)).toBe(true);
   });
 
-  test("should not throw on none writable nested objects, should simply not observe them instead", () => {
+  test('should not throw on none writable nested objects, should simply not observe them instead', () => {
     let dummy: number | undefined;
     const obj: Record<string, any> = {};
-    Object.defineProperty(obj, "prop", {
+    Object.defineProperty(obj, 'prop', {
       value: { num: 12 },
       writable: false,
       configurable: false,
@@ -79,7 +75,7 @@ describe("observable", () => {
     expect(dummy).toBe(12);
   });
 
-  test("should never let observables leak into the underlying raw object", () => {
+  test('should never let observables leak into the underlying raw object', () => {
     const obj: Record<string, any> = {};
     const obs = observable(obj);
     obs.nested1 = {};
@@ -90,20 +86,16 @@ describe("observable", () => {
     expect(isObservable(obs.nested2)).toBe(true);
   });
 
-  describe("custom handlers", () => {
-    test("should run the provided custom Proxy handlers - even when they are not in an observed branch", () => {
+  describe('custom handlers', () => {
+    test('should run the provided custom Proxy handlers - even when they are not in an observed branch', () => {
       const mockProxyHandlers: ProxyHandlers = {
-        get: jest.fn((target, key, receiver) =>
-          baseProxyHandler.get(target, key, receiver)
-        ),
+        get: jest.fn((target, key, receiver) => baseProxyHandler.get(target, key, receiver)),
         has: jest.fn((target, key) => baseProxyHandler.has(target, key)),
-        ownKeys: jest.fn((target) => baseProxyHandler.ownKeys(target)),
+        ownKeys: jest.fn(target => baseProxyHandler.ownKeys(target)),
         set: jest.fn((target, key, value, receiver) =>
           baseProxyHandler.set(target, key, value, receiver)
         ),
-        deleteProperty: jest.fn((target, key) =>
-          baseProxyHandler.deleteProperty(target, key)
-        ),
+        deleteProperty: jest.fn((target, key) => baseProxyHandler.deleteProperty(target, key)),
         construct: jest.fn((target, args, newTarget) =>
           baseProxyHandler.construct(target, args, newTarget)
         ),
@@ -130,7 +122,7 @@ describe("observable", () => {
       jest.clearAllMocks();
 
       // has trap
-      expect("prop" in obs.nested).toBe(true);
+      expect('prop' in obs.nested).toBe(true);
       expect(mockProxyHandlers.has).toHaveBeenCalledTimes(1);
       jest.clearAllMocks();
 
@@ -161,7 +153,7 @@ describe("observable", () => {
     });
   });
 
-  test("should run the provided ES6 collection custom handlers", () => {
+  test('should run the provided ES6 collection custom handlers', () => {
     const mockCollectionHandlers: CollectionHandlers = {
       has: jest.fn(function (this: any, key) {
         return collectionHandlers.has.call(this, key);
@@ -207,7 +199,7 @@ describe("observable", () => {
     });
 
     // set method
-    obsMap.set("prop", 1);
+    obsMap.set('prop', 1);
     expect(mockCollectionHandlers.set).toHaveBeenCalledTimes(1);
     jest.clearAllMocks();
 
@@ -227,12 +219,12 @@ describe("observable", () => {
     jest.clearAllMocks();
 
     // has method
-    obsMap.has("prop");
+    obsMap.has('prop');
     expect(mockCollectionHandlers.has).toHaveBeenCalledTimes(1);
     jest.clearAllMocks();
 
     // get method
-    obsMap.get("prop");
+    obsMap.get('prop');
     expect(mockCollectionHandlers.get).toHaveBeenCalledTimes(1);
     jest.clearAllMocks();
 
@@ -270,13 +262,11 @@ describe("observable", () => {
     jest.clearAllMocks();
   });
 
-  test("should run the provided transformReactions handler", () => {
+  test('should run the provided transformReactions handler', () => {
     let dummy1: number | undefined;
     let dummy2: number | undefined;
     const mockReactionHandlers: ReactionHandlers = {
-      transformReactions: jest.fn(
-        (target, propertyKey, reactions) => reactions
-      ),
+      transformReactions: jest.fn((target, propertyKey, reactions) => reactions),
     };
     const obj = { prop: 12 };
     const obs = observable(obj, { reactionHandlers: mockReactionHandlers });
@@ -287,14 +277,13 @@ describe("observable", () => {
 
     obs.prop = 20;
     expect(mockReactionHandlers.transformReactions).toHaveBeenCalledTimes(1);
-    expect(mockReactionHandlers.transformReactions).toHaveBeenCalledWith(
-      obj,
-      "prop",
-      [reaction1, reaction2]
-    );
+    expect(mockReactionHandlers.transformReactions).toHaveBeenCalledWith(obj, 'prop', [
+      reaction1,
+      reaction2,
+    ]);
   });
 
-  test("should fall back to default handlers for missing custom handlers when only some custom handlers are provided", () => {
+  test('should fall back to default handlers for missing custom handlers when only some custom handlers are provided', () => {
     let dummy: number | undefined;
     // no custom get handler provided
     const obs = observable({ prop: 1 }, {});
@@ -332,15 +321,15 @@ describe("observable", () => {
   // });
 });
 
-describe("isObservable", () => {
-  test("should return true if an observable is passed as argument", () => {
+describe('isObservable', () => {
+  test('should return true if an observable is passed as argument', () => {
     const obs = observable();
     const isObs = isObservable(obs);
     expect(isObs).toBe(true);
   });
 
-  test("should return false if a non observable is passed as argument", () => {
-    const obj1 = { prop: "value" };
+  test('should return false if a non observable is passed as argument', () => {
+    const obj1 = { prop: 'value' };
     const obj2 = new Proxy({}, {});
     const isObs1 = isObservable(obj1);
     const isObs2 = isObservable(obj2);
@@ -348,20 +337,20 @@ describe("isObservable", () => {
     expect(isObs2).toBe(false);
   });
 
-  test("should return false if a primitive is passed as argument", () => {
+  test('should return false if a primitive is passed as argument', () => {
     expect(isObservable(12)).toBe(false);
   });
 });
 
-describe("raw", () => {
-  test("should return the raw non-reactive object", () => {
+describe('raw', () => {
+  test('should return the raw non-reactive object', () => {
     const obj = {};
     const obs = observable(obj);
     expect(raw(obs)).toBe(obj);
     expect(raw(obj)).toBe(obj);
   });
 
-  test("should work with plain primitives", () => {
+  test('should work with plain primitives', () => {
     expect(raw(12 as any)).toBe(12);
   });
 });

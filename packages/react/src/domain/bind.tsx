@@ -6,7 +6,7 @@ import {
   ServiceClass,
   ServiceFactory,
   ServiceIdentifier,
-} from "@rabjs/service";
+} from '@rabjs/service';
 import React, {
   ComponentType,
   useContext,
@@ -14,14 +14,14 @@ import React, {
   useRef,
   forwardRef,
   PropsWithoutRef,
-} from "react";
+} from 'react';
 
-import { isAlreadyWrapped } from "../utils/react-helper";
-import { UniversalFinalizationRegistry } from "../utils/universal-finalization-registry";
-import { view } from "../view";
+import { isAlreadyWrapped } from '../utils/react-helper';
+import { UniversalFinalizationRegistry } from '../utils/universal-finalization-registry';
+import { view } from '../view';
 
-import { DomainContext } from "./domain-context";
-import { StrictContext } from "./strict-context";
+import { DomainContext } from './domain-context';
+import { StrictContext } from './strict-context';
 
 let containerId = 0;
 
@@ -59,19 +59,17 @@ type ADM = {
   container: Container | null;
   timmer: NodeJS.Timeout | null;
 };
-const universalFinalizationRegistry = new UniversalFinalizationRegistry(
-  (adm: ADM) => {
-    adm.container?.destroy();
-    adm.container = null;
-  }
-);
+const universalFinalizationRegistry = new UniversalFinalizationRegistry((adm: ADM) => {
+  adm.container?.destroy();
+  adm.container = null;
+});
 export function bindServices<P extends Record<string, any> = any, TRef = any>(
   Comp: ComponentType<P>,
   servicesList: (
     | [
         ServiceIdentifier | ServiceClass,
         ServiceClass | ServiceFactory | RegisterOptions,
-        RegisterOptions
+        RegisterOptions,
       ]
     | ServiceClass
   )[],
@@ -79,7 +77,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
 ) {
   // 如果组件已经被 observer 或 view 包裹过，直接使用；否则调用 view 进行包裹
   const ViewComp = isAlreadyWrapped(Comp) ? Comp : view(Comp);
-  const compName = options?.name ?? Comp.displayName ?? Comp.name ?? "comp";
+  const compName = options?.name ?? Comp.displayName ?? Comp.name ?? 'comp';
 
   // 默认父节点是全局
   function createADM(parrent: Container = getGlobalContainer()) {
@@ -99,17 +97,14 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
   }
   // 包裹组件
   // 这里要确保container是一个，同时还要确保不会出现内存泄漏的问题
-  const BindWrapper = forwardRef<TRef, any>(function BindWrapper(
-    props: any,
-    ref: any
-  ) {
+  const BindWrapper = forwardRef<TRef, any>(function BindWrapper(props: any, ref: any) {
     const admRef = useRef<ADM | null>(null);
     // 没有 context 分两种情况讨论
     // 严格模式下，应该报错，非严格模式下 默认到全局
     const strictContext = useContext(StrictContext);
     const domainContext = useContext(DomainContext);
     if (strictContext && !domainContext) {
-      throw new Error("[RSJS] Strict mode must in Root Provider");
+      throw new Error('[RSJS] Strict mode must in Root Provider');
     }
     if (!admRef.current) {
       const adm = createADM(domainContext?.container);
@@ -123,11 +118,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       universalFinalizationRegistry.unregister(adm);
       return () => {
         // 兜底进行 destroy的，业务不应该依赖此做任何事情
-        universalFinalizationRegistry.register(
-          admRef,
-          adm,
-          adm
-        );
+        universalFinalizationRegistry.register(admRef, adm, adm);
       };
     }, []);
     return (

@@ -30,12 +30,12 @@
  * ```
  */
 
-import type { Service } from "@rabjs/service";
+import type { Service } from '@rabjs/service';
 
-import { useObserver } from "../use-observer";
+import { useObserver } from '../use-observer';
 
-import type { ServiceIdentifier } from "./types";
-import { useService, type UseServiceOptions } from "./use-service";
+import type { ServiceIdentifier } from './types';
+import { useService, type UseServiceOptions } from './use-service';
 
 /**
  * useObserverService Hook (重载1: 传入类构造函数，自动推导类型，不指定 scope)

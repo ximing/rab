@@ -21,7 +21,9 @@ export function getIdentifierLabel(id: string | symbol | (new (...args: any[]) =
 /**
  * 从 ServiceIdentifier 推断展示类型
  */
-export function getIdentifierType(id: string | symbol | (new (...args: any[]) => any)): ServiceDescriptor['identifierType'] {
+export function getIdentifierType(
+  id: string | symbol | (new (...args: any[]) => any)
+): ServiceDescriptor['identifierType'] {
   if (typeof id === 'function') return 'constructor';
   if (typeof id === 'string') return 'string';
   return 'symbol';

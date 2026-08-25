@@ -45,21 +45,35 @@ describe('debug page', () => {
 
       // renderDevices：deviceId/appName/platform/osVersion/option 均经转义
       expect(script).toContain('${escapeHtml(d.deviceId)}');
-      expect(script).toContain('${escapeHtml(d.appName ?? \'\')}');
-      expect(script).toContain('${escapeHtml(d.platform ?? \'\')}');
-      expect(script).toContain('${escapeHtml(d.osVersion ?? \'\')}');
+      expect(script).toContain("${escapeHtml(d.appName ?? '')}");
+      expect(script).toContain("${escapeHtml(d.platform ?? '')}");
+      expect(script).toContain("${escapeHtml(d.osVersion ?? '')}");
       expect(script).toContain('<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>');
 
       // renderCommand：status/deviceId/type/时长与 payload/result/error 的 JSON.stringify 输出均经转义
       expect(script).toContain('${escapeHtml(cmd.status)}');
       expect(script).toContain('${escapeHtml(cmd.deviceId)}');
       expect(script).toContain('${escapeHtml(cmd.type)}');
-      expect(script).toContain('payload: ${escapeHtml(JSON.stringify(cmd.payload ?? {}, null, 2))}');
-      expect(script).toContain('${escapeHtml(cmd.status === \'pending\' ? \'\' : JSON.stringify(cmd.result ?? cmd.error ?? \'\', null, 2))}');
+      expect(script).toContain(
+        'payload: ${escapeHtml(JSON.stringify(cmd.payload ?? {}, null, 2))}'
+      );
+      expect(script).toContain(
+        "${escapeHtml(cmd.status === 'pending' ? '' : JSON.stringify(cmd.result ?? cmd.error ?? '', null, 2))}"
+      );
 
       // 不允许任何未转义的原始插值残留在 renderDevices/renderCommand 的 innerHTML 模板里
-      const renderFns = script.slice(script.indexOf('function renderDevices'), script.indexOf('function renderLog'));
-      for (const raw of ['${d.deviceId}', '${d.appName', '${cmd.status}', '${cmd.deviceId}', '${cmd.type}', '${JSON.stringify(']) {
+      const renderFns = script.slice(
+        script.indexOf('function renderDevices'),
+        script.indexOf('function renderLog')
+      );
+      for (const raw of [
+        '${d.deviceId}',
+        '${d.appName',
+        '${cmd.status}',
+        '${cmd.deviceId}',
+        '${cmd.type}',
+        '${JSON.stringify(',
+      ]) {
         expect(renderFns).not.toContain(raw);
       }
 

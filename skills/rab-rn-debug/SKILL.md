@@ -75,9 +75,16 @@ curl -X POST localhost:9229/api/commands -H 'Content-Type: application/json' \
 返回示例：
 
 ```json
-{ "status": "ok", "result": [
-  { "instanceId": "CartService#1", "containerName": "ProductPage_2", "identifierLabel": "CartService" }
-]}
+{
+  "status": "ok",
+  "result": [
+    {
+      "instanceId": "CartService#1",
+      "containerName": "ProductPage_2",
+      "identifierLabel": "CartService"
+    }
+  ]
+}
 ```
 
 - `instanceId` 格式为 `类名#序号`（如 `CartService#1`），`identifierLabel` 为 Service 类名。
@@ -124,15 +131,25 @@ curl -X POST localhost:9229/api/commands -H 'Content-Type: application/json' \
 返回结构化断言结果：
 
 ```json
-{ "status": "ok", "result": {
-  "instanceId": "CartService#1",
-  "description": "加购后状态验证",
-  "passed": true,
-  "summary": { "passed": 3, "total": 3 },
-  "results": [
-    { "path": "items.length", "op": "eq", "passed": true, "expected": 1, "actual": 1, "message": "" }
-  ]
-}}
+{
+  "status": "ok",
+  "result": {
+    "instanceId": "CartService#1",
+    "description": "加购后状态验证",
+    "passed": true,
+    "summary": { "passed": 3, "total": 3 },
+    "results": [
+      {
+        "path": "items.length",
+        "op": "eq",
+        "passed": true,
+        "expected": 1,
+        "actual": 1,
+        "message": ""
+      }
+    ]
+  }
+}
 ```
 
 op 速查：`eq` `neq` `gt` `gte` `lt` `lte` `between` `exists` `notExists` `includes` `notIncludes` `matches` `type` `length` `lengthGt` `lengthGte` `lengthLt` `lengthLte` `hasKeys` `matchObject` `deepEq` `some` `every`（语义与 @rabjs/devtools RSExpectBuilder 一致）。
@@ -163,19 +180,24 @@ curl -X POST localhost:9229/api/commands -H 'Content-Type: application/json' \
 ## 常见问题
 
 ### 设备列表为空？
+
 - 手机与电脑不在同一网段，或 `host` 填错（用 server 启动时打印的 IP）
 - App 为 release 构建（SDK 仅 `__DEV__` 生效）
 - 模拟器注意：Android 模拟器访问宿主机用 `10.0.2.2` 而非 localhost
 
 ### rab.listServices 里看不到某个 Service？
+
 - 仅 Singleton 作用域的 Service 会被缓存并枚举；Transient 作用域每次 resolve 都是新实例，不出现在列表中
 - Service 尚未被 resolve 实例化——先触发一次使用路径再枚举
 
 ### 指令返回 timeout？
+
 - 设备端 handler 执行过久——加大 `timeout`（上限 120s）；或设备已掉线，先查 `/api/devices`
 
 ### 返回 409？
+
 - 多台设备在线，从 body 的 `devices` 数组选一个，改用 `/api/devices/<deviceId>/commands`
 
 ### 结果字段缺失？
+
 - handler 返回值必须 JSON 可序列化；循环引用/函数/过深结构（>6 层）会被 SDK 清洗或截断，Map/Set/类实例会退化为字符串标记

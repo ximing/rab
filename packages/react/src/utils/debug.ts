@@ -1,20 +1,20 @@
-import { Operation } from "@rabjs/observer";
+import { Operation } from '@rabjs/observer';
 
 export function debuggerReaction(operation: Operation) {
-  if (["get", "has", "iterate"].includes(operation.type)) {
+  if (['get', 'has', 'iterate'].includes(operation.type)) {
     return;
   }
   console.log(
-    "数据变更触发了 schedule:",
+    '数据变更触发了 schedule:',
     `target`,
     operation.target,
-    "key",
+    'key',
     operation.key,
-    "type",
+    'type',
     operation.type,
-    "value:",
+    'value:',
     operation.value,
-    "oldValue:",
+    'oldValue:',
     operation.oldValue
   );
 }

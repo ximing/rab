@@ -26,12 +26,12 @@
 
 ## 包信息
 
-| 字段 | 值 |
-|------|-----|
-| 包名 | `@rabjs/devtools` |
-| 版本 | `0.0.1` |
-| 路径 | `reactive-state/cdp-debug/` |
-| 依赖 | `@rabjs/service` (peerDependency) |
+| 字段 | 值                                               |
+| ---- | ------------------------------------------------ |
+| 包名 | `@rabjs/devtools`                                |
+| 版本 | `0.0.1`                                          |
+| 路径 | `reactive-state/cdp-debug/`                      |
+| 依赖 | `@rabjs/service` (peerDependency)                |
 | 输出 | `lib/main.cjs` + `lib/main.js` + `lib/main.d.ts` |
 
 ---
@@ -162,7 +162,7 @@ export function setupWindowRootContainer(): void {
 
 ```ts
 export function setupWindowRootContainer(): void {
-  if (typeof window === 'undefined') return;  // ← 只做 window 检测，无 SSR 额外依赖
+  if (typeof window === 'undefined') return; // ← 只做 window 检测，无 SSR 额外依赖
   window.__RS_ROOT_CONTAINER__ = createRSRootContainerHandle();
 }
 ```
@@ -202,6 +202,7 @@ export {};
 **`@rabjs/react` 不依赖 `@rabjs/devtools`**，调试能力完全由业务方按需引入。
 
 **从 `@rabjs/react` 中删除以下内容**：
+
 - `src/domain/root-container-handle.ts` 整个文件
 - `src/main.ts` 中的 `setupWindowRootContainer()` 调用
 - `src/domain/index.ts` 中 `RSRootContainerHandle` 的导出
@@ -269,11 +270,7 @@ export {};
     "tsx": "^4.0.0",
     "typescript": "^5.1.3"
   },
-  "files": [
-    "lib/**/*",
-    "README.md",
-    "CHANGELOG.md"
-  ],
+  "files": ["lib/**/*", "README.md", "CHANGELOG.md"],
   "publishConfig": {
     "registry": "https://r.npm.sankuai.com",
     "access": "public"
@@ -358,11 +355,11 @@ module.exports = {
 
 `src/root-container-handle.ts` 与当前 `@rabjs/react` 中实现的差异仅在 `setupWindowRootContainer` 函数：
 
-| 对比项 | rs-react（现在）| cdp-debug（新包）|
-|--------|----------------|-----------------|
+| 对比项   | rs-react（现在）                                              | cdp-debug（新包）               |
+| -------- | ------------------------------------------------------------- | ------------------------------- |
 | SSR 检测 | `typeof window === 'undefined' \|\| isUsingStaticRendering()` | `typeof window === 'undefined'` |
-| 外部依赖 | `@rabjs/service` + `../static-rendering`（rs-react 内部）| `@rabjs/service`（唯一依赖）|
-| 框架绑定 | 强依赖 React SSR 控制开关 | 框架无关 |
+| 外部依赖 | `@rabjs/service` + `../static-rendering`（rs-react 内部）     | `@rabjs/service`（唯一依赖）    |
+| 框架绑定 | 强依赖 React SSR 控制开关                                     | 框架无关                        |
 
 其余核心逻辑（`walkContainerForInstanceId`、`walkContainerForName`、`createRSRootContainerHandle`）**完全不变**，可以直接迁移。
 
@@ -408,12 +405,12 @@ describe('SSR 安全（无 window 环境）', () => {
 
 ## SSR 场景行为
 
-| 场景 | `typeof window` | 行为 |
-|------|----------------|------|
-| 浏览器正常渲染 | `'object'` | ✅ 挂载 `window.__RS_ROOT_CONTAINER__` |
-| Node.js（真实 SSR） | `'undefined'` | ⛔ 跳过，不挂载，不报错 |
-| Next.js 客户端 Hydration | `'object'` | ✅ 挂载 |
-| Jest jsdom 测试环境 | `'object'` | ✅ 挂载（测试可正常覆盖） |
+| 场景                     | `typeof window` | 行为                                   |
+| ------------------------ | --------------- | -------------------------------------- |
+| 浏览器正常渲染           | `'object'`      | ✅ 挂载 `window.__RS_ROOT_CONTAINER__` |
+| Node.js（真实 SSR）      | `'undefined'`   | ⛔ 跳过，不挂载，不报错                |
+| Next.js 客户端 Hydration | `'object'`      | ✅ 挂载                                |
+| Jest jsdom 测试环境      | `'object'`      | ✅ 挂载（测试可正常覆盖）              |
 
 > **与 rs-react 原实现的 SSR 行为差异**：
 > 原实现在 Next.js SSR 场景下，即使 `window` 存在（部分 SSR 框架会 polyfill），也通过 `isUsingStaticRendering()` 来阻止挂载。
@@ -425,13 +422,13 @@ describe('SSR 安全（无 window 环境）', () => {
 
 `@rabjs/web-mcp` 和 `@rabjs/devtools` 解决的是**同一容器访问需求的两个不同场景**：
 
-| 对比项 | `@rabjs/web-mcp` | `@rabjs/devtools` |
-|--------|--------------------|-----------------------|
-| 目标消费方 | AI Agent（通过 WebMCP 协议）| 开发者（浏览器控制台 / DevTools 插件 / E2E 测试）|
-| 数据形式 | 序列化描述（JSON Schema）| 内存对象引用（直接操作）|
-| 注册方式 | `McpRegistry` / `McpBridge` 主动注册 | `window.__RS_ROOT_CONTAINER__` 全局挂载 |
-| 容器访问来源 | 直接调用 `getGlobalContainer()` | 同，通过 `window.__RS_ROOT_CONTAINER__.container` |
-| 框架依赖 | 无 | 无 |
+| 对比项       | `@rabjs/web-mcp`                     | `@rabjs/devtools`                                 |
+| ------------ | ------------------------------------ | ------------------------------------------------- |
+| 目标消费方   | AI Agent（通过 WebMCP 协议）         | 开发者（浏览器控制台 / DevTools 插件 / E2E 测试） |
+| 数据形式     | 序列化描述（JSON Schema）            | 内存对象引用（直接操作）                          |
+| 注册方式     | `McpRegistry` / `McpBridge` 主动注册 | `window.__RS_ROOT_CONTAINER__` 全局挂载           |
+| 容器访问来源 | 直接调用 `getGlobalContainer()`      | 同，通过 `window.__RS_ROOT_CONTAINER__.container` |
+| 框架依赖     | 无                                   | 无                                                |
 
 两个包可以共存，也可以互相集成：`@rabjs/web-mcp` 可以复用 `window.__RS_ROOT_CONTAINER__.container` 代替直接调用 `getGlobalContainer()`（可选优化）。
 

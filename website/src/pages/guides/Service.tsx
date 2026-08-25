@@ -1,9 +1,7 @@
-import { CodeBlock } from "../../components/CodeBlock";
-import { DemoCard } from "../../components/DemoCard";
-import CollabDemo, { collabDemoCode } from "../../demos/collab";
-import ServiceScopeDemo, {
-  serviceScopeDemoCode,
-} from "../../demos/service-scope";
+import { CodeBlock } from '../../components/CodeBlock';
+import { DemoCard } from '../../components/DemoCard';
+import CollabDemo, { collabDemoCode } from '../../demos/collab';
+import ServiceScopeDemo, { serviceScopeDemoCode } from '../../demos/service-scope';
 
 const serviceBaseCode = `import { Service } from "@rabjs/react";
 
@@ -73,35 +71,36 @@ export default function Service() {
 
       <h2>Service 基类</h2>
       <p>
-        继承 <code>Service</code> 后免费得到三件事：所有属性变成响应式
-        （构造时实例被 <code>observable()</code> 包装）、所有方法默认是 Action、
-        每个方法自动附带 <code>$model</code> 里的 loading/error 状态：
+        继承 <code>Service</code> 后免费得到三件事：所有属性变成响应式 （构造时实例被{' '}
+        <code>observable()</code> 包装）、所有方法默认是 Action、 每个方法自动附带{' '}
+        <code>$model</code> 里的 loading/error 状态：
       </p>
-      <CodeBlock language="ts" title="UserService.ts">{serviceBaseCode}</CodeBlock>
+      <CodeBlock language="ts" title="UserService.ts">
+        {serviceBaseCode}
+      </CodeBlock>
       <p>
-        基类还自带事件方法（<code>on / once / off / emit</code>）和{" "}
-        <code>resolve()</code>（从所属容器解析依赖服务），以及{" "}
-        <code>destroy()</code>（清理事件监听、Debounce/Throttle 定时器、Memo 缓存）。
+        基类还自带事件方法（<code>on / once / off / emit</code>）和 <code>resolve()</code>
+        （从所属容器解析依赖服务），以及 <code>destroy()</code>（清理事件监听、Debounce/Throttle
+        定时器、Memo 缓存）。
       </p>
 
       <h3>@Action 与 @SyncAction</h3>
       <p>
-        方法默认就是 Action，<code>@Action</code> 写了也只是个标记（可读性）。
-        真正有意义的是反向的 <code>@SyncAction</code>——把某个方法排除出批量更新：
+        方法默认就是 Action，<code>@Action</code> 写了也只是个标记（可读性）。 真正有意义的是反向的{' '}
+        <code>@SyncAction</code>——把某个方法排除出批量更新：
       </p>
       <CodeBlock language="ts">{syncActionCode}</CodeBlock>
 
       <h2>服务间依赖：getter + this.resolve</h2>
       <p>
-        一个 Service 要用另一个 Service，推荐写成 getter +
-        <code>this.resolve()</code>：<code>resolve</code> 从当前实例所属的容器解析依赖，
-        容器内 singleton 缓存保证每次拿到同一个实例。依赖关系是显式的普通代码，
-        类型也由返回值直接推导：
+        一个 Service 要用另一个 Service，推荐写成 getter +<code>this.resolve()</code>：
+        <code>resolve</code> 从当前实例所属的容器解析依赖， 容器内 singleton
+        缓存保证每次拿到同一个实例。依赖关系是显式的普通代码， 类型也由返回值直接推导：
       </p>
       <p>
-        注意：<code>resolve</code> 只能解析到同一容器树里的服务——被依赖的 Service
-        必须和当前 Service 注册在同一个 <code>bindServices</code> 列表里，
-        或注册在上层容器 / 全局容器中（子容器解析不到时会沿父链向上委托）。
+        注意：<code>resolve</code> 只能解析到同一容器树里的服务——被依赖的 Service 必须和当前 Service
+        注册在同一个 <code>bindServices</code> 列表里， 或注册在上层容器 /
+        全局容器中（子容器解析不到时会沿父链向上委托）。
       </p>
       <DemoCard
         title="getter + this.resolve 解析依赖"
@@ -111,19 +110,18 @@ export default function Service() {
         <CollabDemo />
       </DemoCard>
       <p>
-        <code>@Inject</code> 属性装饰器仍然可用（首次访问时懒解析并缓存，
-        标识符支持类 / 字符串 / Symbol），但 getter 模式更显式、类型推导更直接，
-        新代码建议用 getter 写法。
+        <code>@Inject</code> 属性装饰器仍然可用（首次访问时懒解析并缓存， 标识符支持类 / 字符串 /
+        Symbol），但 getter 模式更显式、类型推导更直接， 新代码建议用 getter 写法。
       </p>
 
       <h2>Container 与 bindServices</h2>
       <p>
-        容器持有「标识符 → 服务定义」的注册表，负责实例化和缓存。React 里你不直接
-        new 容器，而是用 <code>bindServices</code> 把它绑到组件树上：
+        容器持有「标识符 → 服务定义」的注册表，负责实例化和缓存。React 里你不直接 new 容器，而是用{' '}
+        <code>bindServices</code> 把它绑到组件树上：
       </p>
       <CodeBlock language="tsx">{containerCode}</CodeBlock>
       <p>
-        应用根部想要一个统一入口时，可以用 <code>RSRoot</code>——它就是{" "}
+        应用根部想要一个统一入口时，可以用 <code>RSRoot</code>——它就是{' '}
         <code>bindServices(children, [])</code>，一个空注册表的顶层容器。
       </p>
       <DemoCard
@@ -137,19 +135,17 @@ export default function Service() {
       <h2>实例化时机与生命周期</h2>
       <ul>
         <li>
-          注册不等于实例化：<code>bindServices</code> 挂载时只创建容器和注册表，
-          Service 实例在第一次 <code>useService</code> / <code>resolve</code> 时才创建。
+          注册不等于实例化：<code>bindServices</code> 挂载时只创建容器和注册表， Service
+          实例在第一次 <code>useService</code> / <code>resolve</code> 时才创建。
+        </li>
+        <li>默认 singleton：同一个容器里多次解析拿到同一实例，所以同组件树内状态天然共享。</li>
+        <li>
+          组件卸载时容器随之销毁（内部用 FinalizationRegistry 兜底， 避免 concurrent
+          模式下泄漏），实例的 <code>destroy()</code> 会被调用来清理资源。
         </li>
         <li>
-          默认 singleton：同一个容器里多次解析拿到同一实例，所以同组件树内状态天然共享。
-        </li>
-        <li>
-          组件卸载时容器随之销毁（内部用 FinalizationRegistry 兜底，
-          避免 concurrent 模式下泄漏），实例的 <code>destroy()</code> 会被调用来清理资源。
-        </li>
-        <li>
-          每个实例有唯一的 <code>instanceId</code>（如 <code>CounterService#0</code>），
-          调试和 DevTools 都靠它定位实例。
+          每个实例有唯一的 <code>instanceId</code>（如 <code>CounterService#0</code>）， 调试和
+          DevTools 都靠它定位实例。
         </li>
       </ul>
 
@@ -159,8 +155,8 @@ export default function Service() {
       </p>
       <CodeBlock language="ts">{globalCode}</CodeBlock>
       <p>
-        需要更细的粒度时也可以 <code>new Container({`{ name, parent }`})</code> 手动建容器树，
-        API 与 bindServices 内部用的是同一套。
+        需要更细的粒度时也可以 <code>new Container({`{ name, parent }`})</code> 手动建容器树， API
+        与 bindServices 内部用的是同一套。
       </p>
     </div>
   );

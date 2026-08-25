@@ -5,6 +5,7 @@
 ### 组件不更新？
 
 1. **检查是否使用了 `observer` 或 `view`**
+
    ```typescript
    // ✅ 正确
    const Component = observer(() => {
@@ -13,6 +14,7 @@
    ```
 
 2. **检查是否在 render 内部访问 observable**
+
    ```typescript
    // ❌ 错误：在 render 外部访问
    const count = service.count;
@@ -39,6 +41,7 @@
 ### useService 报错？
 
 1. **检查是否在 `bindServices` 内部使用**
+
    ```typescript
    // ✅ 正确
    const Content = () => {
@@ -57,6 +60,7 @@
 ### 异步状态未更新？
 
 1. **检查异步方法是否正确定义**
+
    ```typescript
    // ✅ 必须是 async 方法
    async fetchData() {
@@ -67,8 +71,8 @@
 2. **检查是否正确访问 $model**
    ```typescript
    // ✅ 正确访问
-   service.$model.fetchData.loading
-   service.$model.fetchData.error
+   service.$model.fetchData.loading;
+   service.$model.fetchData.error;
    ```
 
 ## 调试工具
@@ -95,9 +99,9 @@ export class DebugService extends Service {
   count = 0;
 
   increment() {
-    console.log("Before:", this.count);
+    console.log('Before:', this.count);
     this.count++;
-    console.log("After:", this.count);
+    console.log('After:', this.count);
   }
 }
 ```

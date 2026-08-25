@@ -1,5 +1,5 @@
-import vm from "vm";
-import { observable, observe, shadowObservable } from "../main";
+import vm from 'vm';
+import { observable, observe, shadowObservable } from '../main';
 
 /*
  * GG7 加固测试 (对抗审查轮次补充, 全部 pin 当前绿色行为):
@@ -11,9 +11,9 @@ import { observable, observe, shadowObservable } from "../main";
  * - 双重 clear: 第二次 (空集合) 不产生 debugger 事件
  * */
 
-describe("GG7 hardening: cross-realm collection routing edges", () => {
-  test("cross-realm WeakMap routes to collection handlers (deep)", () => {
-    const wm = vm.runInNewContext("new WeakMap()") as WeakMap<object, number>;
+describe('GG7 hardening: cross-realm collection routing edges', () => {
+  test('cross-realm WeakMap routes to collection handlers (deep)', () => {
+    const wm = vm.runInNewContext('new WeakMap()') as WeakMap<object, number>;
     const key = {};
     const m = observable(wm);
     expect(m).not.toBe(wm);
@@ -27,8 +27,8 @@ describe("GG7 hardening: cross-realm collection routing edges", () => {
     expect(dummy).toBe(undefined);
   });
 
-  test("cross-realm WeakSet routes to collection handlers (shadow)", () => {
-    const ws = vm.runInNewContext("new WeakSet()") as WeakSet<object>;
+  test('cross-realm WeakSet routes to collection handlers (shadow)', () => {
+    const ws = vm.runInNewContext('new WeakSet()') as WeakSet<object>;
     const s = shadowObservable(ws);
     expect(s).not.toBe(ws);
     const key = {};
@@ -41,17 +41,14 @@ describe("GG7 hardening: cross-realm collection routing edges", () => {
     expect(seen).toBe(false);
   });
 
-  test("cross-realm Map via shadowObservable is reactive", () => {
-    const rm = vm.runInNewContext("new Map([['a', 1]])") as Map<
-      string,
-      number
-    >;
+  test('cross-realm Map via shadowObservable is reactive', () => {
+    const rm = vm.runInNewContext("new Map([['a', 1]])") as Map<string, number>;
     const sh = shadowObservable(rm);
     expect(sh).not.toBe(rm);
     let dummy: number | undefined;
-    observe(() => (dummy = sh.get("a")));
+    observe(() => (dummy = sh.get('a')));
     expect(dummy).toBe(1);
-    sh.set("a", 2);
+    sh.set('a', 2);
     expect(dummy).toBe(2);
     sh.clear();
     expect(dummy).toBe(undefined);
@@ -59,47 +56,44 @@ describe("GG7 hardening: cross-realm collection routing edges", () => {
   });
 });
 
-describe("GG7 hardening: nested cross-realm built-ins", () => {
-  test("cross-realm Date nested in an observable object stays raw and usable", () => {
-    const d = vm.runInNewContext("new Date(2020, 0, 2)") as Date;
+describe('GG7 hardening: nested cross-realm built-ins', () => {
+  test('cross-realm Date nested in an observable object stays raw and usable', () => {
+    const d = vm.runInNewContext('new Date(2020, 0, 2)') as Date;
     const state = observable({ when: d });
     // 经 observableChild → observable → shouldInstrument 委托, 黑名单同样生效
     expect(state.when).toBe(d);
     expect(() => state.when.getTime()).not.toThrow();
   });
 
-  test("cross-realm Map nested in an observable object is deeply reactive", () => {
-    const cm = vm.runInNewContext("new Map([['a', 1]])") as Map<
-      string,
-      number
-    >;
+  test('cross-realm Map nested in an observable object is deeply reactive', () => {
+    const cm = vm.runInNewContext("new Map([['a', 1]])") as Map<string, number>;
     const state = observable({ m: cm });
     expect(state.m).not.toBe(cm);
     let dummy: number | undefined;
-    observe(() => (dummy = state.m.get("a")));
+    observe(() => (dummy = state.m.get('a')));
     expect(dummy).toBe(1);
-    state.m.set("a", 2);
+    state.m.set('a', 2);
     expect(dummy).toBe(2);
   });
 });
 
-describe("GG7 hardening: clear self-notification edges", () => {
+describe('GG7 hardening: clear self-notification edges', () => {
   test("clear issued inside the reaction's own run does not self-notify or loop", () => {
-    const c = observable(new Map([["c", 1]]));
+    const c = observable(new Map([['c', 1]]));
     const clearOps: string[] = [];
     let ran = 0;
     let dummy: number | undefined;
     observe(
       () => {
-        dummy = c.get("c");
+        dummy = c.get('c');
         ran++;
         if (ran === 1) {
           c.clear();
         }
       },
       {
-        debugger: (op) => {
-          if (op.type === "clear") clearOps.push("clear");
+        debugger: op => {
+          if (op.type === 'clear') clearOps.push('clear');
         },
       }
     );
@@ -110,17 +104,17 @@ describe("GG7 hardening: clear self-notification edges", () => {
     expect(c.size).toBe(0);
   });
 
-  test("second clear on an already-empty Map emits no debugger event", () => {
-    const m = observable(new Map([["a", 1]]));
+  test('second clear on an already-empty Map emits no debugger event', () => {
+    const m = observable(new Map([['a', 1]]));
     const ops: unknown[] = [];
-    observe(() => m.get("a"), {
-      debugger: (op) => {
-        if (op.type === "clear") ops.push(op.oldValue);
+    observe(() => m.get('a'), {
+      debugger: op => {
+        if (op.type === 'clear') ops.push(op.oldValue);
       },
     });
     m.clear();
     m.clear();
     expect(ops).toHaveLength(1);
-    expect(ops[0]).toEqual(new Map([["a", 1]]));
+    expect(ops[0]).toEqual(new Map([['a', 1]]));
   });
 });

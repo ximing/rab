@@ -138,7 +138,9 @@ describe('McpBridge', () => {
 
       expect(bridge.isMounted()).toBe(false); // 未成功挂载
       expect(mockModelCtx.registerTool).not.toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('navigator.modelContext is not available'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('navigator.modelContext is not available')
+      );
 
       warnSpy.mockRestore();
     });
@@ -146,7 +148,9 @@ describe('McpBridge', () => {
     it('扫描容器中有 @mcpTool 注解的方法并注册独立 Tool', async () => {
       class OrderService {
         @mcpTool({ description: '获取订单列表' })
-        getOrders() { return []; }
+        getOrders() {
+          return [];
+        }
       }
 
       const instance = Object.create(OrderService.prototype) as Service;
@@ -172,7 +176,9 @@ describe('McpBridge', () => {
     it('有自定义 name 的 @mcpTool 使用自定义名称', async () => {
       class CartService {
         @mcpTool({ description: '获取购物车', name: 'my_cart_tool' })
-        getCart() { return {}; }
+        getCart() {
+          return {};
+        }
       }
 
       const instance = Object.create(CartService.prototype) as Service;
@@ -232,7 +238,9 @@ describe('McpBridge', () => {
       // 让 unregister 抛出错误
       mockModelCtx.registerTool.mockImplementationOnce((tool: { name: string }) => {
         return {
-          unregister: () => { throw new Error('注销失败'); },
+          unregister: () => {
+            throw new Error('注销失败');
+          },
         };
       });
 
@@ -251,11 +259,23 @@ describe('McpBridge', () => {
       const childInstance = makeMockInstance('ChildService#0');
 
       const childContainer = mockContainer('child', [
-        { identifier: 'ChildService', factory: class {} as any, scope: 'singleton' as any, instance: childInstance },
+        {
+          identifier: 'ChildService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance: childInstance,
+        },
       ]);
       const rootContainer = mockContainer(
         'root',
-        [{ identifier: 'ParentService', factory: class {} as any, scope: 'singleton' as any, instance: parentInstance }],
+        [
+          {
+            identifier: 'ParentService',
+            factory: class {} as any,
+            scope: 'singleton' as any,
+            instance: parentInstance,
+          },
+        ],
         [childContainer]
       );
 
@@ -268,7 +288,9 @@ describe('McpBridge', () => {
         .find((tool: { name: string }) => tool.name === 'get_state');
 
       // 子容器中的 ChildService#0 应当可以被路由
-      const result = getStateTool!.execute({ instanceId: 'ChildService#0' }) as { state: Record<string, unknown> };
+      const result = getStateTool!.execute({ instanceId: 'ChildService#0' }) as {
+        state: Record<string, unknown>;
+      };
       expect(result).toBeDefined();
     });
 
@@ -295,14 +317,21 @@ describe('McpBridge', () => {
     it('独立 @mcpTool 的 execute 函数：args 非数组时转为空数组', async () => {
       class GreetService {
         @mcpTool({ description: '打招呼' })
-        greet() { return 'hello'; }
+        greet() {
+          return 'hello';
+        }
       }
 
       const instance = Object.create(GreetService.prototype) as Service;
       (instance as any)['instanceId'] = 'GreetService#0';
 
       const container = mockContainer('app', [
-        { identifier: GreetService, factory: GreetService as any, scope: 'singleton' as any, instance },
+        {
+          identifier: GreetService,
+          factory: GreetService as any,
+          scope: 'singleton' as any,
+          instance,
+        },
       ]);
 
       const bridge = new McpBridge();
@@ -315,10 +344,10 @@ describe('McpBridge', () => {
       expect(greetTool).toBeDefined();
 
       // args 传 null（非数组），应转为空数组不报错
-      const mcpResult = await greetTool!.execute({
+      const mcpResult = (await greetTool!.execute({
         instanceId: 'GreetService#0',
         args: null,
-      }) as { content: Array<{ type: string; text: string }> };
+      })) as { content: Array<{ type: string; text: string }> };
 
       // registerTool 会包装返回值为 MCP 标准格式
       const result = JSON.parse(mcpResult.content[0]!.text) as { result: unknown };

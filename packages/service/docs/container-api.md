@@ -11,8 +11,8 @@ Container 已重构为专门为 Service 定制的 IoC 容器,提供更简洁和�
 ```typescript
 // 服务作用域枚举
 export enum ServiceScope {
-  Singleton = "singleton", // 单例模式
-  Transient = "transient", // 瞬时模式
+  Singleton = 'singleton', // 单例模式
+  Transient = 'transient', // 瞬时模式
 }
 
 // 注册选项
@@ -21,10 +21,7 @@ export interface RegisterOptions {
 }
 
 // 服务标识符类型
-export type ServiceIdentifier<T = any> =
-  | string
-  | symbol
-  | (new (...args: any[]) => T);
+export type ServiceIdentifier<T = any> = string | symbol | (new (...args: any[]) => T);
 
 // 服务类类型
 export type ServiceClass<T = any> = new (...args: any[]) => T;
@@ -48,25 +45,25 @@ container.register(TodoService, { scope: ServiceScope.Transient });
 
 ```typescript
 // 使用字符串或 Symbol 作为标识符
-container.register("userService", UserService);
-container.register(Symbol("todoService"), TodoService);
-container.register("config", ConfigService, { scope: ServiceScope.Transient });
+container.register('userService', UserService);
+container.register(Symbol('todoService'), TodoService);
+container.register('config', ConfigService, { scope: ServiceScope.Transient });
 ```
 
 #### 用法 3: 使用懒加载函数(解决循环引用)
 
 ```typescript
 // 使用工厂函数延迟实例化,解决循环依赖
-container.register("userService", (container) => {
+container.register('userService', container => {
   const todoService = container.resolve(TodoService);
   return new UserService(todoService);
 });
 
 container.register(
-  "complexService",
-  (container) => {
-    const dep1 = container.resolve("dep1");
-    const dep2 = container.resolve("dep2");
+  'complexService',
+  container => {
+    const dep1 = container.resolve('dep1');
+    const dep2 = container.resolve('dep2');
     return new ComplexService(dep1, dep2);
   },
   { scope: ServiceScope.Singleton }
@@ -77,8 +74,8 @@ container.register(
 
 ```typescript
 // 直接注册实例对象(主要用于配置对象等)
-container.register("config", { apiUrl: "http://api.example.com" });
-container.register("settings", { theme: "dark", locale: "zh-CN" });
+container.register('config', { apiUrl: 'http://api.example.com' });
+container.register('settings', { theme: 'dark', locale: 'zh-CN' });
 ```
 
 ### 3. 便捷方法
@@ -86,14 +83,14 @@ container.register("settings", { theme: "dark", locale: "zh-CN" });
 ```typescript
 // 注册单例服务
 container.registerSingleton(UserService);
-container.registerSingleton("userService", UserService);
+container.registerSingleton('userService', UserService);
 
 // 注册瞬时服务(每次 resolve 都创建新实例)
 container.registerTransient(TodoService);
-container.registerTransient("todoService", TodoService);
+container.registerTransient('todoService', TodoService);
 
 // 注册实例(向后兼容)
-container.registerInstance("config", { apiUrl: "http://api.example.com" });
+container.registerInstance('config', { apiUrl: 'http://api.example.com' });
 ```
 
 ### 4. resolve 方法 - 智能类型推导
@@ -106,17 +103,17 @@ const userService = container.resolve(UserService);
 // userService 的类型自动推导为 UserService，无需显式泛型！
 
 // ✅ 使用字符串标识符 - 需要显式泛型
-const todoService = container.resolve<TodoService>("todoService");
+const todoService = container.resolve<TodoService>('todoService');
 // 必须显式指定泛型，否则类型为 Service（基类）
 
 // ✅ 使用 Symbol 标识符 - 需要显式泛型
-const configService = container.resolve<ConfigService>(Symbol.for("config"));
+const configService = container.resolve<ConfigService>(Symbol.for('config'));
 
 // ✅ tryResolve 也支持类型推导
 const maybeUser = container.tryResolve(UserService);
 // maybeUser 的类型自动推导为 UserService | undefined
 
-const maybeTodo = container.tryResolve<TodoService>("todoService");
+const maybeTodo = container.tryResolve<TodoService>('todoService');
 // maybeTodo 的类型为 TodoService | undefined
 ```
 
@@ -128,12 +125,12 @@ const maybeTodo = container.tryResolve<TodoService>("todoService");
 ## 完整示例
 
 ```typescript
-import { Container, ServiceScope } from "@rabjs/service";
+import { Container, ServiceScope } from '@rabjs/service';
 
 // 定义服务类
 class DatabaseService extends Service {
   async connect() {
-    console.log("Connected to database");
+    console.log('Connected to database');
   }
 }
 
@@ -143,7 +140,7 @@ class UserRepository extends Service {
   }
 
   async findUser(id: string) {
-    return { id, name: "User" };
+    return { id, name: 'User' };
   }
 }
 
@@ -158,34 +155,34 @@ class UserService extends Service {
 }
 
 // 创建容器
-const container = new Container({ name: "app" });
+const container = new Container({ name: 'app' });
 
 // 注册服务 - 方式 1: 使用类作为标识符
 container.register(DatabaseService);
 
 // 注册服务 - 方式 2: 使用自定义标识符
-container.register("userRepo", UserRepository);
+container.register('userRepo', UserRepository);
 
 // 注册服务 - 方式 3: 使用懒加载函数(解决循环引用)
-container.register("userService", (c) => {
-  const repo = c.resolve("userRepo");
+container.register('userService', c => {
+  const repo = c.resolve('userRepo');
   return new UserService(repo);
 });
 
 // 注册服务 - 方式 4: 注册配置实例
-container.register("config", {
-  apiUrl: "http://api.example.com",
+container.register('config', {
+  apiUrl: 'http://api.example.com',
   timeout: 5000,
 });
 
 // 解析服务
 const db = container.resolve(DatabaseService);
-const userService = container.resolve("userService");
-const config = container.resolve("config");
+const userService = container.resolve('userService');
+const config = container.resolve('config');
 
 // 使用服务
 await db.connect();
-const user = await userService.getUser("123");
+const user = await userService.getUser('123');
 console.log(config.apiUrl);
 ```
 
@@ -193,13 +190,13 @@ console.log(config.apiUrl);
 
 ```typescript
 // 创建根容器
-const rootContainer = new Container({ name: "root" });
+const rootContainer = new Container({ name: 'root' });
 rootContainer.register(DatabaseService);
 
 // 创建子容器(继承父容器的服务)
 const childContainer = new Container({
   parent: rootContainer,
-  name: "child",
+  name: 'child',
 });
 
 // 子容器可以访问父容器的服务
@@ -209,7 +206,7 @@ const db = childContainer.resolve(DatabaseService);
 childContainer.register(DatabaseService, { scope: ServiceScope.Transient });
 
 // 动态添加子容器
-const dynamicChild = new Container({ name: "dynamic" });
+const dynamicChild = new Container({ name: 'dynamic' });
 rootContainer.addChild(dynamicChild);
 
 // 更换父容器
@@ -263,13 +260,13 @@ class ServiceB extends Service {
 }
 
 // 使用懒加载函数解决循环依赖
-container.register("serviceA", (c) => {
-  const serviceB = c.resolve("serviceB");
+container.register('serviceA', c => {
+  const serviceB = c.resolve('serviceB');
   return new ServiceA(serviceB);
 });
 
-container.register("serviceB", (c) => {
-  const serviceA = c.resolve("serviceA");
+container.register('serviceB', c => {
+  const serviceA = c.resolve('serviceA');
   return new ServiceB(serviceA);
 });
 ```
@@ -280,18 +277,18 @@ container.register("serviceB", (c) => {
 
 ```typescript
 // 旧 API
-container.register("userService", UserService, true); // 单例
-container.register("todoService", TodoService, false); // 瞬时
+container.register('userService', UserService, true); // 单例
+container.register('todoService', TodoService, false); // 瞬时
 
 // 新 API
-container.register("userService", UserService); // 默认单例
-container.register("todoService", TodoService, {
+container.register('userService', UserService); // 默认单例
+container.register('todoService', TodoService, {
   scope: ServiceScope.Transient,
 });
 
 // 或使用便捷方法
-container.registerSingleton("userService", UserService);
-container.registerTransient("todoService", TodoService);
+container.registerSingleton('userService', UserService);
+container.registerTransient('todoService', TodoService);
 ```
 
 ### 向后兼容性
@@ -300,8 +297,8 @@ container.registerTransient("todoService", TodoService);
 
 ```typescript
 // 这些旧用法仍然有效
-container.register("config", { apiUrl: "http://api.example.com" });
-container.registerInstance("settings", { theme: "dark" });
+container.register('config', { apiUrl: 'http://api.example.com' });
+container.registerInstance('settings', { theme: 'dark' });
 ```
 
 ## 最佳实践
@@ -316,7 +313,7 @@ container.registerInstance("settings", { theme: "dark" });
 2. **使用 Symbol 避免命名冲突**: 对于字符串标识符,考虑使用 Symbol
 
    ```typescript
-   const USER_SERVICE = Symbol("userService");
+   const USER_SERVICE = Symbol('userService');
    container.register(USER_SERVICE, UserService);
    ```
 
@@ -329,12 +326,12 @@ container.registerInstance("settings", { theme: "dark" });
 4. **使用懒加载解决循环依赖**: 避免在构造函数中直接依赖
 
    ```typescript
-   container.register("service", (c) => new Service(c.resolve("dep")));
+   container.register('service', c => new Service(c.resolve('dep')));
    ```
 
 5. **利用树形结构**: 为不同模块创建子容器,实现服务隔离
    ```typescript
-   const moduleContainer = rootContainer.createChild("module");
+   const moduleContainer = rootContainer.createChild('module');
    ```
 
 ## 类型安全
@@ -346,7 +343,7 @@ container.registerInstance("settings", { theme: "dark" });
 const userService = container.resolve(UserService); // UserService 类型
 
 // 显式类型注解
-const todoService = container.resolve<TodoService>("todoService");
+const todoService = container.resolve<TodoService>('todoService');
 
 // 泛型约束
 container.register<UserService>(UserService);

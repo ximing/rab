@@ -23,8 +23,9 @@ export function getMcpToolMetadataList(target: object): McpToolMetadata[] {
   let current: object | null = target;
 
   while (current && current !== Object.prototype) {
-    const metadataMap: Map<string, McpToolMetadata> | undefined =
-      (current as any)[MCP_TOOL_METADATA_KEY];
+    const metadataMap: Map<string, McpToolMetadata> | undefined = (current as any)[
+      MCP_TOOL_METADATA_KEY
+    ];
 
     if (metadataMap && metadataMap.size > 0) {
       return [...metadataMap.values()];
@@ -50,8 +51,9 @@ export function getMcpToolMetadata(
   let current: object | null = target;
 
   while (current && current !== Object.prototype) {
-    const metadataMap: Map<string, McpToolMetadata> | undefined =
-      (current as any)[MCP_TOOL_METADATA_KEY];
+    const metadataMap: Map<string, McpToolMetadata> | undefined = (current as any)[
+      MCP_TOOL_METADATA_KEY
+    ];
 
     if (metadataMap?.has(methodName)) {
       return metadataMap.get(methodName);
@@ -70,10 +72,12 @@ export function getMcpToolMetadata(
  * @param metadata 元数据
  */
 export function setMcpToolMetadata(target: object, metadata: McpToolMetadata): void {
-  let metadataMap: Map<string, McpToolMetadata> | undefined =
-    Object.prototype.hasOwnProperty.call(target, MCP_TOOL_METADATA_KEY)
-      ? (target as any)[MCP_TOOL_METADATA_KEY]
-      : undefined;
+  let metadataMap: Map<string, McpToolMetadata> | undefined = Object.prototype.hasOwnProperty.call(
+    target,
+    MCP_TOOL_METADATA_KEY
+  )
+    ? (target as any)[MCP_TOOL_METADATA_KEY]
+    : undefined;
 
   if (!metadataMap) {
     // 创建新的 Map，只在当前原型上存储，不影响父类

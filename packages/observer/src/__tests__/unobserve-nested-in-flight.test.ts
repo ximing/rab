@@ -12,10 +12,10 @@
  * registerRunningReactionForOperation 对 unobserved 栈顶跳过注册
  * (见 reaction-runner.ts / 0cf771a), 嵌套与顶层行为一致。
  */
-import { observable, observe, unobserve } from "../main";
+import { observable, observe, unobserve } from '../main';
 
-describe("unobserve 后在途执行的依赖归属 (嵌套场景)", () => {
-  test("在运行中的 reaction 内手动调用已 unobserve 的 reaction, 其读取不落到外层", () => {
+describe('unobserve 后在途执行的依赖归属 (嵌套场景)', () => {
+  test('在运行中的 reaction 内手动调用已 unobserve 的 reaction, 其读取不落到外层', () => {
     const obj = observable({ a: 0, b: 0 });
     let bRuns = 0;
     const B = observe(() => {
@@ -39,7 +39,7 @@ describe("unobserve 后在途执行的依赖归属 (嵌套场景)", () => {
     expect(bRuns).toBe(2); // B 不再被触发
   });
 
-  test("嵌套手动调用后, 外层 reaction 对自己真正读过的 key 仍正常触发", () => {
+  test('嵌套手动调用后, 外层 reaction 对自己真正读过的 key 仍正常触发', () => {
     const obj = observable({ a: 0, b: 0 });
     const B = observe(() => {
       void obj.b;
@@ -59,7 +59,7 @@ describe("unobserve 后在途执行的依赖归属 (嵌套场景)", () => {
     expect(obj.b).toBe(0);
   });
 
-  test("已 unobserve 的 reaction 在途执行期间写 observable, 通知流程不受栈上 unobserved reaction 干扰", () => {
+  test('已 unobserve 的 reaction 在途执行期间写 observable, 通知流程不受栈上 unobserved reaction 干扰', () => {
     const obj = observable({ a: 0 });
     const B = observe(() => {
       void obj.a;
@@ -79,13 +79,13 @@ describe("unobserve 后在途执行的依赖归属 (嵌套场景)", () => {
     expect(aRuns).toBe(2);
   });
 
-  test("unobserved reaction 手动调用抛错时, 栈正确回退 (外层 reaction 不被卡在栈中)", () => {
+  test('unobserved reaction 手动调用抛错时, 栈正确回退 (外层 reaction 不被卡在栈中)', () => {
     const obj = observable({ a: 0, b: 0 });
     // lazy: B 的函数体只在被 A 手动调用时执行 (其唯一一次执行就是抛错那次)
     const B = observe(
       () => {
         void obj.b;
-        throw new Error("boom");
+        throw new Error('boom');
       },
       { lazy: true }
     );

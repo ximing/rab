@@ -5,8 +5,8 @@
  * 这是 useEffect + observe + unobserve 的语法糖，用于简化在组件中创建副作用的过程
  */
 
-import { observe, unobserve, type Reaction, type ObserveOptions } from "@rabjs/observer";
-import { useEffect, useRef } from "react";
+import { observe, unobserve, type Reaction, type ObserveOptions } from '@rabjs/observer';
+import { useEffect, useRef } from 'react';
 
 /**
  * useReaction Hook 选项
@@ -103,10 +103,7 @@ export interface UseReactionOptions extends ObserveOptions {
  * );
  * ```
  */
-export function useReaction(
-  effect: () => void | (() => void),
-  options?: UseReactionOptions
-): void {
+export function useReaction(effect: () => void | (() => void), options?: UseReactionOptions): void {
   const reactionRef = useRef<Reaction | null>(null);
   const { immediate, ...observeOptions } = options || {};
 

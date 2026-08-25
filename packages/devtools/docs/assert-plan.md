@@ -27,13 +27,13 @@ window.__RS_ROOT_CONTAINER__
 
 ### 与 `@rabjs/web-mcp` assert_state 的区别
 
-| 对比项 | `rs-web-mcp` assert_state | `rs-cdp-debug` expect API |
-|-------|--------------------------|--------------------------|
-| 目标用户 | AI Agent（LLM 调用） | 开发者（控制台 / E2E） |
-| 调用方式 | JSON 描述对象 + execute() | Fluent chain API |
-| 错误报告 | JSON 结构，供程序消费 | 友好字符串 + console 彩色输出 |
-| 断言核心逻辑 | `utils/assert.ts` + `utils/resolve-path.ts` | **共同依赖 `@rabjs/shared`** |
-| 与 window 挂载集成 | 否（通过 McpRegistry 注册） | 是（挂载到 `window.__RS_ROOT_CONTAINER__.expect()`） |
+| 对比项             | `rs-web-mcp` assert_state                   | `rs-cdp-debug` expect API                            |
+| ------------------ | ------------------------------------------- | ---------------------------------------------------- |
+| 目标用户           | AI Agent（LLM 调用）                        | 开发者（控制台 / E2E）                               |
+| 调用方式           | JSON 描述对象 + execute()                   | Fluent chain API                                     |
+| 错误报告           | JSON 结构，供程序消费                       | 友好字符串 + console 彩色输出                        |
+| 断言核心逻辑       | `utils/assert.ts` + `utils/resolve-path.ts` | **共同依赖 `@rabjs/shared`**                         |
+| 与 window 挂载集成 | 否（通过 McpRegistry 注册）                 | 是（挂载到 `window.__RS_ROOT_CONTAINER__.expect()`） |
 
 **核心设计决策**：`rs-cdp-debug` 的断言能力 **不重新实现断言内核**，也不从 `rs-web-mcp` vendor 复制代码，而是将断言相关的公共逻辑（类型定义、路径解析、操作符执行）**提取到独立的 `@rabjs/shared` 包**，由 `rs-web-mcp` 和 `rs-cdp-debug` 共同依赖。
 
@@ -128,23 +128,44 @@ reactive-state/web-mcp/src/
  * 断言操作符（与 rs-web-mcp 完全对齐）
  */
 export type AssertOp =
-  | 'eq' | 'neq'
-  | 'gt' | 'gte' | 'lt' | 'lte'
-  | 'exists' | 'notExists'
-  | 'includes' | 'notIncludes'
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'exists'
+  | 'notExists'
+  | 'includes'
+  | 'notIncludes'
   | 'matches'
   | 'type'
-  | 'length' | 'lengthGt' | 'lengthGte' | 'lengthLt' | 'lengthLte'
+  | 'length'
+  | 'lengthGt'
+  | 'lengthGte'
+  | 'lengthLt'
+  | 'lengthLte'
   | 'deepEq'
   | 'between'
   | 'hasKeys'
   | 'matchObject'
-  | 'some' | 'every';
+  | 'some'
+  | 'every';
 
-export type ScalarAssertOp = Extract<AssertOp,
-  | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
-  | 'exists' | 'notExists' | 'includes' | 'notIncludes'
-  | 'matches' | 'type'
+export type ScalarAssertOp = Extract<
+  AssertOp,
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'exists'
+  | 'notExists'
+  | 'includes'
+  | 'notIncludes'
+  | 'matches'
+  | 'type'
 >;
 
 export interface ElementAssertion {
@@ -289,31 +310,31 @@ export class RSExpectBuilder {
 
 ### 方法语义对照表
 
-| RSExpectBuilder 方法 | 对应 AssertOp | Jest 对应 |
-|---------------------|--------------|----------|
-| `toBe(path, v)` | `eq` | `expect(x).toBe(v)` |
-| `notToBe(path, v)` | `neq` | `expect(x).not.toBe(v)` |
-| `toBeGreaterThan(path, n)` | `gt` | `expect(x).toBeGreaterThan(n)` |
-| `toBeGreaterThanOrEqual(path, n)` | `gte` | `expect(x).toBeGreaterThanOrEqual(n)` |
-| `toBeLessThan(path, n)` | `lt` | `expect(x).toBeLessThan(n)` |
-| `toBeLessThanOrEqual(path, n)` | `lte` | `expect(x).toBeLessThanOrEqual(n)` |
-| `toBeBetween(path, lo, hi)` | `between` | — |
-| `toExist(path)` | `exists` | `expect(x).toBeDefined()` |
-| `toNotExist(path)` | `notExists` | `expect(x).toBeUndefined()` |
-| `toInclude(path, v)` | `includes` | `expect(arr).toContain(v)` / `expect(str).toContain(v)` |
-| `toNotInclude(path, v)` | `notIncludes` | `expect(arr).not.toContain(v)` |
-| `toMatch(path, pattern)` | `matches` | `expect(str).toMatch(/pattern/)` |
-| `toBeType(path, type)` | `type` | `expect(typeof x).toBe(type)` |
-| `toHaveLength(path, n)` | `length` | `expect(arr).toHaveLength(n)` |
-| `toHaveLengthGt(path, n)` | `lengthGt` | — |
-| `toHaveLengthGte(path, n)` | `lengthGte` | — |
-| `toHaveLengthLt(path, n)` | `lengthLt` | — |
-| `toHaveLengthLte(path, n)` | `lengthLte` | — |
-| `toHaveKeys(path, keys)` | `hasKeys` | `expect(obj).toHaveProperty(key)` |
-| `toMatchObject(path, subset)` | `matchObject` | `expect(obj).toMatchObject(subset)` |
-| `toDeepEqual(path, v)` | `deepEq` | `expect(x).toEqual(v)` |
-| `toHaveSome(path, assertion)` | `some` | `expect(arr).toEqual(expect.arrayContaining(...))` |
-| `toHaveEvery(path, assertion)` | `every` | — |
+| RSExpectBuilder 方法              | 对应 AssertOp | Jest 对应                                               |
+| --------------------------------- | ------------- | ------------------------------------------------------- |
+| `toBe(path, v)`                   | `eq`          | `expect(x).toBe(v)`                                     |
+| `notToBe(path, v)`                | `neq`         | `expect(x).not.toBe(v)`                                 |
+| `toBeGreaterThan(path, n)`        | `gt`          | `expect(x).toBeGreaterThan(n)`                          |
+| `toBeGreaterThanOrEqual(path, n)` | `gte`         | `expect(x).toBeGreaterThanOrEqual(n)`                   |
+| `toBeLessThan(path, n)`           | `lt`          | `expect(x).toBeLessThan(n)`                             |
+| `toBeLessThanOrEqual(path, n)`    | `lte`         | `expect(x).toBeLessThanOrEqual(n)`                      |
+| `toBeBetween(path, lo, hi)`       | `between`     | —                                                       |
+| `toExist(path)`                   | `exists`      | `expect(x).toBeDefined()`                               |
+| `toNotExist(path)`                | `notExists`   | `expect(x).toBeUndefined()`                             |
+| `toInclude(path, v)`              | `includes`    | `expect(arr).toContain(v)` / `expect(str).toContain(v)` |
+| `toNotInclude(path, v)`           | `notIncludes` | `expect(arr).not.toContain(v)`                          |
+| `toMatch(path, pattern)`          | `matches`     | `expect(str).toMatch(/pattern/)`                        |
+| `toBeType(path, type)`            | `type`        | `expect(typeof x).toBe(type)`                           |
+| `toHaveLength(path, n)`           | `length`      | `expect(arr).toHaveLength(n)`                           |
+| `toHaveLengthGt(path, n)`         | `lengthGt`    | —                                                       |
+| `toHaveLengthGte(path, n)`        | `lengthGte`   | —                                                       |
+| `toHaveLengthLt(path, n)`         | `lengthLt`    | —                                                       |
+| `toHaveLengthLte(path, n)`        | `lengthLte`   | —                                                       |
+| `toHaveKeys(path, keys)`          | `hasKeys`     | `expect(obj).toHaveProperty(key)`                       |
+| `toMatchObject(path, subset)`     | `matchObject` | `expect(obj).toMatchObject(subset)`                     |
+| `toDeepEqual(path, v)`            | `deepEq`      | `expect(x).toEqual(v)`                                  |
+| `toHaveSome(path, assertion)`     | `some`        | `expect(arr).toEqual(expect.arrayContaining(...))`      |
+| `toHaveEvery(path, assertion)`    | `every`       | —                                                       |
 
 ---
 
@@ -396,7 +417,13 @@ export { createRSRootContainerHandle } from './root-container-handle';
 export { setupWindowRootContainer } from './root-container-handle';
 
 // 新增导出
-export type { AssertOp, Assertion, AssertionResult, AssertResult, ElementAssertion } from './assert/types';
+export type {
+  AssertOp,
+  Assertion,
+  AssertionResult,
+  AssertResult,
+  ElementAssertion,
+} from './assert/types';
 export { RSExpectBuilder } from './assert/expect';
 export { printAssertResult } from './assert/reporter';
 
@@ -450,7 +477,7 @@ export class RSAssertionError extends Error {
 
 ```js
 // 查找 Service
-window.__RS_ROOT_CONTAINER__.listServices()
+window.__RS_ROOT_CONTAINER__.listServices();
 // => [{ instanceId: 'CartService_abc123', ... }]
 
 // 链式断言，check() 输出控制台报告并返回 boolean
@@ -460,7 +487,7 @@ window.__RS_ROOT_CONTAINER__
   .toBe('isInitialized', true)
   .toHaveLength('items', 0)
   .toExist('userId')
-  .check()
+  .check();
 // 控制台输出：
 // ✅ CartService_abc123 [3/3] 验证购物车初始化状态
 //   ✓ isInitialized === true
@@ -524,13 +551,13 @@ window.__RS_ROOT_CONTAINER__
   .toHaveSome('ladingMonitorData.list', {
     path: 'status',
     op: 'eq',
-    expected: 'DELIVERED'
+    expected: 'DELIVERED',
   })
   .toHaveEvery('ladingMonitorData.list', {
     path: 'waybillCode',
-    op: 'exists'
+    op: 'exists',
   })
-  .check()
+  .check();
 ```
 
 ---
@@ -541,10 +568,10 @@ window.__RS_ROOT_CONTAINER__
 
 **`rs-web-mcp` 的迁移方式（推荐渐进式）**：
 
-| 文件 | 迁移方式 |
-|------|---------|
-| `utils/resolve-path.ts` | 删除，改为 `export { resolvePath, toSafeActual } from '@rabjs/shared'` |
-| `utils/assert.ts` | 删除，改为 `export { executeAssertion, executeAssertions } from '@rabjs/shared'` |
+| 文件                    | 迁移方式                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `utils/resolve-path.ts` | 删除，改为 `export { resolvePath, toSafeActual } from '@rabjs/shared'`                              |
+| `utils/assert.ts`       | 删除，改为 `export { executeAssertion, executeAssertions } from '@rabjs/shared'`                    |
 | `types.ts` 中的断言类型 | 删除本地定义，改为 `export type { AssertOp, Assertion, AssertionResult, ... } from '@rabjs/shared'` |
 
 迁移后 `rs-web-mcp` 的 `utils/` 目录中的 `assert.ts` 和 `resolve-path.ts` 变为**薄的 re-export 转发文件**，不破坏现有消费方的 import 路径，待下一 major 版本再清理。
@@ -661,6 +688,7 @@ Phase 5：验收
 `rs-shared` 作为公共依赖，`rs-web-mcp` 和 `rs-cdp-debug` 均依赖它。若 `rs-shared` 有 Breaking Change，两个包需要同步升级。
 
 **缓解**：
+
 - monorepo 内使用 `workspace:*`，版本天然同步；
 - 为 `rs-shared` 建立独立的 changeset 流程，Breaking Change 触发 major bump 并在 changelog 中明确说明受影响的包；
 - `rs-shared` 的类型和函数签名应保持保守，优先做加法（新增导出），避免修改已有 API。

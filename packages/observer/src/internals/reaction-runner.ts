@@ -1,12 +1,12 @@
 // reactions can call each other and form a call stack
-import { rawToOptions } from "./proxy-raw-map";
+import { rawToOptions } from './proxy-raw-map';
 import {
   getReactionsForOperation,
   registerReactionForOperation,
   releaseReaction,
-} from "./reaction-track";
-import { Stack } from "./stack";
-import type { Operation, Reaction } from "./types";
+} from './reaction-track';
+import { Stack } from './stack';
+import type { Operation, Reaction } from './types';
 
 /*
  * 用于追踪当前正在执行的 reaction
@@ -32,9 +32,7 @@ export function hasOperationOldValueConsumer(operation: Operation): boolean {
   // 无法静态判断, 保守视为存在消费者。
   const options = rawToOptions.get(operation.target);
   const hasTransformReactions = Boolean(
-    options &&
-      options.reactionHandlers &&
-      options.reactionHandlers.transformReactions
+    options && options.reactionHandlers && options.reactionHandlers.transformReactions
   );
   if (hasTransformReactions) {
     return true;
@@ -114,9 +112,7 @@ export function runAsReaction<T extends Function, R>(
  * 在属性访问时,将当前正在运行的 reaction 注册为该属性的依赖。
  * 在 Proxy 的 get trap 中被调用
  * */
-export function registerRunningReactionForOperation(
-  operation: Operation
-): void {
+export function registerRunningReactionForOperation(operation: Operation): void {
   // 从 reactionStack 栈顶获取当前正在执行的 reaction
   // 如果栈为空(没有 reaction 在运行),则不做任何事
   const runningReaction = reactionStack.peek();
@@ -148,9 +144,7 @@ export function queueReactionsForOperation(operation: Operation): void {
   // 默认情况下直接返回原数组
   const options = rawToOptions.get(target);
   const hasTransformReactions = Boolean(
-    options &&
-      options.reactionHandlers &&
-      options.reactionHandlers.transformReactions
+    options && options.reactionHandlers && options.reactionHandlers.transformReactions
   );
   // 性能优化: 最常见的写操作是"修改没有任何依赖的属性",
   // 此时不 spread 空集合、不分配数组, 直接返回。
@@ -160,11 +154,7 @@ export function queueReactionsForOperation(operation: Operation): void {
   }
   let reactionsArray = [...reactions];
   if (hasTransformReactions && options && options.reactionHandlers) {
-    reactionsArray = options.reactionHandlers.transformReactions(
-      target,
-      key,
-      reactionsArray
-    );
+    reactionsArray = options.reactionHandlers.transformReactions(target, key, reactionsArray);
   }
 
   // 性能优化: 使用 for 循环代替 forEach,避免函数调用开销
@@ -210,12 +200,9 @@ export function queueReactionsForOperation(operation: Operation): void {
               firstError = error;
             }
           }
-          if (typeof reaction.scheduler === "function") {
+          if (typeof reaction.scheduler === 'function') {
             reaction.scheduler(reaction);
-          } else if (
-            typeof reaction.scheduler === "object" &&
-            reaction.scheduler !== null
-          ) {
+          } else if (typeof reaction.scheduler === 'object' && reaction.scheduler !== null) {
             reaction.scheduler.add(reaction);
           } else {
             reaction();

@@ -7,10 +7,10 @@ RSJS 支持服务端渲染（Server-Side Rendering）。
 在服务端禁用响应式追踪：
 
 ```typescript
-import { enableStaticRendering } from "@rabjs/react";
+import { enableStaticRendering } from '@rabjs/react';
 
 // 在服务端代码中
-if (typeof window === "undefined") {
+if (typeof window === 'undefined') {
   enableStaticRendering(true);
 }
 ```
@@ -47,11 +47,13 @@ hydrateRoot(document.getElementById("root")!, <App />);
 ## 注意事项
 
 1. **在服务端禁用响应式追踪**
+
    ```typescript
    enableStaticRendering(true);
    ```
 
 2. **Service 在服务端仍然可用**
+
    ```typescript
    // Service 可以正常使用
    export class DataService extends Service {

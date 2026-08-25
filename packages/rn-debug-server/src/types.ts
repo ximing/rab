@@ -53,7 +53,8 @@ export interface DeviceEventMessage {
   data: unknown;
 }
 
-export type DeviceToServerMessage = RegisterMessage | PingMessage | ResultMessage | DeviceEventMessage;
+export type DeviceToServerMessage =
+  RegisterMessage | PingMessage | ResultMessage | DeviceEventMessage;
 
 /** Agent → 服务端 指令输入 */
 export interface CommandInput {

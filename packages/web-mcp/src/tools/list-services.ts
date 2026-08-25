@@ -10,11 +10,7 @@
 
 import type { Service } from '@rabjs/service';
 
-import type {
-  ActionDescriptor,
-  ListServicesResult,
-  ServiceDescriptor,
-} from '../types';
+import type { ActionDescriptor, ListServicesResult, ServiceDescriptor } from '../types';
 import { getIdentifierLabel, getIdentifierType } from '../utils/identifier';
 import { getMcpToolMetadataList } from '../utils/reflect';
 import { resolveSchema } from '../utils/schema';
@@ -179,7 +175,8 @@ export function createListServicesTool(
 ): import('../types').WebMcpToolDefinition {
   return {
     name: 'list_services',
-    description: '列出页面中所有已激活的 Service 实例，获取它们的 instanceId、可用方法、scalarState（基本类型状态字段）和 objectState（复杂对象字段名，可通过点分路径深入）',
+    description:
+      '列出页面中所有已激活的 Service 实例，获取它们的 instanceId、可用方法、scalarState（基本类型状态字段）和 objectState（复杂对象字段名，可通过点分路径深入）',
     inputSchema: {
       type: 'object',
       properties: {},

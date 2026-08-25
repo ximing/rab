@@ -5,10 +5,10 @@
  * 直接把属性写到 raw target 上, 完全绕过 set trap 的通知逻辑,
  * 已注册的 reaction 不会被触发 (静默失效)。
  */
-import { observable, observe } from "../main";
+import { observable, observe } from '../main';
 
-describe("Object.defineProperty 触发通知", () => {
-  test("defineProperty 定义新属性应通知 get 依赖", () => {
+describe('Object.defineProperty 触发通知', () => {
+  test('defineProperty 定义新属性应通知 get 依赖', () => {
     const obj = observable<{ prop?: number }>({});
     const seen: unknown[] = [];
     observe(() => {
@@ -16,7 +16,7 @@ describe("Object.defineProperty 触发通知", () => {
     });
     expect(seen).toEqual([undefined]);
 
-    Object.defineProperty(obj, "prop", {
+    Object.defineProperty(obj, 'prop', {
       value: 42,
       writable: true,
       enumerable: true,
@@ -27,7 +27,7 @@ describe("Object.defineProperty 触发通知", () => {
     expect(seen).toEqual([undefined, 42]);
   });
 
-  test("defineProperty 修改已有属性值应通知 get 依赖", () => {
+  test('defineProperty 修改已有属性值应通知 get 依赖', () => {
     const obj = observable({ prop: 1 });
     const seen: unknown[] = [];
     observe(() => {
@@ -35,7 +35,7 @@ describe("Object.defineProperty 触发通知", () => {
     });
     expect(seen).toEqual([1]);
 
-    Object.defineProperty(obj, "prop", {
+    Object.defineProperty(obj, 'prop', {
       value: 2,
       writable: true,
       enumerable: true,
@@ -45,7 +45,7 @@ describe("Object.defineProperty 触发通知", () => {
     expect(seen).toEqual([1, 2]);
   });
 
-  test("defineProperty 新增属性应通知迭代依赖", () => {
+  test('defineProperty 新增属性应通知迭代依赖', () => {
     const obj = observable<{ a?: number; b?: number }>({ a: 1 });
     const seen: number[] = [];
     observe(() => {
@@ -53,7 +53,7 @@ describe("Object.defineProperty 触发通知", () => {
     });
     expect(seen).toEqual([1]);
 
-    Object.defineProperty(obj, "b", {
+    Object.defineProperty(obj, 'b', {
       value: 2,
       writable: true,
       enumerable: true,
@@ -63,7 +63,7 @@ describe("Object.defineProperty 触发通知", () => {
     expect(seen).toEqual([1, 2]);
   });
 
-  test("defineProperty 定义的 getter 应保持响应式读取", () => {
+  test('defineProperty 定义的 getter 应保持响应式读取', () => {
     const obj = observable<{ base: number; doubled?: number }>({
       base: 1,
     });
@@ -73,7 +73,7 @@ describe("Object.defineProperty 触发通知", () => {
     });
     expect(seen).toEqual([undefined]);
 
-    Object.defineProperty(obj, "doubled", {
+    Object.defineProperty(obj, 'doubled', {
       get() {
         return obj.base * 2;
       },
@@ -84,15 +84,15 @@ describe("Object.defineProperty 触发通知", () => {
     expect(seen).toEqual([undefined, 2]);
   });
 
-  test("defineProperty 返回值与透传行为不变", () => {
+  test('defineProperty 返回值与透传行为不变', () => {
     const obj = observable<{ prop?: number }>({});
-    const result = Object.defineProperty(obj, "prop", {
+    const result = Object.defineProperty(obj, 'prop', {
       value: 7,
       writable: true,
       enumerable: true,
       configurable: true,
     });
     expect(result).toBe(obj);
-    expect(Object.getOwnPropertyDescriptor(obj, "prop")?.value).toBe(7);
+    expect(Object.getOwnPropertyDescriptor(obj, 'prop')?.value).toBe(7);
   });
 });

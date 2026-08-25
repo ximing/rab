@@ -1,2 +1,2 @@
 // @ts-ignore
-export { unstable_batchedUpdates } from "react-native";
+export { unstable_batchedUpdates } from 'react-native';

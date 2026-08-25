@@ -9,10 +9,10 @@
  * - deep Set add(proxy) 后迭代身份保持（缓存的同一 proxy）
  */
 
-import { observable, observe, unobserve, raw } from "../main";
+import { observable, observe, unobserve, raw } from '../main';
 
-describe("collection unwrap hardening (GG5 review)", () => {
-  test("delete 依赖对齐：get(proxyKey) 注册，raw key 删除必须触发", () => {
+describe('collection unwrap hardening (GG5 review)', () => {
+  test('delete 依赖对齐：get(proxyKey) 注册，raw key 删除必须触发', () => {
     const keyObj = { id: 101 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
@@ -27,7 +27,7 @@ describe("collection unwrap hardening (GG5 review)", () => {
     unobserve(reaction);
   });
 
-  test("Object.is 去重：经 proxy key/value 重复写入同一 raw 不得通知", () => {
+  test('Object.is 去重：经 proxy key/value 重复写入同一 raw 不得通知', () => {
     const keyObj = { id: 102 };
     const proxyKey = observable(keyObj);
     const valObj = { v: 1 };
@@ -45,23 +45,23 @@ describe("collection unwrap hardening (GG5 review)", () => {
     unobserve(reaction);
   });
 
-  test("reaction 内对同一 Map 同步重入 set 级联必须有界", () => {
+  test('reaction 内对同一 Map 同步重入 set 级联必须有界', () => {
     const m = observable(new Map());
     let cascades = 0;
     const reaction = observe(() => {
-      const v = m.get("k");
+      const v = m.get('k');
       if (v !== undefined && cascades < 3) {
         cascades++;
-        m.set("k", (v as number) + 1);
+        m.set('k', (v as number) + 1);
       }
     });
-    m.set("k", 1);
-    expect(m.get("k")).toBe(2);
+    m.set('k', 1);
+    expect(m.get('k')).toBe(2);
     expect(cascades).toBe(1);
     unobserve(reaction);
   });
 
-  test("deep Set add(proxy) 后迭代返回缓存的同一 proxy（身份保持）", () => {
+  test('deep Set add(proxy) 后迭代返回缓存的同一 proxy（身份保持）', () => {
     const item = { id: 103 };
     const itemProxy = observable(item);
     const s = observable(new Set());
@@ -70,7 +70,7 @@ describe("collection unwrap hardening (GG5 review)", () => {
     expect(raw(s).has(item)).toBe(true);
   });
 
-  test("deep Map set(proxyKey, proxyValue) 内部落盘均为 raw", () => {
+  test('deep Map set(proxyKey, proxyValue) 内部落盘均为 raw', () => {
     const keyObj = { id: 104 };
     const valObj = { id: 105 };
     const m = observable(new Map());

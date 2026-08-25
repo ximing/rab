@@ -1,6 +1,6 @@
-import { CodeBlock } from "../../components/CodeBlock";
-import { DemoCard } from "../../components/DemoCard";
-import WebMcpDemo, { webMcpDemoCode } from "../../demos/web-mcp";
+import { CodeBlock } from '../../components/CodeBlock';
+import { DemoCard } from '../../components/DemoCard';
+import WebMcpDemo, { webMcpDemoCode } from '../../demos/web-mcp';
 
 const registryCode = `// 应用入口（如 main.tsx）—— 唯一改动，初始化一次
 import { McpRegistry } from "@rabjs/web-mcp";
@@ -95,18 +95,18 @@ export default function WebMcp() {
     <div>
       <h1>@rabjs/web-mcp</h1>
       <p>
-        <code>@rabjs/web-mcp</code> 把 <code>@rabjs/service</code> 的 Service
-        系统与 WebMCP 协议桥接：挂载后，页面里的 Service 实例会以标准 MCP
-        工具的形式注册到 <code>navigator.modelContext</code>
+        <code>@rabjs/web-mcp</code> 把 <code>@rabjs/service</code> 的 Service 系统与 WebMCP
+        协议桥接：挂载后，页面里的 Service 实例会以标准 MCP 工具的形式注册到{' '}
+        <code>navigator.modelContext</code>
         ，浏览器里的 AI Agent 可以发现它们、读状态、改状态、调方法、跑断言。
         所有修改都走响应式系统，页面照常重渲染。
       </p>
       <CodeBlock language="bash">{`pnpm add @rabjs/web-mcp`}</CodeBlock>
       <p>
-        环境要求：需要浏览器提供 <code>navigator.modelContext</code>{" "}
-        （WebMCP）。挂载时会自动尝试加载可选 polyfill{" "}
-        <code>@mcp-b/global</code>，加载失败则静默跳过；两者都不可用时挂载
-        不会生效（控制台有警告）。peer 依赖：<code>@rabjs/service</code>
+        环境要求：需要浏览器提供 <code>navigator.modelContext</code>{' '}
+        （WebMCP）。挂载时会自动尝试加载可选 polyfill <code>@mcp-b/global</code>
+        ，加载失败则静默跳过；两者都不可用时挂载 不会生效（控制台有警告）。peer 依赖：
+        <code>@rabjs/service</code>
         ，以及可选的 <code>zod</code>（仅 Zod 写法需要）。
       </p>
 
@@ -121,10 +121,9 @@ export default function WebMcp() {
       </CodeBlock>
       <p>
         它依赖两个 Service 容器能力：每个实例的唯一 <code>instanceId</code>
-        （路由主键），以及容器的 <code>getServiceDefinitions()</code> /{" "}
-        <code>events</code>（<code>service:instantiated</code>、
-        <code>child:added</code> 事件）——新挂载的页面组件一旦实例化
-        Service，对应工具即刻可用。
+        （路由主键），以及容器的 <code>getServiceDefinitions()</code> / <code>events</code>（
+        <code>service:instantiated</code>、<code>child:added</code>{' '}
+        事件）——新挂载的页面组件一旦实例化 Service，对应工具即刻可用。
       </p>
 
       <h2>接入方式二：McpBridge（单容器 / 手动管理场景）</h2>
@@ -139,13 +138,12 @@ export default function WebMcp() {
           objectState（复杂对象字段名，可用点分路径深入）。
         </li>
         <li>
-          <code>execute_action</code> — 调用指定实例的方法；可选{" "}
-          <code>assertAfter</code> 在一次调用内完成「操作 + 断言」，异步方法会等
-          Promise resolve 后再断言。
+          <code>execute_action</code> — 调用指定实例的方法；可选 <code>assertAfter</code>{' '}
+          在一次调用内完成「操作 + 断言」，异步方法会等 Promise resolve 后再断言。
         </li>
         <li>
-          <code>get_state</code> — 状态快照：标量字段返回当前值，复杂对象只返回
-          类型摘要（<code>[Object]</code> / <code>[Array(N)]</code>
+          <code>get_state</code> — 状态快照：标量字段返回当前值，复杂对象只返回 类型摘要（
+          <code>[Object]</code> / <code>[Array(N)]</code>
           ），避免大对象序列化 crash；附方法的 loading / error 状态。
         </li>
         <li>
@@ -153,16 +151,15 @@ export default function WebMcp() {
           非私有），修改触发响应式更新。
         </li>
         <li>
-          <code>assert_state</code> — 批量断言（eq / gt / exists / includes /
-          deepEq / some / every 等 23 种操作符），断言在浏览器内执行，返回完整
-          报告。
+          <code>assert_state</code> — 批量断言（eq / gt / exists / includes / deepEq / some / every
+          等 23 种操作符），断言在浏览器内执行，返回完整 报告。
         </li>
       </ul>
 
       <h2>@mcpTool：把业务方法暴露为独立工具</h2>
       <p>
-        通用工具之外，用 <code>@mcpTool</code> 标注的方法会额外注册为独立工具，
-        名字默认是 <code>{"{ServiceName}__{methodName}"}</code>
+        通用工具之外，用 <code>@mcpTool</code> 标注的方法会额外注册为独立工具， 名字默认是{' '}
+        <code>{'{ServiceName}__{methodName}'}</code>
         ，带精准描述和参数 Schema，Agent 更容易正确使用：
       </p>
       <CodeBlock language="ts" title="cart.service.ts">
@@ -175,9 +172,9 @@ export default function WebMcp() {
       <h2>在线体验</h2>
       <p>
         当前浏览器大概率没有 <code>navigator.modelContext</code>
-        ，所以这个 demo 用一个最小 mock 顶替它——桥接本身（McpBridge +
-        TodoService + @mcpTool）跑的是真实代码。点击下面的按钮模拟 Agent
-        调用，观察「AI 的修改和人的修改落在同一份响应式状态上」：
+        ，所以这个 demo 用一个最小 mock 顶替它——桥接本身（McpBridge + TodoService +
+        @mcpTool）跑的是真实代码。点击下面的按钮模拟 Agent 调用，观察「AI
+        的修改和人的修改落在同一份响应式状态上」：
       </p>
       <DemoCard
         title="WebMCP 桥接（可交互）"

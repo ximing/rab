@@ -1,12 +1,7 @@
-import ServiceScopeDemo from "./ServiceScopeDemo";
+import ServiceScopeDemo from './ServiceScopeDemo';
 
 export default ServiceScopeDemo;
-export {
-  AppService,
-  GlobalService,
-  PageService,
-  PanelService,
-} from "./ServiceScopeServices";
+export { AppService, GlobalService, PageService, PanelService } from './ServiceScopeServices';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

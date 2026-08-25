@@ -1,7 +1,7 @@
-import CollabDemo from "./CollabDemo";
+import CollabDemo from './CollabDemo';
 
 export default CollabDemo;
-export { SettingsService, GreetingService } from "./CollabServices";
+export { SettingsService, GreetingService } from './CollabServices';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

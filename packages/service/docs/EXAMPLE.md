@@ -23,7 +23,7 @@ root.render(<App />);
 
 ```typescript
 // src/services/UserService.ts
-import { Service } from "@rabjs/service";
+import { Service } from '@rabjs/service';
 
 export interface User {
   id: string;
@@ -36,13 +36,13 @@ export class UserService extends Service {
   // 响应式状态
   users: User[] = [];
   currentUser: User | null = null;
-  searchQuery: string = "";
+  searchQuery: string = '';
 
   // 异步方法 - 自动管理 loading 和 error
   async fetchUsers() {
-    const response = await fetch("/api/users");
+    const response = await fetch('/api/users');
     if (!response.ok) {
-      throw new Error("Failed to fetch users");
+      throw new Error('Failed to fetch users');
     }
     this.users = await response.json();
     return this.users;
@@ -51,7 +51,7 @@ export class UserService extends Service {
   async fetchUser(id: string) {
     const response = await fetch(`/api/users/${id}`);
     if (!response.ok) {
-      throw new Error("Failed to fetch user");
+      throw new Error('Failed to fetch user');
     }
     this.currentUser = await response.json();
     return this.currentUser;
@@ -59,17 +59,17 @@ export class UserService extends Service {
 
   async updateUser(id: string, data: Partial<User>) {
     const response = await fetch(`/api/users/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-      throw new Error("Failed to update user");
+      throw new Error('Failed to update user');
     }
     const updatedUser = await response.json();
 
     // 更新本地状态
-    const index = this.users.findIndex((u) => u.id === id);
+    const index = this.users.findIndex(u => u.id === id);
     if (index !== -1) {
       this.users[index] = updatedUser;
     }
@@ -82,14 +82,14 @@ export class UserService extends Service {
 
   async deleteUser(id: string) {
     const response = await fetch(`/api/users/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     if (!response.ok) {
-      throw new Error("Failed to delete user");
+      throw new Error('Failed to delete user');
     }
 
     // 从列表中移除
-    this.users = this.users.filter((u) => u.id !== id);
+    this.users = this.users.filter(u => u.id !== id);
     if (this.currentUser?.id === id) {
       this.currentUser = null;
     }
@@ -101,7 +101,7 @@ export class UserService extends Service {
   }
 
   clearSearch() {
-    this.searchQuery = "";
+    this.searchQuery = '';
   }
 
   // 计算属性（使用 getter）
@@ -111,9 +111,7 @@ export class UserService extends Service {
     }
     const query = this.searchQuery.toLowerCase();
     return this.users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query)
+      user => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
     );
   }
 
@@ -267,9 +265,9 @@ export const App = () => {
 
 ```typescript
 // src/components/UserList.tsx
-import React, { useEffect } from "react";
-import { observer } from "@rabjs/react";
-import { useUserService } from "../contexts/UserServiceContext";
+import React, { useEffect } from 'react';
+import { observer } from '@rabjs/react';
+import { useUserService } from '../contexts/UserServiceContext';
 
 export const UserList = observer(() => {
   const userService = useUserService();
@@ -286,7 +284,7 @@ export const UserList = observer(() => {
 
 ```typescript
 // src/services/TodoService.ts
-import { Service } from "@rabjs/service";
+import { Service } from '@rabjs/service';
 
 export interface Todo {
   id: string;
@@ -297,7 +295,7 @@ export interface Todo {
 
 export class TodoService extends Service {
   todos: Todo[] = [];
-  filter: "all" | "active" | "completed" = "all";
+  filter: 'all' | 'active' | 'completed' = 'all';
 
   async fetchTodos(userId: string) {
     const response = await fetch(`/api/users/${userId}/todos`);
@@ -307,8 +305,8 @@ export class TodoService extends Service {
 
   async addTodo(userId: string, text: string) {
     const response = await fetch(`/api/users/${userId}/todos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     });
     const newTodo = await response.json();
@@ -317,32 +315,32 @@ export class TodoService extends Service {
   }
 
   async toggleTodo(id: string) {
-    const todo = this.todos.find((t) => t.id === id);
+    const todo = this.todos.find(t => t.id === id);
     if (!todo) return;
 
     const response = await fetch(`/api/todos/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed: !todo.completed }),
     });
     const updatedTodo = await response.json();
 
-    const index = this.todos.findIndex((t) => t.id === id);
+    const index = this.todos.findIndex(t => t.id === id);
     if (index !== -1) {
       this.todos[index] = updatedTodo;
     }
   }
 
-  setFilter(filter: "all" | "active" | "completed") {
+  setFilter(filter: 'all' | 'active' | 'completed') {
     this.filter = filter;
   }
 
   get filteredTodos() {
     switch (this.filter) {
-      case "active":
-        return this.todos.filter((t) => !t.completed);
-      case "completed":
-        return this.todos.filter((t) => t.completed);
+      case 'active':
+        return this.todos.filter(t => !t.completed);
+      case 'completed':
+        return this.todos.filter(t => t.completed);
       default:
         return this.todos;
     }
@@ -351,8 +349,8 @@ export class TodoService extends Service {
   get stats() {
     return {
       total: this.todos.length,
-      active: this.todos.filter((t) => !t.completed).length,
-      completed: this.todos.filter((t) => t.completed).length,
+      active: this.todos.filter(t => !t.completed).length,
+      completed: this.todos.filter(t => t.completed).length,
     };
   }
 }
@@ -443,13 +441,13 @@ export const UserDashboard = observer(({ userId }: { userId: string }) => {
 
 ```typescript
 // src/services/UserFormService.ts
-import { Service } from "@rabjs/service";
-import { UserService, User } from "./UserService";
+import { Service } from '@rabjs/service';
+import { UserService, User } from './UserService';
 
 export class UserFormService extends Service {
-  name: string = "";
-  email: string = "";
-  avatar: string = "";
+  name: string = '';
+  email: string = '';
+  avatar: string = '';
 
   errors: {
     name?: string;
@@ -476,9 +474,9 @@ export class UserFormService extends Service {
 
   validateName() {
     if (!this.name.trim()) {
-      this.errors.name = "姓名不能为空";
+      this.errors.name = '姓名不能为空';
     } else if (this.name.length < 2) {
-      this.errors.name = "姓名至少2个字符";
+      this.errors.name = '姓名至少2个字符';
     } else {
       delete this.errors.name;
     }
@@ -487,9 +485,9 @@ export class UserFormService extends Service {
   validateEmail() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!this.email.trim()) {
-      this.errors.email = "邮箱不能为空";
+      this.errors.email = '邮箱不能为空';
     } else if (!emailRegex.test(this.email)) {
-      this.errors.email = "邮箱格式不正确";
+      this.errors.email = '邮箱格式不正确';
     } else {
       delete this.errors.email;
     }
@@ -504,12 +502,12 @@ export class UserFormService extends Service {
     this.validateEmail();
 
     if (!this.isValid) {
-      throw new Error("表单验证失败");
+      throw new Error('表单验证失败');
     }
 
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: this.name,
         email: this.email,
@@ -518,7 +516,7 @@ export class UserFormService extends Service {
     });
 
     if (!response.ok) {
-      throw new Error("创建用户失败");
+      throw new Error('创建用户失败');
     }
 
     const newUser = await response.json();
@@ -533,16 +531,16 @@ export class UserFormService extends Service {
   }
 
   reset() {
-    this.name = "";
-    this.email = "";
-    this.avatar = "";
+    this.name = '';
+    this.email = '';
+    this.avatar = '';
     this.errors = {};
   }
 
   loadUser(user: User) {
     this.name = user.name;
     this.email = user.email;
-    this.avatar = user.avatar || "";
+    this.avatar = user.avatar || '';
   }
 }
 ```

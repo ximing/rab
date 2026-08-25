@@ -5,12 +5,12 @@
  * 当 observable 属性变化时，副作用会自动执行（立即执行模式）
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import React, { act } from "react";
-import { observable, useLocalObservable, useReaction, observer } from "@rabjs/react";
+import { render, screen, waitFor } from '@testing-library/react';
+import React, { act } from 'react';
+import { observable, useLocalObservable, useReaction, observer } from '@rabjs/react';
 
-describe("useReaction Hook", () => {
-  it("应该支持 immediate: true 立即执行一次", async () => {
+describe('useReaction Hook', () => {
+  it('应该支持 immediate: true 立即执行一次', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });
 
@@ -29,7 +29,7 @@ describe("useReaction Hook", () => {
 
     // immediate: true 应该在组件 mounted 时立即执行一次
     await waitFor(() => {
-      expect(effects).toContain("count: 0");
+      expect(effects).toContain('count: 0');
     });
 
     // 再改变状态，应该再执行一次
@@ -37,11 +37,11 @@ describe("useReaction Hook", () => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(effects).toContain("count: 1");
+      expect(effects).toContain('count: 1');
     });
   });
 
-  it("应该支持多个状态变化", async () => {
+  it('应该支持多个状态变化', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });
 
@@ -59,28 +59,28 @@ describe("useReaction Hook", () => {
     render(<Component />);
 
     await waitFor(() => {
-      expect(effects).toContain("count: 0");
+      expect(effects).toContain('count: 0');
     });
 
     act(() => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(effects).toContain("count: 1");
+      expect(effects).toContain('count: 1');
     });
 
     act(() => {
       state.count = 2;
     });
     await waitFor(() => {
-      expect(effects).toContain("count: 2");
+      expect(effects).toContain('count: 2');
     });
   });
 
-  it("应该在同一个组件中支持多个 useReaction", async () => {
+  it('应该在同一个组件中支持多个 useReaction', async () => {
     const effects1: string[] = [];
     const effects2: string[] = [];
-    const state = observable({ count: 0, name: "John" });
+    const state = observable({ count: 0, name: 'John' });
 
     const Component = observer(() => {
       useReaction(
@@ -108,29 +108,29 @@ describe("useReaction Hook", () => {
     render(<Component />);
 
     await waitFor(() => {
-      expect(effects1).toContain("count: 0");
-      expect(effects2).toContain("name: John");
+      expect(effects1).toContain('count: 0');
+      expect(effects2).toContain('name: John');
     });
 
     act(() => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(effects1).toContain("count: 1");
+      expect(effects1).toContain('count: 1');
     });
 
     act(() => {
-      state.name = "Jane";
+      state.name = 'Jane';
     });
     await waitFor(() => {
-      expect(effects2).toContain("name: Jane");
+      expect(effects2).toContain('name: Jane');
     });
 
     // count 变化不应该触发 effects2（只包含 name 的变化）
-    expect(effects2.filter((e) => e.includes("count:"))).toHaveLength(0);
+    expect(effects2.filter(e => e.includes('count:'))).toHaveLength(0);
   });
 
-  it("应该支持 useLocalObservable", async () => {
+  it('应该支持 useLocalObservable', async () => {
     const effects: string[] = [];
 
     const Component = observer(() => {
@@ -153,31 +153,31 @@ describe("useReaction Hook", () => {
 
     const { getByText } = render(<Component />);
 
-    expect(getByText("Count: 0")).toBeInTheDocument();
+    expect(getByText('Count: 0')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(effects).toContain("count: 0");
+      expect(effects).toContain('count: 0');
     });
 
     // 点击按钮改变状态
     act(() => {
-      getByText("Increment").click();
+      getByText('Increment').click();
     });
 
     await waitFor(() => {
-      expect(effects).toContain("count: 1");
+      expect(effects).toContain('count: 1');
     });
 
     act(() => {
-      getByText("Increment").click();
+      getByText('Increment').click();
     });
 
     await waitFor(() => {
-      expect(effects).toContain("count: 2");
+      expect(effects).toContain('count: 2');
     });
   });
 
-  it("应该自动清理 reaction 当组件卸载时", async () => {
+  it('应该自动清理 reaction 当组件卸载时', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });
 
@@ -196,7 +196,7 @@ describe("useReaction Hook", () => {
 
     // 初始化执行一次
     await waitFor(() => {
-      expect(effects).toContain("count: 0");
+      expect(effects).toContain('count: 0');
     });
 
     // 改变状态触发副作用
@@ -204,7 +204,7 @@ describe("useReaction Hook", () => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(effects).toContain("count: 1");
+      expect(effects).toContain('count: 1');
     });
 
     const effectsBeforeUnmount = effects.length;
@@ -218,7 +218,7 @@ describe("useReaction Hook", () => {
     });
 
     // 等待一点时间确保没有新的副作用
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // effects 数量不应该增加
     expect(effects.length).toBe(effectsBeforeUnmount);

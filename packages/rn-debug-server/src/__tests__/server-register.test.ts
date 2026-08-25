@@ -97,10 +97,16 @@ describe('debug server /device + /api/devices', () => {
       ws.on('open', () => resolve());
       ws.on('error', reject);
     });
-    ws.send(JSON.stringify({ kind: 'register', deviceId: 'dev-2', info: { appName: 'A', platform: 'android', osVersion: '14', sdkVersion: '0.1.0' } }));
+    ws.send(
+      JSON.stringify({
+        kind: 'register',
+        deviceId: 'dev-2',
+        info: { appName: 'A', platform: 'android', osVersion: '14', sdkVersion: '0.1.0' },
+      })
+    );
     await waitForDevice(port, 'dev-2');
     const before = server.registry.get('dev-2')!.lastSeen;
-    await new Promise((r) => setTimeout(r, 5));
+    await new Promise(r => setTimeout(r, 5));
     ws.send(JSON.stringify({ kind: 'ping' }));
     await waitFor(
       () => (server.registry.get('dev-2')?.lastSeen ?? 0) > before,

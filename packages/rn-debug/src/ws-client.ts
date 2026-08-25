@@ -70,7 +70,7 @@ export function createWsClient(options: WsClientOptions): WsClient {
         if (connected) ws?.send(JSON.stringify({ kind: 'ping' }));
       }, heartbeatIntervalMs);
     };
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       let msg: { kind?: string } & Record<string, unknown>;
       try {
         const text = typeof event.data === 'string' ? event.data : String(event.data);

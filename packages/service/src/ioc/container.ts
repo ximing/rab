@@ -4,14 +4,11 @@
  * 底层的 Service 需要提供分层检索的能力，同时支持 注入 resolve的能力
  */
 
-import EventEmitter from "eventemitter3";
+import EventEmitter from 'eventemitter3';
 
-import { Service } from "../service";
+import { Service } from '../service';
 
-import {
-  globalInstanceContainerMap,
-  setCurrentInstantiatingContainer,
-} from "./globals";
+import { globalInstanceContainerMap, setCurrentInstantiatingContainer } from './globals';
 import type {
   ServiceIdentifier,
   ServiceClass,
@@ -20,9 +17,9 @@ import type {
   ContainerOptions,
   ServiceDefinition,
   ServiceScope,
-} from "./types";
-import { ServiceScope as ServiceScopeEnum } from "./types";
-import { isRegisterOptions, isServiceClass } from "./utils";
+} from './types';
+import { ServiceScope as ServiceScopeEnum } from './types';
+import { isRegisterOptions, isServiceClass } from './utils';
 
 let containerId = 0;
 
@@ -181,9 +178,7 @@ export class Container {
     options?: RegisterOptions
   ): this {
     if (this.destroyed) {
-      throw new Error(
-        `Cannot register service on destroyed container: ${this.name}`
-      );
+      throw new Error(`Cannot register service on destroyed container: ${this.name}`);
     }
 
     let identifier: ServiceIdentifier<T>;
@@ -192,27 +187,22 @@ export class Container {
 
     // 用法 1: register(ServiceClass, options?)
     if (
-      typeof identifierOrClass === "function" &&
+      typeof identifierOrClass === 'function' &&
       isServiceClass(identifierOrClass) &&
       (classOrFactory === undefined || isRegisterOptions(classOrFactory))
     ) {
       identifier = identifierOrClass;
       factory = identifierOrClass;
-      scope =
-        (classOrFactory as RegisterOptions)?.scope ??
-        ServiceScopeEnum.Singleton;
+      scope = (classOrFactory as RegisterOptions)?.scope ?? ServiceScopeEnum.Singleton;
     }
     // 用法 2 和 3: register(identifier, ServiceClass | lazyFunction, options?)
-    else if (
-      classOrFactory !== undefined &&
-      typeof classOrFactory === "function"
-    ) {
+    else if (classOrFactory !== undefined && typeof classOrFactory === 'function') {
       identifier = identifierOrClass;
       factory = classOrFactory as ServiceClass<T> | ServiceFactory<T>;
       scope = options?.scope ?? ServiceScopeEnum.Singleton;
     } else {
       throw new Error(
-        "Invalid register arguments. Expected: register(ServiceClass, options?) or register(identifier, ServiceClass | lazyFunction, options?)"
+        'Invalid register arguments. Expected: register(ServiceClass, options?) or register(identifier, ServiceClass | lazyFunction, options?)'
       );
     }
 
@@ -233,10 +223,7 @@ export class Container {
     identifierOrClass: ServiceIdentifier<T> | ServiceClass<T>,
     classOrFactory?: ServiceClass<T> | ServiceFactory<T>
   ): this {
-    if (
-      typeof identifierOrClass === "function" &&
-      classOrFactory === undefined
-    ) {
+    if (typeof identifierOrClass === 'function' && classOrFactory === undefined) {
       return this.register(identifierOrClass, {
         scope: ServiceScopeEnum.Singleton,
       });
@@ -253,10 +240,7 @@ export class Container {
     identifierOrClass: ServiceIdentifier<T> | ServiceClass<T>,
     classOrFactory?: ServiceClass<T> | ServiceFactory<T>
   ): this {
-    if (
-      typeof identifierOrClass === "function" &&
-      classOrFactory === undefined
-    ) {
+    if (typeof identifierOrClass === 'function' && classOrFactory === undefined) {
       return this.register(identifierOrClass, {
         scope: ServiceScopeEnum.Transient,
       });
@@ -302,16 +286,12 @@ export class Container {
    */
   resolve<T extends Service = Service>(identifier: ServiceIdentifier<T>): T {
     if (this.destroyed) {
-      throw new Error(
-        `Cannot resolve service on destroyed container: ${this.name}`
-      );
+      throw new Error(`Cannot resolve service on destroyed container: ${this.name}`);
     }
 
     const result = this.getServiceDefinitionWithContainer(identifier);
     if (!result) {
-      throw new Error(
-        `Service not found: ${String(identifier)} in container: ${this.name}`
-      );
+      throw new Error(`Service not found: ${String(identifier)} in container: ${this.name}`);
     }
 
     const { definition, container } = result;
@@ -330,9 +310,7 @@ export class Container {
    * const userService = container.tryResolve(UserService); // 自动推导为 UserService | undefined
    * ```
    */
-  tryResolve<T extends Service>(
-    identifier: new (...args: any[]) => T
-  ): T | undefined;
+  tryResolve<T extends Service>(identifier: new (...args: any[]) => T): T | undefined;
 
   /**
    * 尝试解析服务（重载2：传入字符串或 Symbol，需要显式指定泛型）
@@ -346,16 +324,12 @@ export class Container {
    * const userService = container.tryResolve<UserService>('userService'); // 需要显式指定泛型
    * ```
    */
-  tryResolve<T extends Service = Service>(
-    identifier: string | symbol
-  ): T | undefined;
+  tryResolve<T extends Service = Service>(identifier: string | symbol): T | undefined;
 
   /**
    * 尝试解析服务（实现）
    */
-  tryResolve<T extends Service = Service>(
-    identifier: ServiceIdentifier<T>
-  ): T | undefined {
+  tryResolve<T extends Service = Service>(identifier: ServiceIdentifier<T>): T | undefined {
     if (this.destroyed) {
       return undefined;
     }
@@ -428,17 +402,15 @@ export class Container {
 
     // 销毁所有已实例化的 Service 实例
     for (const definition of this.services.values()) {
-      if (definition.instance && typeof definition.instance === "object") {
+      if (definition.instance && typeof definition.instance === 'object') {
         const instance = definition.instance as any;
         // 检查实例是否有 destroy 方法
-        if (typeof instance.destroy === "function") {
+        if (typeof instance.destroy === 'function') {
           try {
             instance.destroy();
           } catch (error) {
             console.error(
-              `Error destroying service instance: ${String(
-                definition.identifier
-              )}`,
+              `Error destroying service instance: ${String(definition.identifier)}`,
               error
             );
           }
@@ -472,9 +444,7 @@ export class Container {
    */
   createChild(name?: string | Symbol): Container {
     if (this.destroyed) {
-      throw new Error(
-        `Cannot create child container on destroyed container: ${this.name}`
-      );
+      throw new Error(`Cannot create child container on destroyed container: ${this.name}`);
     }
 
     return new Container({
@@ -599,9 +569,7 @@ export class Container {
    */
   removeParent(): this {
     if (this.destroyed) {
-      throw new Error(
-        `Cannot remove parent of destroyed container: ${this.name}`
-      );
+      throw new Error(`Cannot remove parent of destroyed container: ${this.name}`);
     }
 
     // 从原有的父容器中移除自己
@@ -649,15 +617,11 @@ export class Container {
    */
   setParent(newParent: Container | undefined): this {
     if (this.destroyed) {
-      throw new Error(
-        `Cannot change parent of destroyed container: ${this.name}`
-      );
+      throw new Error(`Cannot change parent of destroyed container: ${this.name}`);
     }
 
     if (newParent && newParent.destroyed) {
-      throw new Error(
-        `Cannot set destroyed container as parent: ${newParent.name}`
-      );
+      throw new Error(`Cannot set destroyed container as parent: ${newParent.name}`);
     }
 
     // 检查是否会形成循环引用
@@ -744,9 +708,7 @@ export class Container {
   /**
    * 私有方法：获取服务定义（支持分层查找）
    */
-  private getServiceDefinition(
-    identifier: ServiceIdentifier
-  ): ServiceDefinition | undefined {
+  private getServiceDefinition(identifier: ServiceIdentifier): ServiceDefinition | undefined {
     // 先查找当前容器
     if (this.services.has(identifier)) {
       return this.services.get(identifier);
@@ -789,17 +751,14 @@ export class Container {
    */
   protected instantiate<T = any>(definition: ServiceDefinition<T>): T {
     // 如果已经有实例且是单例，直接返回
-    if (
-      definition.scope === ServiceScopeEnum.Singleton &&
-      definition.instance
-    ) {
+    if (definition.scope === ServiceScopeEnum.Singleton && definition.instance) {
       return definition.instance;
     }
 
     let instance: T;
 
     // 判断是否是工厂函数
-    if (typeof definition.factory === "function") {
+    if (typeof definition.factory === 'function') {
       // 检查是否是 Service 类（继承自 Service）
       if (isServiceClass(definition.factory)) {
         // 设置当前正在实例化的容器，以便在 Service 构造函数中获取
@@ -821,13 +780,11 @@ export class Container {
           // 是工厂函数
           instance = (definition.factory as ServiceFactory<T>)(this);
           // 验证工厂函数返回的实例必须是 Service 的实例
-          if (instance && typeof instance === "object") {
+          if (instance && typeof instance === 'object') {
             if (!(instance instanceof Service)) {
               throw new TypeError(
                 `Factory function must return a Service instance. ` +
-                  `Got ${
-                    instance.constructor?.name || typeof instance
-                  } instead. ` +
+                  `Got ${instance.constructor?.name || typeof instance} instead. ` +
                   `Identifier: ${String(definition.identifier)}`
               );
             }
@@ -847,9 +804,7 @@ export class Container {
         }
       }
     } else {
-      throw new TypeError(
-        "Invalid factory type. Expected ServiceClass or ServiceFactory."
-      );
+      throw new TypeError('Invalid factory type. Expected ServiceClass or ServiceFactory.');
     }
 
     // 如果是单例，缓存实例

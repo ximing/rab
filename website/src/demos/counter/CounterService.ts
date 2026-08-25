@@ -1,4 +1,4 @@
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 /**
  * 计数器 Service —— 最小示例

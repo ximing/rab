@@ -7,11 +7,11 @@
  * 运行时断言很弱 (类型擦除), 真正的守卫是 `npx tsc --noEmit` 对本文件的
  * 类型检查: 若 main.ts 未导出该类型, 此处直接编译失败。
  */
-import { observable, observe, unobserve } from "../main";
-import type { ObservableOptions } from "../main";
+import { observable, observe, unobserve } from '../main';
+import type { ObservableOptions } from '../main';
 
-describe("公开类型导出: ObservableOptions", () => {
-  test("可从 main.ts 按名导入并用作注解", () => {
+describe('公开类型导出: ObservableOptions', () => {
+  test('可从 main.ts 按名导入并用作注解', () => {
     const opts: ObservableOptions = {
       reactionHandlers: { transformReactions: (_t, _k, reactions) => reactions },
     };

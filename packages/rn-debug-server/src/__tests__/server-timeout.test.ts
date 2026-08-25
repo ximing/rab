@@ -5,7 +5,7 @@ import { httpFetch, messageKind, waitFor, waitForDevice } from './wait-for';
 async function connectDevice(port: number, deviceId: string) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}/device`);
   const received: string[] = [];
-  ws.on('message', (raw) => received.push(String(raw)));
+  ws.on('message', raw => received.push(String(raw)));
   await new Promise<void>((resolve, reject) => {
     ws.on('open', () => resolve());
     ws.on('error', reject);
@@ -38,14 +38,17 @@ describe('timeout & disconnect (integration)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'hang', payload: {}, timeout: 400 }),
-    }).then((r) => r.json())) as { status: string; durationMs: number };
+    }).then(r => r.json())) as { status: string; durationMs: number };
 
     expect(body.status).toBe('timeout');
     expect(body.durationMs).toBeGreaterThanOrEqual(350);
 
     // 晚到 result：不应抛错（服务端日志静默丢弃）
-    await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'timed-out command was sent');
-    const sent = received.find((m) => messageKind(m) === 'command')!;
+    await waitFor(
+      () => received.some(m => messageKind(m) === 'command'),
+      'timed-out command was sent'
+    );
+    const sent = received.find(m => messageKind(m) === 'command')!;
     ws.send(JSON.stringify({ kind: 'result', id: JSON.parse(sent).id, status: 'ok', result: 1 }));
     await waitFor(
       () => server.dispatcher.getCommand(JSON.parse(sent).id)?.status === 'timeout',
@@ -65,9 +68,12 @@ describe('timeout & disconnect (integration)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'hang', timeout: 10_000 }),
-    }).then((r) => r.json());
+    }).then(r => r.json());
 
-    await waitFor(() => received.some((m) => messageKind(m) === 'command'), 'command delivered before disconnect');
+    await waitFor(
+      () => received.some(m => messageKind(m) === 'command'),
+      'command delivered before disconnect'
+    );
     ws.terminate();
     const body = (await promise) as { status: string; error: { message: string } };
     expect(body.status).toBe('error');

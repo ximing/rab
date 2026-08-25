@@ -7,11 +7,7 @@
 
 import type { Service } from '@rabjs/service';
 
-import type {
-  AssertStateInput,
-  AssertStateResult,
-  WebMcpToolDefinition,
-} from '../types';
+import type { AssertStateInput, AssertStateResult, WebMcpToolDefinition } from '../types';
 import { executeAssertions } from '../utils/assert';
 
 /**
@@ -62,12 +58,11 @@ export function assertState(
 /**
  * assert_state Tool 的 WebMCP 定义
  */
-export function createAssertStateTool(
-  instanceMap: Map<string, Service>
-): WebMcpToolDefinition {
+export function createAssertStateTool(instanceMap: Map<string, Service>): WebMcpToolDefinition {
   return {
     name: 'assert_state',
-    description: '验证指定 Service 实例的状态是否符合预期。支持批量断言，一次调用返回完整断言报告。断言在浏览器内执行，中间节点不序列化，彻底规避大对象 crash。',
+    description:
+      '验证指定 Service 实例的状态是否符合预期。支持批量断言，一次调用返回完整断言报告。断言在浏览器内执行，中间节点不序列化，彻底规避大对象 crash。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -83,28 +78,42 @@ export function createAssertStateTool(
             properties: {
               path: {
                 type: 'string',
-                description: '点分路径，支持数组下标（.数字 形式）：如 "isInitialized"、"ladingMonitorData.list.length"、"ladingMonitorData.list.0.status"',
+                description:
+                  '点分路径，支持数组下标（.数字 形式）：如 "isInitialized"、"ladingMonitorData.list.length"、"ladingMonitorData.list.0.status"',
               },
               op: {
                 type: 'string',
                 enum: [
-                  'eq', 'neq',
-                  'gt', 'gte', 'lt', 'lte',
-                  'exists', 'notExists',
-                  'includes', 'notIncludes',
+                  'eq',
+                  'neq',
+                  'gt',
+                  'gte',
+                  'lt',
+                  'lte',
+                  'exists',
+                  'notExists',
+                  'includes',
+                  'notIncludes',
                   'matches',
                   'type',
-                  'length', 'lengthGt', 'lengthGte', 'lengthLt', 'lengthLte',
+                  'length',
+                  'lengthGt',
+                  'lengthGte',
+                  'lengthLt',
+                  'lengthLte',
                   'deepEq',
                   'between',
                   'hasKeys',
                   'matchObject',
-                  'some', 'every',
+                  'some',
+                  'every',
                 ],
-                description: '断言操作符。between: 闭区间 [lo,hi]；hasKeys: 对象包含指定 key（string 或 string[]）；matchObject: 对象浅层匹配（expected 为键值对）；some/every: 数组元素断言（expected 为 {path,op,expected}）',
+                description:
+                  '断言操作符。between: 闭区间 [lo,hi]；hasKeys: 对象包含指定 key（string 或 string[]）；matchObject: 对象浅层匹配（expected 为键值对）；some/every: 数组元素断言（expected 为 {path,op,expected}）',
               },
               expected: {
-                description: '期望值。exists/notExists 时不需要传；type 时传 typeof 字符串如 "string"；matches 时传正则字符串如 "^route-"；between 时传 [lo, hi]；hasKeys 时传 string 或 string[]；matchObject/some/every 时传对应结构',
+                description:
+                  '期望值。exists/notExists 时不需要传；type 时传 typeof 字符串如 "string"；matches 时传正则字符串如 "^route-"；between 时传 [lo, hi]；hasKeys 时传 string 或 string[]；matchObject/some/every 时传对应结构',
               },
               message: {
                 type: 'string',

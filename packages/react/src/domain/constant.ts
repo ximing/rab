@@ -1,1 +1,1 @@
-export const RSROOT = Symbol.for("rsRoot");
+export const RSROOT = Symbol.for('rsRoot');

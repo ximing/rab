@@ -74,14 +74,15 @@ WebMCP 是 W3C 提案的浏览器原生 AI 工具注册协议，通过 `navigato
 instance.instanceId = `${getIdentifierLabel(definition.identifier)}#${instanceCounter++}`;
 ```
 
-| 注册方式 | 生成的 instanceId |
-|---|---|
-| `register(CartService)` | `CartService#0` |
-| `register('cartService', CartService)` | `cartService#1` |
+| 注册方式                                      | 生成的 instanceId   |
+| --------------------------------------------- | ------------------- |
+| `register(CartService)`                       | `CartService#0`     |
+| `register('cartService', CartService)`        | `cartService#1`     |
 | `register(Symbol('payment'), PaymentService)` | `Symbol(payment)#2` |
-| 另一个容器中再次注册同一个 `CartService` | `CartService#3` |
+| 另一个容器中再次注册同一个 `CartService`      | `CartService#3`     |
 
 **关键性质**：
+
 - 全局自增序号保证绝对唯一，即使两个容器注册了相同名字的 Service 也不会冲突
 - 前缀保留 identifier 语义，一眼可读
 - 在实例构造完成后立即赋值，整个实例生命周期内不变
@@ -130,6 +131,7 @@ AI Agent 侧：
 `list_services` **只返回已实例化的 Service**——遍历 Container 树时，`definition.instance` 为空的条目直接跳过。
 
 这意味着：
+
 - 还没有被任何组件 `useService()` 的 Service 不出现在列表里（符合直觉）
 - Transient Service 永远不出现（不缓存实例）
 - 无需在发现阶段触发任何实例化副作用
@@ -258,7 +260,7 @@ async getProductsByCategory(category: string, page = 1) { ... }
   "type": "object",
   "properties": {
     "category": { "type": "string", "description": "商品分类" },
-    "page":     { "type": "number", "description": "页码，从1开始" }
+    "page": { "type": "number", "description": "页码，从1开始" }
   },
   "required": ["category"]
 }
@@ -361,13 +363,13 @@ class CartService extends Service {
 ```typescript
 class McpBridge {
   // 挂载到指定容器，自动发现容器内所有已实例化 Service
-  mount(container: Container): void
+  mount(container: Container): void;
 
   // 卸载，注销所有注册的 Tools
-  unmount(): void
+  unmount(): void;
 
   // 支持手动注册额外 Service（不在容器内的场景）
-  addService(name: string, instance: Service): void
+  addService(name: string, instance: Service): void;
 }
 ```
 
@@ -380,6 +382,7 @@ class McpBridge {
 5. 对有 `@mcpTool` 注解的方法扫描其 `prototype`，生成独立 Tool
 
 这样可以保证：
+
 - `mount()` 不触发任何实例化副作用（只遍历已有实例）
 - 路由完全基于内存中的 `instanceId → instance` Map，无需反序列化 `ServiceIdentifier`
 - 独立 Tool 的注册复用现有装饰器元数据
@@ -388,12 +391,12 @@ class McpBridge {
 
 ## 状态序列化策略
 
-| 情况 | 处理方式 |
-|------|---------|
-| 函数属性 | 过滤，不作为状态输出 |
-| 私有属性（`_` 或 `$` 开头，除 `$model`） | 过滤 |
-| 循环引用 | 使用安全 JSON 序列化处理 |
-| Observable Proxy | 直接读取属性值，不触发依赖追踪 |
+| 情况                                     | 处理方式                       |
+| ---------------------------------------- | ------------------------------ |
+| 函数属性                                 | 过滤，不作为状态输出           |
+| 私有属性（`_` 或 `$` 开头，除 `$model`） | 过滤                           |
+| 循环引用                                 | 使用安全 JSON 序列化处理       |
+| Observable Proxy                         | 直接读取属性值，不触发依赖追踪 |
 
 ---
 
@@ -501,17 +504,17 @@ bridge.mount(container);
 
 ## 关键设计决策
 
-| 决策点 | 方案 | 原因 |
-|--------|------|------|
-| MCP 路由主键 | `instanceId`（`Service` 基类属性） | `ServiceIdentifier` 含函数引用/symbol，无法序列化；`instanceId` 由 Container 实例化时自动生成，字符串格式，天然可序列化 |
-| `instanceId` 格式 | `{identifierLabel}#{自增序号}` | 前缀保留语义（一眼可读），序号保证全局唯一（即使同名 Service 多实例） |
-| `identifierLabel` / `identifierType` | 保留在 `list_services` 输出中 | 仅展示和调试用，不参与路由 |
-| `list_services` 扫描范围 | 只扫 `definition.instance` 存在的 Service | 避免触发实例化副作用；未被使用的 Service 不应暴露给 AI |
-| Tool 命名 | `{ServiceName}__{methodName}` | 保持语义清晰 |
-| Schema 推断优先级 | ZodTuple > params 数组 > emitDecoratorMetadata > `[]` | 均以位置数组语义统一，metadata 仅作为显式开启的兜底能力 |
-| Zod 为 peerDep | 不打包 zod，由业务侧提供 | 避免版本冲突，保持包体积小 |
-| 状态获取方式 | 快照（非实时订阅） | WebMCP 是请求-响应模式，不支持 push |
-| 动态 import WebMCP | `mount()` 时 lazy import | 避免 SSR 环境 `navigator` 不存在的问题 |
+| 决策点                               | 方案                                                  | 原因                                                                                                                    |
+| ------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| MCP 路由主键                         | `instanceId`（`Service` 基类属性）                    | `ServiceIdentifier` 含函数引用/symbol，无法序列化；`instanceId` 由 Container 实例化时自动生成，字符串格式，天然可序列化 |
+| `instanceId` 格式                    | `{identifierLabel}#{自增序号}`                        | 前缀保留语义（一眼可读），序号保证全局唯一（即使同名 Service 多实例）                                                   |
+| `identifierLabel` / `identifierType` | 保留在 `list_services` 输出中                         | 仅展示和调试用，不参与路由                                                                                              |
+| `list_services` 扫描范围             | 只扫 `definition.instance` 存在的 Service             | 避免触发实例化副作用；未被使用的 Service 不应暴露给 AI                                                                  |
+| Tool 命名                            | `{ServiceName}__{methodName}`                         | 保持语义清晰                                                                                                            |
+| Schema 推断优先级                    | ZodTuple > params 数组 > emitDecoratorMetadata > `[]` | 均以位置数组语义统一，metadata 仅作为显式开启的兜底能力                                                                 |
+| Zod 为 peerDep                       | 不打包 zod，由业务侧提供                              | 避免版本冲突，保持包体积小                                                                                              |
+| 状态获取方式                         | 快照（非实时订阅）                                    | WebMCP 是请求-响应模式，不支持 push                                                                                     |
+| 动态 import WebMCP                   | `mount()` 时 lazy import                              | 避免 SSR 环境 `navigator` 不存在的问题                                                                                  |
 
 ---
 
@@ -624,9 +627,9 @@ McpBridge / list_services / execute_action / get_state
 
 ### 与 `McpBridge` 的关系
 
-| 场景 | 使用方式 |
-|------|---------|
-| **快速接入**（单 Container） | `new McpBridge().mount(someContainer)` |
+| 场景                          | 使用方式                                |
+| ----------------------------- | --------------------------------------- |
+| **快速接入**（单 Container）  | `new McpBridge().mount(someContainer)`  |
 | **React / 多 Container 场景** | `McpRegistry` 自动遍历全局 Container 树 |
 
 两者路由均基于 `instanceId`，调用面完全统一。

@@ -12,17 +12,17 @@
  *    外层 receiver 的帧却在 base 栈上 —— 兜底 add 不被抑制, 链上 reaction 双通知。
  *    修复: 帧栈抽为两个 handler 共享的模块。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("转发帧 covered 标记的跨 target 误伤", () => {
-  test("setter 内无关链的同名 key 嵌套写入不得吞掉外层的兜底 add", () => {
+describe('转发帧 covered 标记的跨 target 误伤', () => {
+  test('setter 内无关链的同名 key 嵌套写入不得吞掉外层的兜底 add', () => {
     // 无关链 (chain2), 与外层仅 key 同名 'count'
     const middle2: Record<PropertyKey, unknown> = observable({ side: 0 });
     const gp2Raw: Record<string, unknown> = {};
-    Object.defineProperty(gp2Raw, "count", {
+    Object.defineProperty(gp2Raw, 'count', {
       configurable: true,
       set(this: unknown, v: number) {
-        Object.defineProperty(middle2, "count", {
+        Object.defineProperty(middle2, 'count', {
           value: v,
           writable: true,
           enumerable: true,
@@ -65,14 +65,14 @@ describe("转发帧 covered 标记的跨 target 误伤", () => {
   });
 });
 
-describe("base/shadow 混合 handler 链的转发帧栈共享", () => {
-  test("shadow 中层通知后, base 外层的兜底 add 必须被抑制 (不得双通知)", () => {
+describe('base/shadow 混合 handler 链的转发帧栈共享', () => {
+  test('shadow 中层通知后, base 外层的兜底 add 必须被抑制 (不得双通知)', () => {
     const middle: Record<PropertyKey, unknown> = shadowObservable({ side: 0 });
     const gpRaw: Record<string, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(this: unknown, v: number) {
-        Object.defineProperty(middle, "k", {
+        Object.defineProperty(middle, 'k', {
           value: v,
           writable: true,
           enumerable: true,
@@ -104,13 +104,13 @@ describe("base/shadow 混合 handler 链的转发帧栈共享", () => {
     expect(childCalls).toBe(2);
   });
 
-  test("对称: base 中层通知后, shadow 外层的兜底 add 也必须被抑制", () => {
+  test('对称: base 中层通知后, shadow 外层的兜底 add 也必须被抑制', () => {
     const middle: Record<PropertyKey, unknown> = observable({ side: 0 });
     const gpRaw: Record<string, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(this: unknown, v: number) {
-        Object.defineProperty(middle, "k", {
+        Object.defineProperty(middle, 'k', {
           value: v,
           writable: true,
           enumerable: true,

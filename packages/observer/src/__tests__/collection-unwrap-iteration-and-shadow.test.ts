@@ -13,10 +13,10 @@
  *    需要响应式嵌套值时应使用 deep 集合。
  */
 
-import { observable, shadowObservable, observe, unobserve, raw } from "../main";
+import { observable, shadowObservable, observe, unobserve, raw } from '../main';
 
-describe("collection unwrap: delete alignment (GG5 review round 2)", () => {
-  test("delete(proxyKey) 必须触发以 raw key 注册的 get reaction", () => {
+describe('collection unwrap: delete alignment (GG5 review round 2)', () => {
+  test('delete(proxyKey) 必须触发以 raw key 注册的 get reaction', () => {
     const keyObj = { id: 201 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
@@ -31,7 +31,7 @@ describe("collection unwrap: delete alignment (GG5 review round 2)", () => {
     unobserve(reaction);
   });
 
-  test("delete(proxyKey) 必须触发以 raw key 注册的 has reaction", () => {
+  test('delete(proxyKey) 必须触发以 raw key 注册的 has reaction', () => {
     const keyObj = { id: 202 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
@@ -46,7 +46,7 @@ describe("collection unwrap: delete alignment (GG5 review round 2)", () => {
     unobserve(reaction);
   });
 
-  test("Set.delete(proxyItem) 必须触发以 raw item 注册的 has reaction", () => {
+  test('Set.delete(proxyItem) 必须触发以 raw item 注册的 has reaction', () => {
     const item = { id: 203 };
     const itemProxy = observable(item);
     const s = observable(new Set());
@@ -61,7 +61,7 @@ describe("collection unwrap: delete alignment (GG5 review round 2)", () => {
     unobserve(reaction);
   });
 
-  test("shadow Map delete(proxyKey) 必须触发以 raw key 注册的 get reaction", () => {
+  test('shadow Map delete(proxyKey) 必须触发以 raw key 注册的 get reaction', () => {
     const keyObj = { id: 204 };
     const proxyKey = observable(keyObj);
     const m = shadowObservable(new Map());
@@ -77,8 +77,8 @@ describe("collection unwrap: delete alignment (GG5 review round 2)", () => {
   });
 });
 
-describe("collection unwrap: size / iteration deps under mixed identity", () => {
-  test("observe size 后 set(proxyKey, v) 必须触发", () => {
+describe('collection unwrap: size / iteration deps under mixed identity', () => {
+  test('observe size 后 set(proxyKey, v) 必须触发', () => {
     const keyObj = { id: 211 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
@@ -87,16 +87,16 @@ describe("collection unwrap: size / iteration deps under mixed identity", () => 
       sizes.push(m.size);
     });
     expect(sizes).toEqual([0]);
-    m.set(proxyKey, "v");
+    m.set(proxyKey, 'v');
     expect(sizes).toEqual([0, 1]);
     unobserve(reaction);
   });
 
-  test("observe size 后 delete(proxyKey) 必须触发", () => {
+  test('observe size 后 delete(proxyKey) 必须触发', () => {
     const keyObj = { id: 212 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
-    m.set(keyObj, "v");
+    m.set(keyObj, 'v');
     const sizes: number[] = [];
     const reaction = observe(() => {
       sizes.push(m.size);
@@ -107,7 +107,7 @@ describe("collection unwrap: size / iteration deps under mixed identity", () => 
     unobserve(reaction);
   });
 
-  test("observe spread 后 set(proxyKey, v) 必须触发且迭代可见", () => {
+  test('observe spread 后 set(proxyKey, v) 必须触发且迭代可见', () => {
     const keyObj = { id: 213 };
     const proxyKey = observable(keyObj);
     const m = observable(new Map());
@@ -117,14 +117,14 @@ describe("collection unwrap: size / iteration deps under mixed identity", () => 
     });
     expect(snapshots.length).toBe(1);
     expect(snapshots[0].length).toBe(0);
-    m.set(proxyKey, "v");
+    m.set(proxyKey, 'v');
     expect(snapshots.length).toBe(2);
     expect(snapshots[1].length).toBe(1);
     expect(snapshots[1][0]).toBe(keyObj);
     unobserve(reaction);
   });
 
-  test("observe Set size 后 add(proxyItem) / delete(proxyItem) 必须触发", () => {
+  test('observe Set size 后 add(proxyItem) / delete(proxyItem) 必须触发', () => {
     const item = { id: 214 };
     const itemProxy = observable(item);
     const s = observable(new Set());
@@ -141,8 +141,8 @@ describe("collection unwrap: size / iteration deps under mixed identity", () => 
   });
 });
 
-describe("collection unwrap: shadow WeakMap / WeakSet", () => {
-  test("shadow WeakMap set 用 proxy，get/has/delete 用 raw 正常", () => {
+describe('collection unwrap: shadow WeakMap / WeakSet', () => {
+  test('shadow WeakMap set 用 proxy，get/has/delete 用 raw 正常', () => {
     const keyObj = { id: 221 };
     const proxyKey = observable(keyObj);
     const wm = shadowObservable(new WeakMap());
@@ -153,7 +153,7 @@ describe("collection unwrap: shadow WeakMap / WeakSet", () => {
     expect(wm.has(keyObj)).toBe(false);
   });
 
-  test("shadow WeakSet add 用 proxy，has/delete 用 raw 正常", () => {
+  test('shadow WeakSet add 用 proxy，has/delete 用 raw 正常', () => {
     const item = { id: 222 };
     const itemProxy = observable(item);
     const ws = shadowObservable(new WeakSet());
@@ -164,22 +164,22 @@ describe("collection unwrap: shadow WeakMap / WeakSet", () => {
   });
 });
 
-describe("shadow collection shallow semantics (pinned, GG5 review item 5)", () => {
+describe('shadow collection shallow semantics (pinned, GG5 review item 5)', () => {
   // 规格（原任务书"浅层 get 直接返回 raw"）要求的行为，勿"修"：
   // shadow 集合存取 observable proxy 会解包为 raw，get/迭代返回 raw 而非
   // 存入的 proxy —— 经返回值直接变更不被追踪（无任何通知）。需要响应式
   // 嵌套值时应使用 deep 集合（observable 集合经 observableChild 命中缓存
   // proxy，往返身份保持，见 collection-unwrap-hardening.test.ts）。
-  test("shadow Map get 返回 raw（存入 proxy value 的往返）", () => {
+  test('shadow Map get 返回 raw（存入 proxy value 的往返）', () => {
     const valObj = { v: 1 };
     const valProxy = observable(valObj);
     const m = shadowObservable(new Map());
-    m.set("k", valProxy);
-    expect(raw(m).get("k")).toBe(valObj);
-    expect(m.get("k")).toBe(valObj); // raw, 不是 valProxy
+    m.set('k', valProxy);
+    expect(raw(m).get('k')).toBe(valObj);
+    expect(m.get('k')).toBe(valObj); // raw, 不是 valProxy
   });
 
-  test("shadow Set 迭代返回 raw（存入 proxy item 的往返）", () => {
+  test('shadow Set 迭代返回 raw（存入 proxy item 的往返）', () => {
     const item = { id: 231 };
     const itemProxy = observable(item);
     const s = shadowObservable(new Set());

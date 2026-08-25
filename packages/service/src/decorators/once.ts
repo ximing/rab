@@ -1,4 +1,4 @@
-import { EventScope } from "../event";
+import { EventScope } from '../event';
 
 /**
  * @Once 装饰器选项
@@ -51,10 +51,7 @@ export interface OnceOptions {
  * }
  * ```
  */
-export function Once(
-  eventName: string,
-  options?: OnceOptions
-): MethodDecorator {
+export function Once(eventName: string, options?: OnceOptions): MethodDecorator {
   return function (
     target: any,
     propertyKey: string | symbol,
@@ -62,13 +59,11 @@ export function Once(
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    if (typeof originalMethod !== "function") {
-      throw new TypeError(
-        `@Once 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`
-      );
+    if (typeof originalMethod !== 'function') {
+      throw new TypeError(`@Once 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`);
     }
 
-    const scope = options?.scope ?? "container";
+    const scope = options?.scope ?? 'container';
 
     // 在类的原型上存储事件监听元数据
     if (!target.__eventListeners) {

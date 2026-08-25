@@ -27,9 +27,11 @@
 ### Task 1: Add Service definitions
 
 **Files:**
+
 - Create: `website/src/demos/service-scope/ServiceScopeServices.ts`
 
 **Interfaces:**
+
 - Produces `AppService` with `theme: "signal" | "paper"`, `visits: number`, `toggleTheme()` and `visit()`.
 - Produces `PageService` with `title: string`, `updates: number` and `update()`.
 - Produces `PanelService` with a stable `panelId: string`, `count: number` and `increment()`.
@@ -38,14 +40,14 @@
 - [ ] **Step 1: Create the Service definitions using the existing base class import.**
 
 ```ts
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export class AppService extends Service {
-  theme: "signal" | "paper" = "signal";
+  theme: 'signal' | 'paper' = 'signal';
   visits = 0;
 
   toggleTheme() {
-    this.theme = this.theme === "signal" ? "paper" : "signal";
+    this.theme = this.theme === 'signal' ? 'paper' : 'signal';
   }
 
   visit() {
@@ -54,7 +56,7 @@ export class AppService extends Service {
 }
 
 export class PageService extends Service {
-  title = "嵌套页面";
+  title = '嵌套页面';
   updates = 0;
 
   update() {
@@ -98,9 +100,11 @@ git commit -m "docs: add Service scope demo models"
 ### Task 2: Build the live nested/global Demo
 
 **Files:**
+
 - Create: `website/src/demos/service-scope/ServiceScopeDemo.tsx`
 
 **Interfaces:**
+
 - Consumes the four Service classes from `ServiceScopeServices.ts`.
 - Produces a default `ServiceScopeDemo` React component.
 
@@ -215,9 +219,11 @@ git commit -m "docs: add interactive Service scope demo"
 ### Task 3: Add exports and synchronized source code
 
 **Files:**
+
 - Create: `website/src/demos/service-scope/index.ts`
 
 **Interfaces:**
+
 - Produces default export `ServiceScopeDemo`.
 - Produces named exports `AppService`, `PageService`, `PanelService`, `GlobalService`.
 - Produces `serviceScopeDemoCode: string` containing the complete copyable example.
@@ -235,7 +241,7 @@ import {
   register,
   resolve,
   useService,
-} from "@rabjs/react";
+} from '@rabjs/react';
 ```
 
 It must show `AppService` in the outer `bindServices`, `PageService` in the nested `bindServices`, two `bindServices(Panel, [PanelService])` siblings, and the idempotent global registration followed by `resolve(GlobalService)`.
@@ -258,18 +264,18 @@ git commit -m "docs: expose Service scope demo source"
 ### Task 4: Insert the Demo into the Service guide
 
 **Files:**
+
 - Modify: `website/src/pages/guides/Service.tsx`
 
 **Interfaces:**
+
 - Consumes `ServiceScopeDemo` and `serviceScopeDemoCode` from `../../demos/service-scope`.
 - Produces one `DemoCard` under the existing `Container 与 bindServices` section.
 
 - [ ] **Step 1: Add the import beside the existing `collab` Demo import.**
 
 ```tsx
-import ServiceScopeDemo, {
-  serviceScopeDemoCode,
-} from "../../demos/service-scope";
+import ServiceScopeDemo, { serviceScopeDemoCode } from '../../demos/service-scope';
 ```
 
 - [ ] **Step 2: Render the DemoCard immediately after the `bindServices` explanation and before `实例化时机与生命周期`.**
@@ -300,6 +306,7 @@ git commit -m "docs: add Service scope demo to guide"
 ### Task 5: Verify the website build and interaction contract
 
 **Files:**
+
 - Verify: `website/src/demos/service-scope/ServiceScopeServices.ts`
 - Verify: `website/src/demos/service-scope/ServiceScopeDemo.tsx`
 - Verify: `website/src/demos/service-scope/index.ts`

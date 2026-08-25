@@ -10,10 +10,10 @@
  * 但应与 a1fd53d 的 toRawIfProxy 对齐。
  */
 
-import { observable, shadowObservable, raw } from "../main";
+import { observable, shadowObservable, raw } from '../main';
 
-describe("set trap function unwrap alignment (G5 review round 3, issue 6)", () => {
-  test("base set trap: 赋 observable 函数 proxy 时内部必须存 raw", () => {
+describe('set trap function unwrap alignment (G5 review round 3, issue 6)', () => {
+  test('base set trap: 赋 observable 函数 proxy 时内部必须存 raw', () => {
     const fn = () => {};
     const fnProxy = observable(fn);
     expect(fnProxy).not.toBe(fn); // 确保确实是 proxy（而非 shouldInstrument 拒绝包装）
@@ -27,7 +27,7 @@ describe("set trap function unwrap alignment (G5 review round 3, issue 6)", () =
     expect(raw(state).data).toBe(fn);
   });
 
-  test("shadow set trap: 赋 observable 函数 proxy 时内部必须存 raw", () => {
+  test('shadow set trap: 赋 observable 函数 proxy 时内部必须存 raw', () => {
     const fn = () => {};
     const fnProxy = observable(fn);
 
@@ -39,7 +39,7 @@ describe("set trap function unwrap alignment (G5 review round 3, issue 6)", () =
     expect(raw(state).data).toBe(fn);
   });
 
-  test("对象 value 的既有解包行为不受影响（对照）", () => {
+  test('对象 value 的既有解包行为不受影响（对照）', () => {
     const objVal = { a: 1 };
     const objProxy = observable(objVal);
     const state = observable<{ data: unknown }>({ data: null });

@@ -1,4 +1,4 @@
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export interface Todo {
   id: number;
@@ -16,20 +16,20 @@ export interface Todo {
  */
 export class TodoService extends Service {
   todos: Todo[] = [
-    { id: 1, title: "读一遍快速开始", done: true },
-    { id: 2, title: "写一个自己的 Service", done: false },
+    { id: 1, title: '读一遍快速开始', done: true },
+    { id: 2, title: '写一个自己的 Service', done: false },
   ];
 
-  filter: "all" | "active" | "done" = "all";
+  filter: 'all' | 'active' | 'done' = 'all';
 
   get filteredTodos(): Todo[] {
-    if (this.filter === "active") return this.todos.filter((t) => !t.done);
-    if (this.filter === "done") return this.todos.filter((t) => t.done);
+    if (this.filter === 'active') return this.todos.filter(t => !t.done);
+    if (this.filter === 'done') return this.todos.filter(t => t.done);
     return this.todos;
   }
 
   get remaining(): number {
-    return this.todos.filter((t) => !t.done).length;
+    return this.todos.filter(t => !t.done).length;
   }
 
   add(title: string) {
@@ -39,15 +39,15 @@ export class TodoService extends Service {
   }
 
   toggle(id: number) {
-    const todo = this.todos.find((t) => t.id === id);
+    const todo = this.todos.find(t => t.id === id);
     if (todo) todo.done = !todo.done;
   }
 
   remove(id: number) {
-    this.todos = this.todos.filter((t) => t.id !== id);
+    this.todos = this.todos.filter(t => t.id !== id);
   }
 
-  setFilter(filter: "all" | "active" | "done") {
+  setFilter(filter: 'all' | 'active' | 'done') {
     this.filter = filter;
   }
 }

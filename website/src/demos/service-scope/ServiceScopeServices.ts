@@ -1,11 +1,11 @@
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export class AppService extends Service {
-  theme: "signal" | "paper" = "signal";
+  theme: 'signal' | 'paper' = 'signal';
   visits = 0;
 
   toggleTheme() {
-    this.theme = this.theme === "signal" ? "paper" : "signal";
+    this.theme = this.theme === 'signal' ? 'paper' : 'signal';
   }
 
   visit() {
@@ -14,7 +14,7 @@ export class AppService extends Service {
 }
 
 export class PageService extends Service {
-  title = "嵌套页面";
+  title = '嵌套页面';
   updates = 0;
 
   update() {

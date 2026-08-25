@@ -5,6 +5,7 @@
 领域是通过 `bindServices` 创建的一个独立的 Service 容器，与组件的生命周期绑定。
 
 **关键特性**：
+
 - ✅ **聚合根** - 每个领域有一个聚合根组件
 - ✅ **作用域链** - 支持嵌套领域，自动向上查找 Service
 - ✅ **隔离性** - 不同领域的 Service 相互隔离
@@ -82,7 +83,7 @@ export const ComponentB = bindServices(ComponentBContent, [ComponentService]);
 // 领域 A
 export class PageAService extends Service {
   sendMessage(message: string) {
-    this.emit("app:message", { from: "PageA", text: message }, "global");
+    this.emit('app:message', { from: 'PageA', text: message }, 'global');
   }
 }
 
@@ -93,11 +94,11 @@ export class PageBService extends Service {
   constructor() {
     super();
     this.on(
-      "app:message",
+      'app:message',
       (data: { from: string; text: string }) => {
         this.receivedMessages.push(`${data.from}: ${data.text}`);
       },
-      "global"
+      'global'
     );
   }
 }

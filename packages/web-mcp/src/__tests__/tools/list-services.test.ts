@@ -49,7 +49,12 @@ function makeMockInstance(
 describe('executeListServices', () => {
   it('没有已实例化的 Service 时返回空列表', () => {
     const container = mockContainer('root', [
-      { identifier: 'SomeService', factory: class {} as any, scope: 'singleton' as any, instance: undefined },
+      {
+        identifier: 'SomeService',
+        factory: class {} as any,
+        scope: 'singleton' as any,
+        instance: undefined,
+      },
     ]);
 
     const result = executeListServices(container);
@@ -57,7 +62,7 @@ describe('executeListServices', () => {
   });
 
   it('没有 instanceId 的实例被跳过', () => {
-    const instance = { /* 无 instanceId */ } as unknown as Service;
+    const instance = {/* 无 instanceId */} as unknown as Service;
     const container = mockContainer('root', [
       { identifier: 'SomeService', factory: class {} as any, scope: 'singleton' as any, instance },
     ]);
@@ -113,16 +118,25 @@ describe('executeListServices', () => {
     // 构造带 @mcpTool 注解的 Service 类
     class OrderService {
       @mcpTool({ description: '获取订单', name: 'getOrders' })
-      getOrders() { return []; }
+      getOrders() {
+        return [];
+      }
 
-      normalMethod() { return null; }
+      normalMethod() {
+        return null;
+      }
     }
 
     const instance = Object.create(OrderService.prototype) as Service;
     (instance as any)['instanceId'] = 'OrderService#0';
 
     const container = mockContainer('app', [
-      { identifier: OrderService, factory: OrderService as any, scope: 'singleton' as any, instance },
+      {
+        identifier: OrderService,
+        factory: OrderService as any,
+        scope: 'singleton' as any,
+        instance,
+      },
     ]);
 
     const result = executeListServices(container);
@@ -179,12 +193,24 @@ describe('executeListServices', () => {
     const childInstance = makeMockInstance('ChildService#0', { doChild: () => {} });
 
     const childContainer = mockContainer('child', [
-      { identifier: 'ChildService', factory: class {} as any, scope: 'singleton' as any, instance: childInstance },
+      {
+        identifier: 'ChildService',
+        factory: class {} as any,
+        scope: 'singleton' as any,
+        instance: childInstance,
+      },
     ]);
 
     const rootContainer = mockContainer(
       'root',
-      [{ identifier: 'ParentService', factory: class {} as any, scope: 'singleton' as any, instance: parentInstance }],
+      [
+        {
+          identifier: 'ParentService',
+          factory: class {} as any,
+          scope: 'singleton' as any,
+          instance: parentInstance,
+        },
+      ],
       [childContainer]
     );
 
@@ -214,15 +240,19 @@ describe('executeListServices', () => {
   });
 
   it('scalarState 包含基本类型字段，objectState 包含复杂类型字段，均不含函数和私有属性', () => {
-    const instance = makeMockInstance('DataService#0', {
-      fetchData: () => {},
-    }, {
-      count: 0,
-      name: 'test',
-      _private: 'hidden',
-      items: ['a', 'b'],
-      meta: { key: 'value' },
-    });
+    const instance = makeMockInstance(
+      'DataService#0',
+      {
+        fetchData: () => {},
+      },
+      {
+        count: 0,
+        name: 'test',
+        _private: 'hidden',
+        items: ['a', 'b'],
+        meta: { key: 'value' },
+      }
+    );
 
     const container = mockContainer('app', [
       { identifier: 'DataService', factory: class {} as any, scope: 'singleton' as any, instance },

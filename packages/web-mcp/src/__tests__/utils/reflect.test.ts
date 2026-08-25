@@ -32,8 +32,14 @@ describe('setMcpToolMetadata', () => {
 
   it('多次写入不同方法名，全部保留', () => {
     const proto = createPrototype();
-    const meta1: McpToolMetadata = { methodName: 'fetchOrders', options: { description: '获取订单' } };
-    const meta2: McpToolMetadata = { methodName: 'cancelOrder', options: { description: '取消订单' } };
+    const meta1: McpToolMetadata = {
+      methodName: 'fetchOrders',
+      options: { description: '获取订单' },
+    };
+    const meta2: McpToolMetadata = {
+      methodName: 'cancelOrder',
+      options: { description: '取消订单' },
+    };
 
     setMcpToolMetadata(proto, meta1);
     setMcpToolMetadata(proto, meta2);
@@ -61,8 +67,14 @@ describe('setMcpToolMetadata', () => {
     const parentProto = createPrototype();
     const childProto = Object.create(parentProto);
 
-    const parentMeta: McpToolMetadata = { methodName: 'parentMethod', options: { description: '父类方法' } };
-    const childMeta: McpToolMetadata = { methodName: 'childMethod', options: { description: '子类方法' } };
+    const parentMeta: McpToolMetadata = {
+      methodName: 'parentMethod',
+      options: { description: '父类方法' },
+    };
+    const childMeta: McpToolMetadata = {
+      methodName: 'childMethod',
+      options: { description: '子类方法' },
+    };
 
     setMcpToolMetadata(parentProto, parentMeta);
     setMcpToolMetadata(childProto, childMeta);
@@ -86,8 +98,14 @@ describe('getMcpToolMetadataList', () => {
 
   it('返回当前原型上的所有元数据', () => {
     const proto = createPrototype();
-    const meta1: McpToolMetadata = { methodName: 'fetchOrders', options: { description: '获取订单' } };
-    const meta2: McpToolMetadata = { methodName: 'cancelOrder', options: { description: '取消订单' } };
+    const meta1: McpToolMetadata = {
+      methodName: 'fetchOrders',
+      options: { description: '获取订单' },
+    };
+    const meta2: McpToolMetadata = {
+      methodName: 'cancelOrder',
+      options: { description: '取消订单' },
+    };
 
     setMcpToolMetadata(proto, meta1);
     setMcpToolMetadata(proto, meta2);
@@ -102,7 +120,10 @@ describe('getMcpToolMetadataList', () => {
     const parentProto = createPrototype();
     const childProto = Object.create(parentProto);
 
-    const parentMeta: McpToolMetadata = { methodName: 'parentMethod', options: { description: '父类' } };
+    const parentMeta: McpToolMetadata = {
+      methodName: 'parentMethod',
+      options: { description: '父类' },
+    };
     setMcpToolMetadata(parentProto, parentMeta);
 
     // 子类自身没有元数据，但应能查到父类的
@@ -114,8 +135,14 @@ describe('getMcpToolMetadataList', () => {
     const parentProto = createPrototype();
     const childProto = Object.create(parentProto);
 
-    const parentMeta: McpToolMetadata = { methodName: 'parentMethod', options: { description: '父类' } };
-    const childMeta: McpToolMetadata = { methodName: 'childMethod', options: { description: '子类' } };
+    const parentMeta: McpToolMetadata = {
+      methodName: 'parentMethod',
+      options: { description: '父类' },
+    };
+    const childMeta: McpToolMetadata = {
+      methodName: 'childMethod',
+      options: { description: '子类' },
+    };
 
     setMcpToolMetadata(parentProto, parentMeta);
     setMcpToolMetadata(childProto, childMeta);
@@ -146,7 +173,10 @@ describe('getMcpToolMetadata', () => {
     const parentProto = createPrototype();
     const childProto = Object.create(parentProto);
 
-    const meta: McpToolMetadata = { methodName: 'parentMethod', options: { description: '父类方法' } };
+    const meta: McpToolMetadata = {
+      methodName: 'parentMethod',
+      options: { description: '父类方法' },
+    };
     setMcpToolMetadata(parentProto, meta);
 
     expect(getMcpToolMetadata(childProto, 'parentMethod')).toEqual(meta);

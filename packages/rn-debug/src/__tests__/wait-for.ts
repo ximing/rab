@@ -17,7 +17,7 @@ export async function waitFor(
     } catch (err) {
       lastError = err;
     }
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 20));
   }
   const extra = lastError instanceof Error ? ` (last error: ${lastError.message})` : '';
   throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms${extra}`);

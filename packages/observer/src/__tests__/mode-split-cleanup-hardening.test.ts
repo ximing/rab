@@ -3,15 +3,15 @@
  * 组合出行为时的边界不变量 —— 均为审查 repro 实际攻击过的场景。
  */
 
-import { observable } from "../observable";
-import { shadowObservable } from "../shadow-observable";
-import { observe, unobserve } from "../observer";
-import { isObservable, raw } from "../internals/utils";
-import { getConnectionsCount } from "../internals/reaction-track";
-import type { Reaction } from "../internals/types";
+import { observable } from '../observable';
+import { shadowObservable } from '../shadow-observable';
+import { observe, unobserve } from '../observer';
+import { isObservable, raw } from '../internals/utils';
+import { getConnectionsCount } from '../internals/reaction-track';
+import type { Reaction } from '../internals/types';
 
-describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
-  test("deep 子代理身份跨访问路径稳定; shadow 暴露 raw 嵌套对象", () => {
+describe('GG6 hardening: 模式分桶 + entry 清理的组合边界', () => {
+  test('deep 子代理身份跨访问路径稳定; shadow 暴露 raw 嵌套对象', () => {
     const root: any = { nested: { a: 1 } };
     const s = shadowObservable(root);
     const o = observable(root);
@@ -28,7 +28,7 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(observable(s)).toBe(s);
   });
 
-  test("同一 raw 的 Map 在 deep/shadow 两个代理上: 单次写入两侧各触发一次", () => {
+  test('同一 raw 的 Map 在 deep/shadow 两个代理上: 单次写入两侧各触发一次', () => {
     const rawMap = new Map<any, any>();
     const s = shadowObservable(rawMap);
     const m = observable(rawMap);
@@ -54,20 +54,20 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(deepCalls).toBe(3);
   });
 
-  test("reaction 重跑切换依赖后旧 entry 清除且新依赖仍被触发 (无 stale/漏通知)", () => {
+  test('reaction 重跑切换依赖后旧 entry 清除且新依赖仍被触发 (无 stale/漏通知)', () => {
     const rawObj: any = { ctl: 0 };
     const obj = observable(rawObj);
     let idx = 0;
     let calls = 0;
     const r = observe(() => {
       obj.ctl;
-      obj["k" + idx];
+      obj['k' + idx];
       calls++;
     });
 
     for (let round = 0; round < 20; round++) {
       idx = round;
-      rawObj["k" + round] = round; // raw 写入不通知, 依赖在下次运行时刷新
+      rawObj['k' + round] = round; // raw 写入不通知, 依赖在下次运行时刷新
       obj.ctl = round + 1; // 变更 -> 触发 r 重跑, 重新注册到 k{round}
     }
     expect(calls).toBe(21);
@@ -82,12 +82,12 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(calls).toBe(22);
   });
 
-  test("async scheduler: unobserve 后 entry 归零, 手动运行残留队列不产生幻影注册", () => {
+  test('async scheduler: unobserve 后 entry 归零, 手动运行残留队列不产生幻影注册', () => {
     const rawObj = { v: 1 };
     const obj = observable(rawObj);
     const pending: Reaction[] = [];
     const r = observe(() => void obj.v, {
-      scheduler: (rr) => pending.push(rr),
+      scheduler: rr => pending.push(rr),
     });
 
     obj.v = 2;
@@ -99,7 +99,7 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("嵌套 mutation 重入: 栈上 reaction 自跳过, 栈外 reaction 正常触发", () => {
+  test('嵌套 mutation 重入: 栈上 reaction 自跳过, 栈外 reaction 正常触发', () => {
     const rawObj: any = { a: 0 };
     const obj = observable(rawObj);
     let innerCalls = 0;
@@ -127,7 +127,7 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(getConnectionsCount(rawObj)).toBe(0);
   });
 
-  test("options 首次写死: 缓存命中后第二次传入的 options 不替换已有 handlers", () => {
+  test('options 首次写死: 缓存命中后第二次传入的 options 不替换已有 handlers', () => {
     const rawObj = { count: 0 };
     const o1 = observable(rawObj, {
       reactionHandlers: { transformReactions: () => [] },
@@ -146,7 +146,7 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
     expect(calls).toBe(1); // 第一次的过滤 handler 仍然生效
   });
 
-  test("deep options 的 transformReactions 对同一 raw 的 shadow 写入同样生效 (共享连接表语义)", () => {
+  test('deep options 的 transformReactions 对同一 raw 的 shadow 写入同样生效 (共享连接表语义)', () => {
     const rawObj = { count: 0 };
     const o = observable(rawObj, {
       reactionHandlers: { transformReactions: () => [] },
@@ -169,7 +169,7 @@ describe("GG6 hardening: 模式分桶 + entry 清理的组合边界", () => {
   // transformReactions 过滤器无法 (也不应) 区分写入走的是哪个代理 ——
   // shadowObservable 不接收 options, 用户如需隔离请用不同的 raw 对象。
   // 详见 shadowObservable / observable 的 JSDoc。
-  test("per-raw options 语义 (shadow-first 顺序): deep 的 transformReactions 同样治理 shadow 侧通知", () => {
+  test('per-raw options 语义 (shadow-first 顺序): deep 的 transformReactions 同样治理 shadow 侧通知', () => {
     const rawObj = { count: 0 };
     const s = shadowObservable(rawObj);
     const o = observable(rawObj, {

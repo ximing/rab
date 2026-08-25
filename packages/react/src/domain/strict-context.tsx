@@ -5,7 +5,7 @@
  * useService 会按照 Provider 作用域链向上查找服务
  */
 
-import React, { ReactNode, createContext } from "react";
+import React, { ReactNode, createContext } from 'react';
 
 /**
  * Strict Context
@@ -16,7 +16,7 @@ import React, { ReactNode, createContext } from "react";
  */
 export const StrictContext = createContext<{} | null>(null);
 
-StrictContext.displayName = "RSStrictContext";
+StrictContext.displayName = 'RSStrictContext';
 
 /**
  * RSStrict - 严格模式 Provider

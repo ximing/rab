@@ -2,14 +2,7 @@
  * @On 和 @Once 装饰器使用示例
  */
 
-import {
-  Service,
-  Container,
-  On,
-  Once,
-  EventSystem,
-  cleanupEventListeners,
-} from "../../main.js";
+import { Service, Container, On, Once, EventSystem, cleanupEventListeners } from '../../main.js';
 
 // ============ 示例 1: 基础事件监听 ============
 
@@ -18,7 +11,7 @@ class UserService extends Service {
   public loginCount = 0;
 
   // 监听全局登录事件
-  @On("user:login", { scope: "global" })
+  @On('user:login', { scope: 'global' })
   onUserLogin(user: any) {
     this.currentUser = user;
     this.loginCount++;
@@ -26,7 +19,7 @@ class UserService extends Service {
   }
 
   // 监听容器级别的用户更新事件
-  @On("user:update")
+  @On('user:update')
   onUserUpdate(updates: any) {
     if (this.currentUser) {
       this.currentUser = { ...this.currentUser, ...updates };
@@ -35,9 +28,9 @@ class UserService extends Service {
   }
 
   // 监听一次性的应用初始化事件
-  @Once("app:initialized", { scope: "global" })
+  @Once('app:initialized', { scope: 'global' })
   onAppInitialized() {
-    console.log("App initialized, UserService ready");
+    console.log('App initialized, UserService ready');
   }
 }
 
@@ -47,27 +40,25 @@ class NotificationService extends Service {
   public notifications: any[] = [];
   public unreadCount = 0;
 
-  @On("notification:new")
+  @On('notification:new')
   onNewNotification(notification: any) {
     this.notifications.push(notification);
     this.unreadCount++;
     console.log(`New notification: ${notification.message}`);
   }
 
-  @On("notification:read")
+  @On('notification:read')
   onNotificationRead(notificationId: string) {
-    const notification = this.notifications.find(
-      (n) => n.id === notificationId
-    );
+    const notification = this.notifications.find(n => n.id === notificationId);
     if (notification) {
       notification.read = true;
       this.unreadCount--;
     }
   }
 
-  @Once("notification:service:ready")
+  @Once('notification:service:ready')
   onServiceReady() {
-    console.log("Notification service is ready");
+    console.log('Notification service is ready');
   }
 }
 
@@ -75,7 +66,7 @@ class NotificationService extends Service {
 
 export function demonstrateEventDecorators() {
   // 创建容器
-  const container = new Container({ name: "app" });
+  const container = new Container({ name: 'app' });
 
   // 注册服务
   container.register(UserService);
@@ -90,13 +81,13 @@ export function demonstrateEventDecorators() {
   const containerEmitter = EventSystem.getContainerEvents(container);
 
   // 发送全局事件
-  globalEmitter.emit("user:login", { id: 1, name: "John Doe" });
-  globalEmitter.emit("app:initialized");
+  globalEmitter.emit('user:login', { id: 1, name: 'John Doe' });
+  globalEmitter.emit('app:initialized');
 
   // 发送容器级别事件
-  containerEmitter.emit("user:update", { email: "john@example.com" });
-  containerEmitter.emit("notification:new", { id: 1, message: "Welcome!" });
-  containerEmitter.emit("notification:service:ready");
+  containerEmitter.emit('user:update', { email: 'john@example.com' });
+  containerEmitter.emit('notification:new', { id: 1, message: 'Welcome!' });
+  containerEmitter.emit('notification:service:ready');
 
   // 清理事件监听器
   cleanupEventListeners(userService);
@@ -107,26 +98,26 @@ export function demonstrateEventDecorators() {
 
 export function demonstrateEventScopes() {
   class GlobalEventService extends Service {
-    public globalMessage = "";
+    public globalMessage = '';
 
-    @On("global:message", { scope: "global" })
+    @On('global:message', { scope: 'global' })
     onGlobalMessage(message: string) {
       this.globalMessage = message;
     }
   }
 
   class ContainerEventService extends Service {
-    public containerMessage = "";
+    public containerMessage = '';
 
-    @On("container:message")
+    @On('container:message')
     onContainerMessage(message: string) {
       this.containerMessage = message;
     }
   }
 
   // 创建两个容器
-  const container1 = new Container({ name: "container1" });
-  const container2 = new Container({ name: "container2" });
+  const container1 = new Container({ name: 'container1' });
+  const container2 = new Container({ name: 'container2' });
 
   // 在两个容器中注册服务
   container1.register(GlobalEventService);
@@ -142,20 +133,20 @@ export function demonstrateEventScopes() {
 
   // 发送全局事件 - 所有容器都会收到
   const globalEmitter = EventSystem.getGlobalEvents();
-  globalEmitter.emit("global:message", "Hello from global");
+  globalEmitter.emit('global:message', 'Hello from global');
 
-  console.log("Global event received:");
-  console.log("  container1:", globalService1.globalMessage); // 'Hello from global'
-  console.log("  container2:", globalService2.globalMessage); // 'Hello from global'
+  console.log('Global event received:');
+  console.log('  container1:', globalService1.globalMessage); // 'Hello from global'
+  console.log('  container2:', globalService2.globalMessage); // 'Hello from global'
 
   // 发送容器级别事件 - 只有该容器会收到
   const emitter1 = EventSystem.getContainerEvents(container1);
   const emitter2 = EventSystem.getContainerEvents(container2);
 
-  emitter1.emit("container:message", "Hello from container1");
-  emitter2.emit("container:message", "Hello from container2");
+  emitter1.emit('container:message', 'Hello from container1');
+  emitter2.emit('container:message', 'Hello from container2');
 
-  console.log("Container event received:");
-  console.log("  container1:", containerService1.containerMessage); // 'Hello from container1'
-  console.log("  container2:", containerService2.containerMessage); // 'Hello from container2'
+  console.log('Container event received:');
+  console.log('  container1:', containerService1.containerMessage); // 'Hello from container1'
+  console.log('  container2:', containerService2.containerMessage); // 'Hello from container2'
 }

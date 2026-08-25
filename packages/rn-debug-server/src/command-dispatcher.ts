@@ -62,7 +62,7 @@ export function createCommandDispatcher(options: {
   }
 
   function sendAndAwait(deviceId: string, input: CommandInput): Promise<CommandOutcome> {
-    return new Promise<CommandOutcome>((resolve) => {
+    return new Promise<CommandOutcome>(resolve => {
       const entry = registry.get(deviceId);
       const id = `cmd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const timeout = Math.min(input.timeout ?? DEFAULT_TIMEOUT, MAX_TIMEOUT);
@@ -87,10 +87,15 @@ export function createCommandDispatcher(options: {
       // 测试桩 socket 可能没有 readyState（undefined 视为可发送，仅明确的非 OPEN 才视为断开）
       const readyState = (entry?.ws as { readyState?: number } | undefined)?.readyState;
       if (!entry || (readyState !== undefined && readyState !== 1)) {
-        finish({ id, status: 'error', error: { message: 'device disconnected' }, durationMs: 0 }, p);
+        finish(
+          { id, status: 'error', error: { message: 'device disconnected' }, durationMs: 0 },
+          p
+        );
         return;
       }
-      entry.ws.send(JSON.stringify({ kind: 'command', id, type: input.type, payload: input.payload ?? {} }));
+      entry.ws.send(
+        JSON.stringify({ kind: 'command', id, type: input.type, payload: input.payload ?? {} })
+      );
       onEvent?.({ kind: 'command', action: 'sent', command: record });
     });
   }
@@ -129,7 +134,12 @@ export function createCommandDispatcher(options: {
       for (const [id, p] of pending) {
         if (p.record.deviceId !== deviceId) continue;
         finish(
-          { id, status: 'error', error: { message: 'device disconnected' }, durationMs: Date.now() - p.record.sentAt },
+          {
+            id,
+            status: 'error',
+            error: { message: 'device disconnected' },
+            durationMs: Date.now() - p.record.sentAt,
+          },
           p
         );
       }
@@ -139,7 +149,7 @@ export function createCommandDispatcher(options: {
       return [...history];
     },
     getCommand(id) {
-      return pending.get(id)?.record ?? history.find((h) => h.id === id);
+      return pending.get(id)?.record ?? history.find(h => h.id === id);
     },
   };
 }

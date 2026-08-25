@@ -50,13 +50,13 @@ pnpm install
 
 ## Core Packages
 
-| Package | Responsibility |
-| --- | --- |
-| [`@rabjs/observer`](./packages/observer) | Fine-grained observable dependency tracking and reactions. |
-| [`@rabjs/service`](./packages/service) | Observable Services, dependency containers, lifecycle, actions, and method models. |
-| [`@rabjs/react`](./packages/react) | React bindings for reactive rendering and Service resolution. |
-| [`@rabjs/devtools`](./packages/devtools) | Inspection and assertion access to the live container tree. |
-| [`@rabjs/web-mcp`](./packages/web-mcp) | A WebMCP bridge that exposes active Services as tools for browser agents. |
+| Package                                  | Responsibility                                                                     |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| [`@rabjs/observer`](./packages/observer) | Fine-grained observable dependency tracking and reactions.                         |
+| [`@rabjs/service`](./packages/service)   | Observable Services, dependency containers, lifecycle, actions, and method models. |
+| [`@rabjs/react`](./packages/react)       | React bindings for reactive rendering and Service resolution.                      |
+| [`@rabjs/devtools`](./packages/devtools) | Inspection and assertion access to the live container tree.                        |
+| [`@rabjs/web-mcp`](./packages/web-mcp)   | A WebMCP bridge that exposes active Services as tools for browser agents.          |
 
 ## The AI-First Workflow
 
@@ -79,7 +79,7 @@ For example, an agent can discover an active Service, call one of its methods, r
 This is the minimal React Service pattern:
 
 ```tsx
-import { Service, bindServices, observer, useService } from "@rabjs/react";
+import { Service, bindServices, observer, useService } from '@rabjs/react';
 
 class CounterService extends Service {
   count = 0;
@@ -104,7 +104,7 @@ Service properties are observable by default, and Service methods are Actions by
 Use `@rabjs/observer` directly when reactive state is not tied to React:
 
 ```ts
-import { observable, observe, unobserve } from "@rabjs/observer";
+import { observable, observe, unobserve } from '@rabjs/observer';
 
 const state = observable({ count: 0 });
 
@@ -128,11 +128,11 @@ Reactions track the properties they read. Changes to those properties rerun the 
 
 RAB ships [Agent Skills](https://code.claude.com/docs/en/claude-code/skills) in [`skills/`](./skills) that teach coding agents the correct RAB patterns and let them debug live applications:
 
-| Skill | Purpose |
-| --- | --- |
-| [`rab-react`](./skills/rab-react) | Write `@rabjs/react` code with the right conventions (`observer`, `useService`, `bindServices`, Service lifecycle). |
-| [`rab-cdp-debug`](./skills/rab-cdp-debug) | Inspect, call, and assert Service instances of a running rab app via Chrome DevTools MCP. |
-| [`rab-rn-debug`](./skills/rab-rn-debug) | Debug a React Native app on a device through the `@rabjs/rn-debug-server` bridge. |
+| Skill                                     | Purpose                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`rab-react`](./skills/rab-react)         | Write `@rabjs/react` code with the right conventions (`observer`, `useService`, `bindServices`, Service lifecycle). |
+| [`rab-cdp-debug`](./skills/rab-cdp-debug) | Inspect, call, and assert Service instances of a running rab app via Chrome DevTools MCP.                           |
+| [`rab-rn-debug`](./skills/rab-rn-debug)   | Debug a React Native app on a device through the `@rabjs/rn-debug-server` bridge.                                   |
 
 The skills are plain `SKILL.md` documents with no runtime dependency, so the same files work across coding tools. Installation differs by tool — if you use more than one, install separately for each.
 
@@ -228,8 +228,8 @@ The last command builds the documentation site independently. During development
 
 The documentation site's production JavaScript bundle is minified by Vite. A production build (`pnpm --filter @rabjs/website build`) currently produces:
 
-| Asset | Minified size | Gzip size |
-| --- | ---: | ---: |
+| Asset                            |             Minified size |                 Gzip size |
+| -------------------------------- | ------------------------: | ------------------------: |
 | `website/dist/assets/index-*.js` | 448,651 bytes (448.65 kB) | 140,928 bytes (140.93 kB) |
 
 The reported gzip size uses Vite's production build output.

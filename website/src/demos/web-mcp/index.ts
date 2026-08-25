@@ -1,7 +1,7 @@
-import WebMcpDemo from "./WebMcpDemo";
+import WebMcpDemo from './WebMcpDemo';
 
 export default WebMcpDemo;
-export { TodoService } from "./WebMcpService";
+export { TodoService } from './WebMcpService';
 
 /**
  * 与 live demo 对应的展示源码（DemoCard 的 code 属性使用）。

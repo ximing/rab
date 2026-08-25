@@ -10,49 +10,56 @@
  */
 export type AssertOp =
   // ─── 相等 ───────────────────────────────────────
-  | 'eq'           // actual === expected
-  | 'neq'          // actual !== expected
+  | 'eq' // actual === expected
+  | 'neq' // actual !== expected
   // ─── 大小比较（数值）────────────────────────────
-  | 'gt'           // actual > expected
-  | 'gte'          // actual >= expected
-  | 'lt'           // actual < expected
-  | 'lte'          // actual <= expected
+  | 'gt' // actual > expected
+  | 'gte' // actual >= expected
+  | 'lt' // actual < expected
+  | 'lte' // actual <= expected
   // ─── 存在性 ─────────────────────────────────────
-  | 'exists'       // actual != null && actual !== undefined
-  | 'notExists'    // actual == null || actual === undefined
+  | 'exists' // actual != null && actual !== undefined
+  | 'notExists' // actual == null || actual === undefined
   // ─── 字符串 / 数组包含 ──────────────────────────
-  | 'includes'     // Array.includes(expected) 或 string.includes(expected)
+  | 'includes' // Array.includes(expected) 或 string.includes(expected)
   | 'notIncludes'
   // ─── 正则匹配 ────────────────────────────────────
-  | 'matches'      // new RegExp(expected).test(actual)
+  | 'matches' // new RegExp(expected).test(actual)
   // ─── 类型检查 ────────────────────────────────────
-  | 'type'         // typeof actual === expected
+  | 'type' // typeof actual === expected
   // ─── 长度断言（数组 / 字符串） ────────────────────
-  | 'length'       // actual.length === expected
-  | 'lengthGt'     // actual.length > expected
-  | 'lengthGte'    // actual.length >= expected
-  | 'lengthLt'     // actual.length < expected
-  | 'lengthLte'    // actual.length <= expected
+  | 'length' // actual.length === expected
+  | 'lengthGt' // actual.length > expected
+  | 'lengthGte' // actual.length >= expected
+  | 'lengthLt' // actual.length < expected
+  | 'lengthLte' // actual.length <= expected
   // ─── 深比对（仅用于已知小对象） ──────────────────
-  | 'deepEq'       // JSON.stringify(actual) === JSON.stringify(expected)
+  | 'deepEq' // JSON.stringify(actual) === JSON.stringify(expected)
   // ─── 数值区间（闭区间） ───────────────────────────
-  | 'between'      // expected[0] <= actual <= expected[1]
+  | 'between' // expected[0] <= actual <= expected[1]
   // ─── 对象 key 检查 ────────────────────────────────
-  | 'hasKeys'      // 对象包含所有指定 key（支持单个 string 或 string[]）
+  | 'hasKeys' // 对象包含所有指定 key（支持单个 string 或 string[]）
   // ─── 对象结构浅层匹配 ─────────────────────────────
-  | 'matchObject'  // 对象包含 expected 的所有键值对（浅层 ===）
+  | 'matchObject' // 对象包含 expected 的所有键值对（浅层 ===）
   // ─── 数组元素断言 ─────────────────────────────────
-  | 'some'         // arr.some(item => subPath satisfies subOp)
-  | 'every';       // arr.every(item => subPath satisfies subOp)
+  | 'some' // arr.some(item => subPath satisfies subOp)
+  | 'every'; // arr.every(item => subPath satisfies subOp)
 
 /**
  * 允许在 every/some 中使用的标量操作符（防止嵌套递归）
  */
-export type ScalarAssertOp = Extract<AssertOp,
-  | 'eq' | 'neq'
-  | 'gt' | 'gte' | 'lt' | 'lte'
-  | 'exists' | 'notExists'
-  | 'includes' | 'notIncludes'
+export type ScalarAssertOp = Extract<
+  AssertOp,
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'exists'
+  | 'notExists'
+  | 'includes'
+  | 'notIncludes'
   | 'matches'
   | 'type'
 >;

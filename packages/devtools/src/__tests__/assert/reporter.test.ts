@@ -15,7 +15,9 @@ import type { AssertResult } from '@rabjs/shared';
 
 // ─── 测试工具 ────────────────────────────────────────────────────────────────
 
-function makeResult(overrides: Partial<AssertResult & { instanceId?: string; description?: string }> = {}): AssertResult & { instanceId?: string; description?: string } {
+function makeResult(
+  overrides: Partial<AssertResult & { instanceId?: string; description?: string }> = {}
+): AssertResult & { instanceId?: string; description?: string } {
   return {
     passed: true,
     summary: { passed: 1, total: 1 },
@@ -101,14 +103,16 @@ describe('printAssertResult - 基本行为', () => {
     const result = makeResult({
       passed: false,
       summary: { passed: 0, total: 1 },
-      results: [{
-        path: 'val',
-        op: 'eq',
-        expected: 1,
-        actual: 2,
-        passed: false,
-        error: 'Expected val to eq 1, but got 2',
-      }],
+      results: [
+        {
+          path: 'val',
+          op: 'eq',
+          expected: 1,
+          actual: 2,
+          passed: false,
+          error: 'Expected val to eq 1, but got 2',
+        },
+      ],
     });
     printAssertResult(result, { verbose: false });
 
@@ -155,13 +159,15 @@ describe('printAssertResult - 基本行为', () => {
     const result = makeResult({
       passed: false,
       summary: { passed: 0, total: 1 },
-      results: [{
-        path: 'val',
-        op: 'eq',
-        expected: 1,
-        actual: 2,
-        passed: false,
-      }],
+      results: [
+        {
+          path: 'val',
+          op: 'eq',
+          expected: 1,
+          actual: 2,
+          passed: false,
+        },
+      ],
     });
     printAssertResult(result);
 
@@ -173,14 +179,16 @@ describe('printAssertResult - 基本行为', () => {
     const result = makeResult({
       passed: false,
       summary: { passed: 0, total: 1 },
-      results: [{
-        path: 'count',
-        op: 'gt',
-        expected: 0,
-        actual: 0,
-        passed: false,
-        message: '数量应大于 0',
-      }],
+      results: [
+        {
+          path: 'count',
+          op: 'gt',
+          expected: 0,
+          actual: 0,
+          passed: false,
+          message: '数量应大于 0',
+        },
+      ],
     });
     printAssertResult(result);
 
@@ -269,10 +277,16 @@ describe('printAssertResult - 不同 op 输出格式', () => {
   for (const { op, expected, expectedText } of opCases) {
     it(`op=${op} 时显示 "${expectedText}"`, () => {
       const result = makeResult({
-        results: [{
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          path: 'field', op: op as any, expected, actual: 'value', passed: true,
-        }],
+        results: [
+          {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            path: 'field',
+            op: op as any,
+            expected,
+            actual: 'value',
+            passed: true,
+          },
+        ],
       });
       printAssertResult(result);
 

@@ -13,12 +13,12 @@ npx rab-rn-debug --port 9300
 
 ## HTTP API
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/devices | 设备列表 |
-| POST | /api/commands | 发指令（唯一设备时自动路由） |
-| POST | /api/devices/:deviceId/commands | 向指定设备发指令 |
-| GET | /api/commands/:id | 查询指令状态 |
+| 方法 | 路径                            | 说明                         |
+| ---- | ------------------------------- | ---------------------------- |
+| GET  | /api/devices                    | 设备列表                     |
+| POST | /api/commands                   | 发指令（唯一设备时自动路由） |
+| POST | /api/devices/:deviceId/commands | 向指定设备发指令             |
+| GET  | /api/commands/:id               | 查询指令状态                 |
 
 ```bash
 curl -X POST http://localhost:9229/api/commands \

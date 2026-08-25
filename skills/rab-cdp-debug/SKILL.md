@@ -7,7 +7,7 @@ sourcePath: packages/react
 repository: git@github.com:ximing/rab.git
 ---
 
-# window.__RS_ROOT_CONTAINER__ 调试指南（Chrome DevTools MCP）
+# window.**RS_ROOT_CONTAINER** 调试指南（Chrome DevTools MCP）
 
 本 skill 告知 Agent 如何通过 **Chrome DevTools MCP** 的 `evaluate_script` 工具，利用 `@rabjs/devtools` 挂载的 `window.__RS_ROOT_CONTAINER__` 能力，对 Service 层进行功能验证与状态检查。
 
@@ -54,14 +54,14 @@ global (getGlobalContainer())           ← 真正的根，与 React 无关
 
 ```ts
 interface RSRootContainerHandle {
-  container: Container;                    // global 容器实例
+  container: Container; // global 容器实例
   getService(instanceId: string): Service | undefined;
   getContainer(containerName: string): Container | undefined;
   listServices(): Array<{
-    instanceId: string;       // 格式: ClassName_nanoid
-    containerName: string;    // 来自 bindServices options.name 或自动生成
-    identifierLabel: string;  // Service 类名
-    instance: Service;        // 内存对象引用，可直接操控
+    instanceId: string; // 格式: ClassName_nanoid
+    containerName: string; // 来自 bindServices options.name 或自动生成
+    identifierLabel: string; // Service 类名
+    instance: Service; // 内存对象引用，可直接操控
   }>;
 }
 ```
@@ -90,7 +90,7 @@ args (array) (optional): 传入函数的参数列表
 ```js
 () => {
   return typeof window.__RS_ROOT_CONTAINER__;
-}
+};
 // 期望返回: "object"
 ```
 
@@ -105,15 +105,23 @@ args (array) (optional): 传入函数的参数列表
     containerName: s.containerName,
     identifierLabel: s.identifierLabel,
   }));
-}
+};
 ```
 
 返回示例：
 
 ```json
 [
-  { "instanceId": "CartService_abc12", "containerName": "ProductPage_2", "identifierLabel": "CartService" },
-  { "instanceId": "UserService_xyz99", "containerName": "RSRootInner_1", "identifierLabel": "UserService" }
+  {
+    "instanceId": "CartService_abc12",
+    "containerName": "ProductPage_2",
+    "identifierLabel": "CartService"
+  },
+  {
+    "instanceId": "UserService_xyz99",
+    "containerName": "RSRootInner_1",
+    "identifierLabel": "UserService"
+  }
 ]
 ```
 
@@ -132,7 +140,7 @@ args (array) (optional): 传入函数的参数列表
     itemCount: svc.items?.length ?? 0,
     total: svc.total,
   };
-}
+};
 ```
 
 ### 4. 通过 identifierLabel 查找 Service
@@ -149,7 +157,7 @@ args (array) (optional): 传入函数的参数列表
     instanceId: entry.instanceId,
     containerName: entry.containerName,
   };
-}
+};
 ```
 
 ### 5. 调用 Service 方法并验证结果
@@ -168,7 +176,7 @@ args (array) (optional): 传入函数的参数列表
     itemCount: svc.items.length,
     lastItem: svc.items[svc.items.length - 1],
   };
-}
+};
 ```
 
 ### 6. 调用异步 Service 方法
@@ -185,7 +193,7 @@ async () => {
     productCount: svc.products.length,
     loadingState: svc.loadingState,
   };
-}
+};
 ```
 
 ### 7. 通过 containerName 查找特定容器内的 Service
@@ -194,10 +202,11 @@ async () => {
 () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   if (!handle) return null;
-  return handle.listServices()
+  return handle
+    .listServices()
     .filter(s => s.containerName === 'ProductPage_2')
     .map(s => ({ instanceId: s.instanceId, identifierLabel: s.identifierLabel }));
-}
+};
 ```
 
 ### 8. 重置 Service 状态（验证后清理）
@@ -210,7 +219,7 @@ async () => {
   if (!entry) return { error: '未找到' };
   entry.instance.clearCart?.();
   return { cleared: true, itemCount: entry.instance.items?.length ?? 0 };
-}
+};
 ```
 
 ---
@@ -220,18 +229,19 @@ async () => {
 **Step 1**：确认 handle 存在
 
 ```js
-() => typeof window.__RS_ROOT_CONTAINER__
+() => typeof window.__RS_ROOT_CONTAINER__;
 // 期望: "object"
 ```
 
 **Step 2**：枚举所有 Service，找到目标
 
 ```js
-() => window.__RS_ROOT_CONTAINER__?.listServices().map(s => ({
-  instanceId: s.instanceId,
-  identifierLabel: s.identifierLabel,
-  containerName: s.containerName,
-}))
+() =>
+  window.__RS_ROOT_CONTAINER__?.listServices().map(s => ({
+    instanceId: s.instanceId,
+    identifierLabel: s.identifierLabel,
+    containerName: s.containerName,
+  }));
 ```
 
 **Step 3**：取出 Service 当前状态快照
@@ -240,17 +250,19 @@ async () => {
 () => {
   const svc = window.__RS_ROOT_CONTAINER__?.getService('CartService_abc12');
   return svc ? { total: svc.total, count: svc.items.length } : null;
-}
+};
 ```
 
 **Step 4**：触发操作
 
 ```js
 () => {
-  const entry = window.__RS_ROOT_CONTAINER__?.listServices().find(s => s.identifierLabel === 'CartService');
+  const entry = window.__RS_ROOT_CONTAINER__
+    ?.listServices()
+    .find(s => s.identifierLabel === 'CartService');
   entry?.instance.addItem({ id: '1', name: 'Apple', price: 5 });
   return { ok: true };
-}
+};
 ```
 
 **Step 5**：验证状态变更
@@ -259,7 +271,7 @@ async () => {
 () => {
   const svc = window.__RS_ROOT_CONTAINER__?.getService('CartService_abc12');
   return { total: svc?.total, count: svc?.items.length };
-}
+};
 ```
 
 ---
@@ -291,31 +303,31 @@ async () => {
 
 ### 断言方法速查表
 
-| 方法 | 说明 | op |
-|------|------|-----|
-| `.toBe(path, expected)` | `actual === expected` | `eq` |
-| `.notToBe(path, expected)` | `actual !== expected` | `neq` |
-| `.toBeGreaterThan(path, n)` | `actual > n` | `gt` |
-| `.toBeGreaterThanOrEqual(path, n)` | `actual >= n` | `gte` |
-| `.toBeLessThan(path, n)` | `actual < n` | `lt` |
-| `.toBeLessThanOrEqual(path, n)` | `actual <= n` | `lte` |
-| `.toBeBetween(path, lo, hi)` | `lo <= actual <= hi` | `between` |
-| `.toExist(path)` | `actual != null` | `exists` |
-| `.toNotExist(path)` | `actual == null` | `notExists` |
-| `.toInclude(path, item)` | 数组/字符串包含 | `includes` |
-| `.toNotInclude(path, item)` | 数组/字符串不包含 | `notIncludes` |
-| `.toMatch(path, pattern)` | 正则匹配 | `matches` |
-| `.toBeType(path, type)` | `typeof actual === type` | `type` |
-| `.toHaveLength(path, n)` | `actual.length === n` | `length` |
-| `.toHaveLengthGt(path, n)` | `actual.length > n` | `lengthGt` |
-| `.toHaveLengthGte(path, n)` | `actual.length >= n` | `lengthGte` |
-| `.toHaveLengthLt(path, n)` | `actual.length < n` | `lengthLt` |
-| `.toHaveLengthLte(path, n)` | `actual.length <= n` | `lengthLte` |
-| `.toHaveKeys(path, keys)` | 对象包含所有指定 key | `hasKeys` |
-| `.toMatchObject(path, subset)` | 对象浅层匹配子集 | `matchObject` |
-| `.toDeepEqual(path, expected)` | JSON 深比较 | `deepEq` |
-| `.toHaveSome(path, assertion)` | 数组中至少一项满足 | `some` |
-| `.toHaveEvery(path, assertion)` | 数组所有项满足 | `every` |
+| 方法                               | 说明                     | op            |
+| ---------------------------------- | ------------------------ | ------------- |
+| `.toBe(path, expected)`            | `actual === expected`    | `eq`          |
+| `.notToBe(path, expected)`         | `actual !== expected`    | `neq`         |
+| `.toBeGreaterThan(path, n)`        | `actual > n`             | `gt`          |
+| `.toBeGreaterThanOrEqual(path, n)` | `actual >= n`            | `gte`         |
+| `.toBeLessThan(path, n)`           | `actual < n`             | `lt`          |
+| `.toBeLessThanOrEqual(path, n)`    | `actual <= n`            | `lte`         |
+| `.toBeBetween(path, lo, hi)`       | `lo <= actual <= hi`     | `between`     |
+| `.toExist(path)`                   | `actual != null`         | `exists`      |
+| `.toNotExist(path)`                | `actual == null`         | `notExists`   |
+| `.toInclude(path, item)`           | 数组/字符串包含          | `includes`    |
+| `.toNotInclude(path, item)`        | 数组/字符串不包含        | `notIncludes` |
+| `.toMatch(path, pattern)`          | 正则匹配                 | `matches`     |
+| `.toBeType(path, type)`            | `typeof actual === type` | `type`        |
+| `.toHaveLength(path, n)`           | `actual.length === n`    | `length`      |
+| `.toHaveLengthGt(path, n)`         | `actual.length > n`      | `lengthGt`    |
+| `.toHaveLengthGte(path, n)`        | `actual.length >= n`     | `lengthGte`   |
+| `.toHaveLengthLt(path, n)`         | `actual.length < n`      | `lengthLt`    |
+| `.toHaveLengthLte(path, n)`        | `actual.length <= n`     | `lengthLte`   |
+| `.toHaveKeys(path, keys)`          | 对象包含所有指定 key     | `hasKeys`     |
+| `.toMatchObject(path, subset)`     | 对象浅层匹配子集         | `matchObject` |
+| `.toDeepEqual(path, expected)`     | JSON 深比较              | `deepEq`      |
+| `.toHaveSome(path, assertion)`     | 数组中至少一项满足       | `some`        |
+| `.toHaveEvery(path, assertion)`    | 数组所有项满足           | `every`       |
 
 ---
 
@@ -334,7 +346,7 @@ async () => {
     .toExist('currentUser')
     .toBeGreaterThan('total', 0)
     .check(); // 控制台输出报告，返回 true/false
-}
+};
 ```
 
 > **注意**：`.check()` 直接向控制台打印，`evaluate_script` 只需返回布尔值即可。
@@ -358,7 +370,7 @@ async () => {
   // 返回可序列化的结构化断言结果
   return {
     passed: result.passed,
-    summary: result.summary,   // { passed: 2, total: 3 }
+    summary: result.summary, // { passed: 2, total: 3 }
     results: result.results.map(r => ({
       path: r.path,
       op: r.op,
@@ -367,7 +379,7 @@ async () => {
       actual: r.actual,
     })),
   };
-}
+};
 ```
 
 返回示例：
@@ -395,16 +407,12 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   if (!handle) throw new Error('未挂载');
   try {
-    handle
-      .expect('CartService_abc123')
-      .toBe('items.length', 3)
-      .toExist('currentUser')
-      .expect(); // 失败时抛出 RSAssertionError
+    handle.expect('CartService_abc123').toBe('items.length', 3).toExist('currentUser').expect(); // 失败时抛出 RSAssertionError
     return { passed: true };
   } catch (e) {
     return { passed: false, message: e.message };
   }
-}
+};
 ```
 
 ---
@@ -418,10 +426,10 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('UserService_xyz99')
-    .toBe('loginState', 'logged_in')       // 精确相等
-    .notToBe('errorCode', 403)             // 不等于
+    .toBe('loginState', 'logged_in') // 精确相等
+    .notToBe('errorCode', 403) // 不等于
     .check();
-}
+};
 ```
 
 #### 数值比较
@@ -431,12 +439,12 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('CartService_abc123')
-    .toBeGreaterThan('total', 0)           // > 0
-    .toBeGreaterThanOrEqual('items.length', 1)  // >= 1
-    .toBeLessThan('items.length', 100)     // < 100
-    .toBeBetween('total', 10, 500)         // 10 <= total <= 500
+    .toBeGreaterThan('total', 0) // > 0
+    .toBeGreaterThanOrEqual('items.length', 1) // >= 1
+    .toBeLessThan('items.length', 100) // < 100
+    .toBeBetween('total', 10, 500) // 10 <= total <= 500
     .check();
-}
+};
 ```
 
 #### 存在性检查
@@ -446,11 +454,11 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('UserService_xyz99')
-    .toExist('currentUser')                // 不为 null/undefined
-    .toExist('currentUser.token')          // 深层路径存在性
-    .toNotExist('errorMessage')            // 为 null/undefined
+    .toExist('currentUser') // 不为 null/undefined
+    .toExist('currentUser.token') // 深层路径存在性
+    .toNotExist('errorMessage') // 为 null/undefined
     .check();
-}
+};
 ```
 
 #### 数组与字符串包含
@@ -460,11 +468,11 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('ProductService_p001')
-    .toInclude('tags', 'featured')         // 数组包含元素
-    .toNotInclude('disabledFeatures', 'checkout')  // 数组不包含
-    .toInclude('title', 'iPhone')          // 字符串包含子串
+    .toInclude('tags', 'featured') // 数组包含元素
+    .toNotInclude('disabledFeatures', 'checkout') // 数组不包含
+    .toInclude('title', 'iPhone') // 字符串包含子串
     .check();
-}
+};
 ```
 
 #### 正则匹配
@@ -474,10 +482,10 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('UserService_xyz99')
-    .toMatch('email', '^\\w+@\\w+\\.\\w+$')  // 正则匹配 email 格式
+    .toMatch('email', '^\\w+@\\w+\\.\\w+$') // 正则匹配 email 格式
     .toMatch('phone', '^\\+?[0-9]{7,15}$')
     .check();
-}
+};
 ```
 
 #### 类型检查
@@ -487,11 +495,11 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('CartService_abc123')
-    .toBeType('total', 'number')           // typeof total === 'number'
-    .toBeType('items', 'object')           // typeof items === 'object'（数组也是 object）
+    .toBeType('total', 'number') // typeof total === 'number'
+    .toBeType('items', 'object') // typeof items === 'object'（数组也是 object）
     .toBeType('isLoading', 'boolean')
     .check();
-}
+};
 ```
 
 #### 长度断言
@@ -501,11 +509,11 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('CartService_abc123')
-    .toHaveLength('items', 3)              // 精确长度
-    .toHaveLengthGt('items', 0)            // 非空
-    .toHaveLengthLte('items', 10)          // 不超过 10
+    .toHaveLength('items', 3) // 精确长度
+    .toHaveLengthGt('items', 0) // 非空
+    .toHaveLengthLte('items', 10) // 不超过 10
     .check();
-}
+};
 ```
 
 #### 对象键与子集匹配
@@ -515,11 +523,11 @@ async () => {
   const handle = window.__RS_ROOT_CONTAINER__;
   return handle
     .expect('UserService_xyz99')
-    .toHaveKeys('currentUser', ['id', 'name', 'email'])  // 包含所有指定 key
-    .toMatchObject('currentUser', { role: 'admin', active: true })  // 浅层子集
-    .toDeepEqual('config', { theme: 'dark', lang: 'zh' })  // 深比较
+    .toHaveKeys('currentUser', ['id', 'name', 'email']) // 包含所有指定 key
+    .toMatchObject('currentUser', { role: 'admin', active: true }) // 浅层子集
+    .toDeepEqual('config', { theme: 'dark', lang: 'zh' }) // 深比较
     .check();
-}
+};
 ```
 
 #### 数组元素断言（some / every）
@@ -527,14 +535,16 @@ async () => {
 ```js
 () => {
   const handle = window.__RS_ROOT_CONTAINER__;
-  return handle
-    .expect('CartService_abc123')
-    // 至少一个商品价格 > 100
-    .toHaveSome('items', { path: 'price', op: 'gt', expected: 100 })
-    // 所有商品数量 >= 1
-    .toHaveEvery('items', { path: 'quantity', op: 'gte', expected: 1 })
-    .check();
-}
+  return (
+    handle
+      .expect('CartService_abc123')
+      // 至少一个商品价格 > 100
+      .toHaveSome('items', { path: 'price', op: 'gt', expected: 100 })
+      // 所有商品数量 >= 1
+      .toHaveEvery('items', { path: 'quantity', op: 'gte', expected: 1 })
+      .check()
+  );
+};
 ```
 
 #### 带自定义错误信息
@@ -547,7 +557,7 @@ async () => {
     .toBe('items.length', 3, '购物车应有 3 个商品')
     .toExist('currentUser', '用户未登录')
     .check();
-}
+};
 ```
 
 ---
@@ -585,7 +595,7 @@ rsExpect(cartService, '购物车加购验证')
     .toBeGreaterThan('total', 0)
     .run();
   return { passed: result.passed, summary: result.summary };
-}
+};
 ```
 
 ---
@@ -603,10 +613,7 @@ async () => {
   if (!entry) return { error: 'CartService 未找到' };
 
   // 1. 记录操作前状态
-  const before = handle
-    .expect(entry.instanceId)
-    .toBe('items.length', 0)
-    .run();
+  const before = handle.expect(entry.instanceId).toBe('items.length', 0).run();
 
   // 2. 触发操作
   await entry.instance.addItem({ id: 'test-1', name: 'Test Product', price: 9.9 });
@@ -622,7 +629,7 @@ async () => {
     before: { passed: before.passed, summary: before.summary },
     after: { passed: after.passed, summary: after.summary },
   };
-}
+};
 ```
 
 ---
@@ -630,6 +637,7 @@ async () => {
 ## 常见问题
 
 ### `window.__RS_ROOT_CONTAINER__` 为 undefined？
+
 - 页面未完成加载，稍等后重试
 
 ### `getService` 找不到 Service？

@@ -36,9 +36,10 @@ function walkCollect(container: Container, containerName: string, out: ServiceRe
     out.push({
       instanceId: svc.instanceId ?? '',
       containerName,
-      identifierLabel: identifierLabelOf(
-        (definition as { identifier?: unknown }).identifier
-      ) || svc.constructor?.name || 'Anonymous',
+      identifierLabel:
+        identifierLabelOf((definition as { identifier?: unknown }).identifier) ||
+        svc.constructor?.name ||
+        'Anonymous',
       instance,
     });
   }
@@ -57,9 +58,9 @@ function listServices(): ServiceRef[] {
 function findService(payload: { instanceId?: string; identifierLabel?: string }): ServiceRef {
   const services = listServices();
   const found = payload.instanceId
-    ? services.find((s) => s.instanceId === payload.instanceId)
+    ? services.find(s => s.instanceId === payload.instanceId)
     : payload.identifierLabel
-      ? services.find((s) => s.identifierLabel === payload.identifierLabel)
+      ? services.find(s => s.identifierLabel === payload.identifierLabel)
       : undefined;
   if (!found) {
     throw new Error(
@@ -88,8 +89,12 @@ export function createRabHandlers(): Record<string, DebugHandler> {
         identifierLabel,
       })),
 
-    'rab.getServiceState': async (payload) => {
-      const p = (payload ?? {}) as { instanceId?: string; identifierLabel?: string; paths?: string[] };
+    'rab.getServiceState': async payload => {
+      const p = (payload ?? {}) as {
+        instanceId?: string;
+        identifierLabel?: string;
+        paths?: string[];
+      };
       const ref = findService(p);
       if (p.paths && p.paths.length > 0) {
         const out: Record<string, unknown> = {};
@@ -103,20 +108,23 @@ export function createRabHandlers(): Record<string, DebugHandler> {
       return serialized.data;
     },
 
-    'rab.callServiceMethod': async (payload) => {
+    'rab.callServiceMethod': async payload => {
       const p = (payload ?? {}) as { instanceId: string; method: string; args?: unknown[] };
       const ref = findService({ instanceId: p.instanceId });
       const method = (ref.instance as unknown as Record<string, unknown>)[p.method];
       if (typeof method !== 'function') {
         throw new Error(`method not found: ${p.method}`);
       }
-      const raw = await (method as (...args: unknown[]) => unknown).apply(ref.instance, p.args ?? []);
+      const raw = await (method as (...args: unknown[]) => unknown).apply(
+        ref.instance,
+        p.args ?? []
+      );
       const serialized = safeSerialize(raw);
       if (!serialized.ok) throw new Error(serialized.error.message);
       return serialized.data;
     },
 
-    'rab.expect': async (payload) => {
+    'rab.expect': async payload => {
       const p = (payload ?? {}) as {
         instanceId: string;
         description?: string;
@@ -129,7 +137,7 @@ export function createRabHandlers(): Record<string, DebugHandler> {
         description: p.description,
         passed: result.passed,
         summary: result.summary,
-        results: result.results.map((r) => ({
+        results: result.results.map(r => ({
           path: r.path,
           op: r.op,
           passed: r.passed,

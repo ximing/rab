@@ -34,12 +34,12 @@
  * ```
  */
 
-import { useMemo } from "react";
+import { useMemo } from 'react';
 
-import { useDomainContext } from "./domain-context";
+import { useDomainContext } from './domain-context';
 
 // EventEmitter 类型从 Container 的 events 属性推导
-type EventEmitter = ReturnType<typeof useDomainContext>["container"]["events"];
+type EventEmitter = ReturnType<typeof useDomainContext>['container']['events'];
 
 /**
  * 获取当前容器的事件发射器

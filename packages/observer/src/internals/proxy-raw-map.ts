@@ -1,4 +1,4 @@
-import { ObservableOptions } from "./types";
+import { ObservableOptions } from './types';
 
 /*
  * 反向映射 (proxy -> raw) 无歧义, deep 与 shadow 两种代理可以共用:

@@ -436,7 +436,11 @@ describe('op: deepEq', () => {
   it('deepEq 直接返回原始值（例外）', () => {
     const obj = { offset: 0 };
     const inst = makeInstance({ paging: obj });
-    const result = executeAssertion(inst, { path: 'paging', op: 'deepEq', expected: { offset: 0 } });
+    const result = executeAssertion(inst, {
+      path: 'paging',
+      op: 'deepEq',
+      expected: { offset: 0 },
+    });
     expect(result.actual).toEqual({ offset: 0 });
   });
 });
@@ -536,7 +540,11 @@ describe('op: matchObject', () => {
 
   it('actual 始终返回 "[Object]"', () => {
     const inst = makeInstance({ paging: { offset: 0, limit: 10 } });
-    const result = executeAssertion(inst, { path: 'paging', op: 'matchObject', expected: { offset: 0 } });
+    const result = executeAssertion(inst, {
+      path: 'paging',
+      op: 'matchObject',
+      expected: { offset: 0 },
+    });
     expect(result.actual).toBe('[Object]');
   });
 });
@@ -546,11 +554,7 @@ describe('op: matchObject', () => {
 describe('op: some', () => {
   it('至少一个元素满足子断言时通过', () => {
     const inst = makeInstance({
-      list: [
-        { status: 'done' },
-        { status: 'loading' },
-        { status: 'error' },
-      ],
+      list: [{ status: 'done' }, { status: 'loading' }, { status: 'error' }],
     });
     expectPass(inst, {
       path: 'list',
@@ -561,10 +565,7 @@ describe('op: some', () => {
 
   it('所有元素都不满足时失败', () => {
     const inst = makeInstance({
-      list: [
-        { status: 'done' },
-        { status: 'done' },
-      ],
+      list: [{ status: 'done' }, { status: 'done' }],
     });
     expectFail(inst, {
       path: 'list',
@@ -600,7 +601,11 @@ describe('op: some', () => {
       path: 'list',
       op: 'some',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expected: { path: 'items', op: 'every' as any, expected: { path: 'x', op: 'eq', expected: 1 } },
+      expected: {
+        path: 'items',
+        op: 'every' as any,
+        expected: { path: 'x', op: 'eq', expected: 1 },
+      },
     });
     expect(result.passed).toBe(false);
   });
@@ -611,11 +616,7 @@ describe('op: some', () => {
 describe('op: every', () => {
   it('所有元素满足子断言时通过', () => {
     const inst = makeInstance({
-      list: [
-        { status: 'done' },
-        { status: 'done' },
-        { status: 'done' },
-      ],
+      list: [{ status: 'done' }, { status: 'done' }, { status: 'done' }],
     });
     expectPass(inst, {
       path: 'list',
@@ -626,10 +627,7 @@ describe('op: every', () => {
 
   it('有一个元素不满足时失败', () => {
     const inst = makeInstance({
-      list: [
-        { status: 'done' },
-        { status: 'loading' },
-      ],
+      list: [{ status: 'done' }, { status: 'loading' }],
     });
     expectFail(inst, {
       path: 'list',

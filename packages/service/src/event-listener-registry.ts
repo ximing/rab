@@ -1,8 +1,8 @@
-import { raw } from "@rabjs/observer";
-import EventEmitter from "eventemitter3";
+import { raw } from '@rabjs/observer';
+import EventEmitter from 'eventemitter3';
 
-import { EventSystem, type EventScope } from "./event";
-import { Container } from "./ioc";
+import { EventSystem, type EventScope } from './event';
+import { Container } from './ioc';
 
 export interface EventListenerRecord {
   eventName: string;
@@ -11,7 +11,7 @@ export interface EventListenerRecord {
   originalHandler: (...args: any[]) => void;
   subscribedHandler: (...args: any[]) => void;
   once: boolean;
-  source: "manual" | "decorator";
+  source: 'manual' | 'decorator';
   active: boolean;
 }
 
@@ -21,7 +21,7 @@ export interface BindTrackedEventListenerOptions {
   scope: EventScope;
   once: boolean;
   container?: Container;
-  source: "manual" | "decorator";
+  source: 'manual' | 'decorator';
 }
 
 export interface UnbindTrackedEventListenerOptions {
@@ -31,7 +31,7 @@ export interface UnbindTrackedEventListenerOptions {
   limit?: number;
 }
 
-const EVENT_LISTENER_REGISTRY = Symbol("rs-service:event-listener-registry");
+const EVENT_LISTENER_REGISTRY = Symbol('rs-service:event-listener-registry');
 
 type RegistryCarrier = {
   [EVENT_LISTENER_REGISTRY]?: EventListenerRecord[];
@@ -72,10 +72,7 @@ function removeRecord(service: object, record: EventListenerRecord): void {
   }
 }
 
-function resolveContainer(
-  service: object,
-  container?: Container
-): Container | undefined {
+function resolveContainer(service: object, container?: Container): Container | undefined {
   if (container) {
     return normalizeTarget(container);
   }
@@ -117,9 +114,7 @@ export function bindTrackedEventListener(
   options: BindTrackedEventListenerOptions
 ): EventListenerRecord {
   const { eventName, handler, scope, once, container, source } = options;
-  const originalHandler = normalizeTarget(
-    handler as unknown as object
-  ) as (...args: any[]) => void;
+  const originalHandler = normalizeTarget(handler as unknown as object) as (...args: any[]) => void;
   const emitter = normalizeTarget(
     EventSystem.getEmitter(scope, resolveContainer(service, container))
   ) as EventEmitter;
@@ -149,10 +144,7 @@ export function bindTrackedEventListener(
   return record;
 }
 
-export function unbindTrackedEventListener(
-  service: object,
-  record: EventListenerRecord
-): boolean {
+export function unbindTrackedEventListener(service: object, record: EventListenerRecord): boolean {
   const normalizedRecord = normalizeTarget(record as unknown as object) as EventListenerRecord;
 
   if (!normalizedRecord.active) {
@@ -161,10 +153,7 @@ export function unbindTrackedEventListener(
   }
 
   normalizedRecord.active = false;
-  normalizedRecord.emitter.off(
-    normalizedRecord.eventName,
-    normalizedRecord.subscribedHandler
-  );
+  normalizedRecord.emitter.off(normalizedRecord.eventName, normalizedRecord.subscribedHandler);
   removeRecord(service, normalizedRecord);
   return true;
 }
@@ -182,12 +171,14 @@ export function unbindTrackedEventListeners(
   const recordsToRemove: EventListenerRecord[] = [];
 
   for (const record of registry) {
-    if (!matchesRecord(record, {
-      ...options,
-      handler: options.handler
-        ? (normalizeTarget(options.handler as unknown as object) as (...args: any[]) => void)
-        : undefined,
-    })) {
+    if (
+      !matchesRecord(record, {
+        ...options,
+        handler: options.handler
+          ? (normalizeTarget(options.handler as unknown as object) as (...args: any[]) => void)
+          : undefined,
+      })
+    ) {
       continue;
     }
 
@@ -220,9 +211,7 @@ export function cleanupTrackedEventListeners(service: object): void {
   }
 }
 
-export function getTrackedEventListenerRecords(
-  service: object
-): EventListenerRecord[] {
+export function getTrackedEventListenerRecords(service: object): EventListenerRecord[] {
   const registry = getRegistryCarrier(service)[EVENT_LISTENER_REGISTRY];
-  return registry ? registry.filter((record) => record.active) : [];
+  return registry ? registry.filter(record => record.active) : [];
 }

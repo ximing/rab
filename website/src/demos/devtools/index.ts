@@ -1,4 +1,4 @@
-import DevtoolsDemo from "./DevtoolsDemo";
+import DevtoolsDemo from './DevtoolsDemo';
 
 export default DevtoolsDemo;
 

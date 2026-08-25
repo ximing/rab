@@ -68,9 +68,9 @@ export default bindServices(UserListContent, [UserService]);
 
 ```typescript
 service.$model.methodName = {
-  loading: boolean,  // 是否正在加载
-  error: Error | null // 错误对象（如果有）
-}
+  loading: boolean, // 是否正在加载
+  error: Error | null, // 错误对象（如果有）
+};
 ```
 
 ## 常见模式

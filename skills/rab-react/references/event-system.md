@@ -17,13 +17,13 @@ RSJS 提供了强大的事件系统用于 Service 之间的通信，支持容器
 ### 容器级别事件（默认）
 
 ```typescript
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 // 发送方
 export class ChatService extends Service {
   sendMessage(text: string) {
     // 发送容器级别事件（默认）
-    this.emit("chat:message", { text });
+    this.emit('chat:message', { text });
   }
 }
 
@@ -35,7 +35,7 @@ export class NotificationService extends Service {
     super();
 
     // 监听容器级别事件（默认）
-    this.on("chat:message", (data) => {
+    this.on('chat:message', data => {
       this.notifications.push(data.text);
     });
   }
@@ -52,7 +52,7 @@ export default bindServices(ChatPage, [ChatService, NotificationService]);
 export class PageAService extends Service {
   sendMessage(message: string) {
     // 发送全局事件
-    this.emit("app:message", { from: "PageA", text: message }, "global");
+    this.emit('app:message', { from: 'PageA', text: message }, 'global');
   }
 }
 
@@ -65,11 +65,11 @@ export class PageBService extends Service {
 
     // 监听全局事件
     this.on(
-      "app:message",
+      'app:message',
       (data: { from: string; text: string }) => {
         this.receivedMessages.push(`${data.from}: ${data.text}`);
       },
-      "global"
+      'global'
     );
   }
 }
@@ -87,24 +87,24 @@ class MyService extends Service {
     super();
 
     // 监听容器事件
-    this.on("event", handler);
+    this.on('event', handler);
 
     // 监听一次（自动移除）
-    this.once("event", handler);
+    this.once('event', handler);
 
     // 监听全局事件
-    this.on("event", handler, "global");
+    this.on('event', handler, 'global');
   }
 
   sendEvent() {
     // 发送容器事件
-    this.emit("event", data);
+    this.emit('event', data);
 
     // 发送全局事件
-    this.emit("event", data, "global");
+    this.emit('event', data, 'global');
 
     // 移除监听器
-    this.off("event", handler);
+    this.off('event', handler);
   }
 }
 ```
@@ -112,19 +112,19 @@ class MyService extends Service {
 ## 使用 @On 装饰器
 
 ```typescript
-import { Service, On } from "@rabjs/react";
+import { Service, On } from '@rabjs/react';
 
 export class NotificationService extends Service {
   notifications: string[] = [];
 
   // 使用装饰器自动监听事件
-  @On("chat:message")
+  @On('chat:message')
   handleMessage(data: { text: string }) {
     this.notifications.push(data.text);
   }
 
   // 监听全局事件
-  @On("app:message", { scope: "global" })
+  @On('app:message', { scope: 'global' })
   handleGlobalMessage(data: { text: string }) {
     this.notifications.push(data.text);
   }
@@ -141,12 +141,12 @@ export class UserDomainService extends Service {
   login(user: any) {
     this.currentUser = user;
     // 发送全局事件通知其他领域
-    this.emit("user:logged-in", user, "global");
+    this.emit('user:logged-in', user, 'global');
   }
 
   logout() {
     this.currentUser = null;
-    this.emit("user:logged-out", undefined, "global");
+    this.emit('user:logged-out', undefined, 'global');
   }
 }
 
@@ -159,20 +159,20 @@ export class CartDomainService extends Service {
 
     // 监听用户登录事件
     this.on(
-      "user:logged-in",
+      'user:logged-in',
       (user: any) => {
         this.loadCartForUser(user.id);
       },
-      "global"
+      'global'
     );
 
     // 监听用户登出事件
     this.on(
-      "user:logged-out",
+      'user:logged-out',
       () => {
         this.clearCart();
       },
-      "global"
+      'global'
     );
   }
 
@@ -193,19 +193,19 @@ export class NotificationDomainService extends Service {
     super();
 
     this.on(
-      "user:logged-in",
+      'user:logged-in',
       (user: any) => {
         this.notifications.push(`欢迎回来，${user.name}！`);
       },
-      "global"
+      'global'
     );
 
     this.on(
-      "user:logged-out",
+      'user:logged-out',
       () => {
-        this.notifications.push("您已安全退出");
+        this.notifications.push('您已安全退出');
       },
-      "global"
+      'global'
     );
   }
 }
@@ -220,15 +220,15 @@ export class NotificationDomainService extends Service {
 class AuthService extends Service {
   login() {
     // ...
-    this.emit("auth:login-success", user);
+    this.emit('auth:login-success', user);
   }
 }
 
 class AnalyticsService extends Service {
   constructor() {
     super();
-    this.on("auth:login-success", (user) => {
-      this.track("user_login", { userId: user.id });
+    this.on('auth:login-success', user => {
+      this.track('user_login', { userId: user.id });
     });
   }
 }
@@ -241,7 +241,7 @@ class AuthService extends Service {
 
   login() {
     // ...
-    this.analytics.track("user_login", { userId: user.id });
+    this.analytics.track('user_login', { userId: user.id });
   }
 }
 ```

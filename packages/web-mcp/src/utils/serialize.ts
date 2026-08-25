@@ -108,10 +108,7 @@ function toStateSummary(value: unknown): unknown {
  * @param keys 可选，指定要读取的属性名，不传则返回全部
  * @returns 安全状态快照（可 JSON 序列化）
  */
-export function serializeStateSafe(
-  instance: Service,
-  keys?: string[]
-): Record<string, unknown> {
+export function serializeStateSafe(instance: Service, keys?: string[]): Record<string, unknown> {
   const allKeys = keys ?? getStateKeys(instance);
   const result: Record<string, unknown> = {};
 
@@ -137,10 +134,7 @@ export function serializeStateSafe(
  * @param keys 可选，指定要读取的属性名，不传则返回全部
  * @returns 状态快照（可 JSON 序列化）
  */
-export function serializeState(
-  instance: Service,
-  keys?: string[]
-): Record<string, unknown> {
+export function serializeState(instance: Service, keys?: string[]): Record<string, unknown> {
   const allKeys = keys ?? getStateKeys(instance);
   const result: Record<string, unknown> = {};
 

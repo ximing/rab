@@ -47,10 +47,7 @@ export interface ThrottleOptions {
  * }
  * ```
  */
-export function Throttle(
-  wait: number,
-  options?: Omit<ThrottleOptions, "wait">
-): MethodDecorator {
+export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>): MethodDecorator {
   return function (
     target: any,
     propertyKey: string | symbol,
@@ -58,10 +55,8 @@ export function Throttle(
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    if (typeof originalMethod !== "function") {
-      throw new TypeError(
-        `@Throttle 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`
-      );
+    if (typeof originalMethod !== 'function') {
+      throw new TypeError(`@Throttle 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`);
     }
 
     const leading = options?.leading ?? true;
@@ -179,12 +174,9 @@ export function Throttle(
  * }
  * ```
  */
-export function cancelThrottle(
-  instance: any,
-  propertyKey: string | symbol
-): void {
+export function cancelThrottle(instance: any, propertyKey: string | symbol): void {
   const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === "function") {
+  if (typeof instance[cleanupMethodName] === 'function') {
     instance[cleanupMethodName]();
   }
 }
@@ -220,7 +212,7 @@ export function cleanupAllThrottles(instance: any): void {
 
   for (const propertyName of propertyNames) {
     const cleanupMethodName = `__cleanup_throttle_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === "function") {
+    if (typeof instance[cleanupMethodName] === 'function') {
       instance[cleanupMethodName]();
     }
   }

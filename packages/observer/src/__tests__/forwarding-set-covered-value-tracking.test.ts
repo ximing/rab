@@ -16,7 +16,7 @@
  * /tmp/gg2b-reg-sequential-writes.ts, /tmp/gg2b-reg-shadow-seq.ts,
  * /tmp/gg2b-reg-accessor.ts, /tmp/gg2b-attack-root-on-middle.ts
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 type Make = (o: object) => Record<PropertyKey, unknown>;
 
@@ -37,14 +37,14 @@ function setupChain(
   makeMiddle: Make,
   makeChild: Make,
   after: (middle: Record<PropertyKey, unknown>) => void,
-  writeStart: "child" | "middle" = "child"
+  writeStart: 'child' | 'middle' = 'child'
 ) {
   const middle = makeMiddle({ side: 0 });
   const gpRaw: Record<PropertyKey, unknown> = {};
-  Object.defineProperty(gpRaw, "k", {
+  Object.defineProperty(gpRaw, 'k', {
     configurable: true,
     set(_v: number) {
-      Object.defineProperty(middle, "k", dataDescriptor(3));
+      Object.defineProperty(middle, 'k', dataDescriptor(3));
       // 嵌套普通赋值: normal-path 落盘通知 3→7,
       // markNotifiedInFlightFrames 把外层 middle 帧与链根帧标记 covered
       middle.k = 7;
@@ -67,7 +67,7 @@ function setupChain(
     childSeen.push(child.k);
   });
 
-  if (writeStart === "child") {
+  if (writeStart === 'child') {
     child.k = 5;
   } else {
     middle.k = 5;
@@ -75,15 +75,11 @@ function setupChain(
   return { middle, child, seen, midCalls, childSeen };
 }
 
-describe("转发帧 covered 值追踪: 嵌套 set 通知后的同 key 新落盘不得丢通知", () => {
-  test("base: 嵌套 set (→7) 后同 key defineProperty(9), reaction 观察到 7→9", () => {
-    const { middle, seen, midCalls, childSeen } = setupChain(
-      observable,
-      observable,
-      (m) => {
-        Object.defineProperty(m, "k", dataDescriptor(9));
-      }
-    );
+describe('转发帧 covered 值追踪: 嵌套 set 通知后的同 key 新落盘不得丢通知', () => {
+  test('base: 嵌套 set (→7) 后同 key defineProperty(9), reaction 观察到 7→9', () => {
+    const { middle, seen, midCalls, childSeen } = setupChain(observable, observable, m => {
+      Object.defineProperty(m, 'k', dataDescriptor(9));
+    });
     expect(middle.k).toBe(9);
     expect(seen).toEqual([undefined, 7, 9]);
     expect(midCalls).toBe(3);
@@ -92,118 +88,98 @@ describe("转发帧 covered 值追踪: 嵌套 set 通知后的同 key 新落盘�
     expect(childSeen[childSeen.length - 1]).toBe(9);
   });
 
-  test("shadow 中层: 同场景不丢通知", () => {
-    const { middle, seen } = setupChain(
-      shadowObservable,
-      observable,
-      (m) => {
-        Object.defineProperty(m, "k", dataDescriptor(8));
-      }
-    );
+  test('shadow 中层: 同场景不丢通知', () => {
+    const { middle, seen } = setupChain(shadowObservable, observable, m => {
+      Object.defineProperty(m, 'k', dataDescriptor(8));
+    });
     expect(middle.k).toBe(8);
     expect(seen).toEqual([undefined, 7, 8]);
   });
 
-  test("混合链 (shadow child + base middle): 同场景不丢通知", () => {
-    const { middle, seen } = setupChain(
-      observable,
-      shadowObservable,
-      (m) => {
-        Object.defineProperty(m, "k", dataDescriptor(9));
-      }
-    );
+  test('混合链 (shadow child + base middle): 同场景不丢通知', () => {
+    const { middle, seen } = setupChain(observable, shadowObservable, m => {
+      Object.defineProperty(m, 'k', dataDescriptor(9));
+    });
     expect(middle.k).toBe(9);
     expect(seen).toEqual([undefined, 7, 9]);
   });
 
-  test("accessor 重定义: 嵌套 set (→7) 后 defineProperty(getter→9), 读取语义变化必须通知", () => {
-    const { middle, seen } = setupChain(
-      observable,
-      observable,
-      (m) => {
-        Object.defineProperty(m, "k", {
-          get() {
-            return 9;
-          },
-          configurable: true,
-          enumerable: true,
-        });
-      }
-    );
+  test('accessor 重定义: 嵌套 set (→7) 后 defineProperty(getter→9), 读取语义变化必须通知', () => {
+    const { middle, seen } = setupChain(observable, observable, m => {
+      Object.defineProperty(m, 'k', {
+        get() {
+          return 9;
+        },
+        configurable: true,
+        enumerable: true,
+      });
+    });
     expect(middle.k).toBe(9);
     expect(seen).toEqual([undefined, 7, 9]);
   });
 
-  test("对照: covered 后同值 defineProperty (7→7) 仍只通知一次 (G2b 语义保持)", () => {
-    const { middle, seen, midCalls } = setupChain(
-      observable,
-      observable,
-      (m) => {
-        Object.defineProperty(m, "k", dataDescriptor(7));
-      }
-    );
+  test('对照: covered 后同值 defineProperty (7→7) 仍只通知一次 (G2b 语义保持)', () => {
+    const { middle, seen, midCalls } = setupChain(observable, observable, m => {
+      Object.defineProperty(m, 'k', dataDescriptor(7));
+    });
     expect(middle.k).toBe(7);
     expect(seen).toEqual([undefined, 7]);
     expect(midCalls).toBe(2);
   });
 
-  test("对照: 嵌套 set 后再一次普通嵌套 set (→9) 逐次通知 (既有行为保持)", () => {
-    const { middle, seen } = setupChain(
-      observable,
-      observable,
-      (m) => {
-        m.k = 9;
-      }
-    );
+  test('对照: 嵌套 set 后再一次普通嵌套 set (→9) 逐次通知 (既有行为保持)', () => {
+    const { middle, seen } = setupChain(observable, observable, m => {
+      m.k = 9;
+    });
     expect(middle.k).toBe(9);
     expect(seen).toEqual([undefined, 7, 9]);
   });
 });
 
-describe("转发帧 covered 值追踪: 根帧 landed 分支 (写入起点在被改层自身)", () => {
-  test("base: 写入起点是 middle 自身, 嵌套 set 通知后 landed-add 不得再发一次 (单通知)", () => {
+describe('转发帧 covered 值追踪: 根帧 landed 分支 (写入起点在被改层自身)', () => {
+  test('base: 写入起点是 middle 自身, 嵌套 set 通知后 landed-add 不得再发一次 (单通知)', () => {
     const { middle, seen, midCalls } = setupChain(
       observable,
       observable,
       () => {
         /* covered 后没有新落盘 */
       },
-      "middle"
+      'middle'
     );
     expect(middle.k).toBe(7);
     expect(seen).toEqual([undefined, 7]);
     expect(midCalls).toBe(2);
   });
 
-  test("shadow: 写入起点是 middle 自身同样单通知", () => {
+  test('shadow: 写入起点是 middle 自身同样单通知', () => {
     const { middle, seen, midCalls } = setupChain(
       shadowObservable,
       shadowObservable,
       () => {
         /* covered 后没有新落盘 */
       },
-      "middle"
+      'middle'
     );
     expect(middle.k).toBe(7);
     expect(seen).toEqual([undefined, 7]);
     expect(midCalls).toBe(2);
   });
 
-  test("base: 写入起点是 middle 自身 + covered 后 defineProperty(9), 差值必须通知", () => {
+  test('base: 写入起点是 middle 自身 + covered 后 defineProperty(9), 差值必须通知', () => {
     const { middle, seen } = setupChain(
       observable,
       observable,
-      (m) => {
-        Object.defineProperty(m, "k", dataDescriptor(9));
+      m => {
+        Object.defineProperty(m, 'k', dataDescriptor(9));
       },
-      "middle"
+      'middle'
     );
     expect(middle.k).toBe(9);
     expect(seen).toEqual([undefined, 7, 9]);
   });
 });
 
-describe("转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化的迭代通知", () => {
+describe('转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化的迭代通知', () => {
   // 窗口内新增到 middle 的 key 'k' 改变了键集合。covered 机制抑制的是
   // {target,key} 依赖的重复通知, 但 ownKeys (Object.keys) 观察者的依赖挂在
   // ITERATION_KEY 桶上, 嵌套写入的 "set" 通知不会触发它 —— 若 covered
@@ -211,10 +187,10 @@ describe("转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化
   function setupIterObserver(makeMiddle: Make) {
     const middle = makeMiddle({ side: 0 });
     const gpRaw: Record<PropertyKey, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(_v: number) {
-        Object.defineProperty(middle, "k", dataDescriptor(3));
+        Object.defineProperty(middle, 'k', dataDescriptor(3));
         middle.k = 7;
       },
     });
@@ -227,7 +203,7 @@ describe("转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化
     return { middle, keyCountRef: () => keyCount };
   }
 
-  test("base: 写入起点是 middle 自身, Object.keys 观察者看到新键 (根帧 landed 分支)", () => {
+  test('base: 写入起点是 middle 自身, Object.keys 观察者看到新键 (根帧 landed 分支)', () => {
     const { middle, keyCountRef } = setupIterObserver(observable);
     expect(keyCountRef()).toBe(1);
     middle.k = 5;
@@ -235,7 +211,7 @@ describe("转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化
     expect(keyCountRef()).toBe(2);
   });
 
-  test("shadow: 同场景 Object.keys 观察者看到新键", () => {
+  test('shadow: 同场景 Object.keys 观察者看到新键', () => {
     const { middle, keyCountRef } = setupIterObserver(shadowObservable);
     expect(keyCountRef()).toBe(1);
     middle.k = 5;
@@ -243,13 +219,13 @@ describe("转发帧 covered 值追踪: covered 抑制不得吞掉键集合变化
     expect(keyCountRef()).toBe(2);
   });
 
-  test("base: 写入起点是 child (mismatch 分支), Object.keys 观察者同样看到新键", () => {
+  test('base: 写入起点是 child (mismatch 分支), Object.keys 观察者同样看到新键', () => {
     const middle: Record<string, unknown> = observable({ side: 0 });
     const gpRaw: Record<PropertyKey, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(_v: number) {
-        Object.defineProperty(middle, "k", dataDescriptor(3));
+        Object.defineProperty(middle, 'k', dataDescriptor(3));
         middle.k = 7;
       },
     });

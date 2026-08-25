@@ -17,7 +17,7 @@ function serialize(value: unknown, depth: number, seen: Set<object>): unknown {
   seen.add(value as object);
   try {
     if (Array.isArray(value)) {
-      return value.map((item) => serialize(item, depth + 1, seen));
+      return value.map(item => serialize(item, depth + 1, seen));
     }
     if (isPlainObject(value)) {
       const out: Record<string, unknown> = {};

@@ -29,16 +29,16 @@
  */
 
 // Context
-export { DomainContext } from "./domain-context";
-export { RSRoot } from "./root-context";
-export { RSStrict, StrictContext } from "./strict-context";
+export { DomainContext } from './domain-context';
+export { RSRoot } from './root-context';
+export { RSStrict, StrictContext } from './strict-context';
 
-export { bindServices } from "./bind";
+export { bindServices } from './bind';
 
 // Hooks
-export { useService, useContainer } from "./use-service";
-export { useObserverService, useViewService } from "./use-observer-service";
-export { useContainerEvents } from "./use-container-events";
+export { useService, useContainer } from './use-service';
+export { useObserverService, useViewService } from './use-observer-service';
+export { useContainerEvents } from './use-container-events';
 
 // 类型
 export type {
@@ -50,6 +50,4 @@ export type {
   ProviderResult,
   DomainComponent,
   DomainContextValue,
-} from "./types";
-
-
+} from './types';

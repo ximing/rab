@@ -5,11 +5,11 @@
  * useService 会按照 Provider 作用域链向上查找服务
  */
 
-import { getGlobalContainer } from "@rabjs/service";
-import { createContext, useContext, useRef } from "react";
+import { getGlobalContainer } from '@rabjs/service';
+import { createContext, useContext, useRef } from 'react';
 
-import { StrictContext } from "./strict-context";
-import type { DomainContextValue } from "./types";
+import { StrictContext } from './strict-context';
+import type { DomainContextValue } from './types';
 
 /**
  * Domain Context
@@ -19,7 +19,7 @@ import type { DomainContextValue } from "./types";
  */
 export const DomainContext = createContext<DomainContextValue | null>(null);
 
-DomainContext.displayName = "RSDomainContext";
+DomainContext.displayName = 'RSDomainContext';
 
 export function useDomainContext(): DomainContextValue {
   // 找到最近的
@@ -31,7 +31,7 @@ export function useDomainContext(): DomainContextValue {
     if (strictContext) {
       throw new Error(`useService must be called within a bindServices`);
     } else {
-      console.info("[WARN] 兼容模式，使用全局GlobalContainer");
+      console.info('[WARN] 兼容模式，使用全局GlobalContainer');
       contextRef.current = { container: getGlobalContainer() };
     }
   }

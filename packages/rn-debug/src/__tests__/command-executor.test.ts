@@ -5,7 +5,7 @@ function setup() {
   const sent: ResultMessage[] = [];
   const executor = createCommandExecutor({
     handlers: {
-      echo: async (payload) => payload,
+      echo: async payload => payload,
       fail: () => {
         throw new Error('boom');
       },
@@ -49,7 +49,7 @@ describe('CommandExecutor', () => {
     const executor = createCommandExecutor({
       handlers: {
         slow: async () => {
-          await new Promise((r) => setTimeout(r, 80));
+          await new Promise(r => setTimeout(r, 80));
           order.push('slow-done');
         },
         fast: async () => {
@@ -72,7 +72,7 @@ describe('CommandExecutor', () => {
       handlers: { weird: () => cyc },
     });
     const sent: ResultMessage[] = [];
-    await executor.execute(cmd('4', 'weird'), (m) => sent.push(m));
+    await executor.execute(cmd('4', 'weird'), m => sent.push(m));
     expect(sent[0].status).toBe('ok'); // 循环引用被切断后可序列化
   });
 
@@ -86,7 +86,7 @@ describe('CommandExecutor', () => {
       }
       sent.push(msg);
     };
-    const executor = createCommandExecutor({ handlers: { echo: async (p) => p } });
+    const executor = createCommandExecutor({ handlers: { echo: async p => p } });
 
     const p1 = executor.execute(cmd('1', 'echo', { a: 1 }), send);
     const p2 = executor.execute(cmd('2', 'echo', { b: 2 }), send);
@@ -99,12 +99,12 @@ describe('CommandExecutor', () => {
 
   it('未知 type 分支 send 抛错同样不毒化队列', async () => {
     const sent: ResultMessage[] = [];
-    const executor = createCommandExecutor({ handlers: { echo: async (p) => p } });
+    const executor = createCommandExecutor({ handlers: { echo: async p => p } });
 
     const p1 = executor.execute(cmd('1', 'nope'), () => {
       throw new Error('WebSocket is not open');
     });
-    const p2 = executor.execute(cmd('2', 'echo', { ok: true }), (m) => sent.push(m));
+    const p2 = executor.execute(cmd('2', 'echo', { ok: true }), m => sent.push(m));
     await Promise.all([p1, p2]);
 
     expect(sent).toHaveLength(1);

@@ -20,7 +20,7 @@
  *
  * 复现脚本: /tmp/rev-g2b-reentry-matrix.ts, /tmp/rev-g2b-lost.ts
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
 type Make = (o: object) => Record<PropertyKey, unknown>;
 
@@ -40,15 +40,15 @@ const dataDescriptor = (v: unknown): PropertyDescriptor => ({
 function setupReentryChain(
   makeMiddle: Make,
   makeChild: Make,
-  writeStart: "child" | "middle",
+  writeStart: 'child' | 'middle',
   after?: (middle: Record<PropertyKey, unknown>) => void
 ) {
   const middle = makeMiddle({ side: 0 });
   const gpRaw: Record<PropertyKey, unknown> = {};
-  Object.defineProperty(gpRaw, "k", {
+  Object.defineProperty(gpRaw, 'k', {
     configurable: true,
     set(_v: number) {
-      Object.defineProperty(middle, "k", dataDescriptor(3));
+      Object.defineProperty(middle, 'k', dataDescriptor(3));
       // 嵌套通知 7 → 同步 reaction 重入写 9 → 本 trap 落盘分支的事后
       // markNotified(7) 不得把外层帧的 notifiedValue 从 9 覆写回 7
       middle.k = 7;
@@ -74,7 +74,7 @@ function setupReentryChain(
   });
 
   armed = true;
-  if (writeStart === "child") {
+  if (writeStart === 'child') {
     child.k = 5;
   } else {
     middle.k = 5;
@@ -82,20 +82,16 @@ function setupReentryChain(
   return { middle, child, midSeen };
 }
 
-describe("转发帧重入窗口: 重入写回不得让 notifiedValue 被覆写回旧值 (#3 双通知)", () => {
+describe('转发帧重入窗口: 重入写回不得让 notifiedValue 被覆写回旧值 (#3 双通知)', () => {
   test.each([
-    ["base/base", observable, observable],
-    ["shadow-mid/base-child", shadowObservable, observable],
-    ["base-mid/shadow-child", observable, shadowObservable],
-    ["shadow/shadow", shadowObservable, shadowObservable],
+    ['base/base', observable, observable],
+    ['shadow-mid/base-child', shadowObservable, observable],
+    ['base-mid/shadow-child', observable, shadowObservable],
+    ['shadow/shadow', shadowObservable, shadowObservable],
   ] as Array<[string, Make, Make]>)(
-    "%s: 写入起点 child, 嵌套通知 7 + 重入写 9 → 单通知语义 [undefined,7,9]",
+    '%s: 写入起点 child, 嵌套通知 7 + 重入写 9 → 单通知语义 [undefined,7,9]',
     (_label, makeMiddle, makeChild) => {
-      const { middle, midSeen } = setupReentryChain(
-        makeMiddle,
-        makeChild,
-        "child"
-      );
+      const { middle, midSeen } = setupReentryChain(makeMiddle, makeChild, 'child');
       expect(middle.k).toBe(9);
       // 重入写回的 9 已随嵌套 set 的同步 reaction 通知过;
       // 外层 mismatch 分支不得再按 (9 vs 被覆写的 7) 补发第二次 9
@@ -104,39 +100,30 @@ describe("转发帧重入窗口: 重入写回不得让 notifiedValue 被覆写�
   );
 
   test.each([
-    ["base", observable, observable],
-    ["shadow", shadowObservable, shadowObservable],
+    ['base', observable, observable],
+    ['shadow', shadowObservable, shadowObservable],
   ] as Array<[string, Make, Make]>)(
-    "%s: 写入起点 middle (根帧 landed 分支), 同样单通知 [undefined,7,9]",
+    '%s: 写入起点 middle (根帧 landed 分支), 同样单通知 [undefined,7,9]',
     (_label, makeMiddle, makeChild) => {
-      const { middle, midSeen } = setupReentryChain(
-        makeMiddle,
-        makeChild,
-        "middle"
-      );
+      const { middle, midSeen } = setupReentryChain(makeMiddle, makeChild, 'middle');
       expect(middle.k).toBe(9);
       expect(midSeen).toEqual([undefined, 7, 9]);
     }
   );
 });
 
-describe("转发帧重入窗口: setter defineProperty 回旧已通知值不得丢通知 (#4 丢通知)", () => {
+describe('转发帧重入窗口: setter defineProperty 回旧已通知值不得丢通知 (#4 丢通知)', () => {
   test.each([
-    ["base", observable],
-    ["shadow", shadowObservable],
+    ['base', observable],
+    ['shadow', shadowObservable],
   ] as Array<[string, Make]>)(
-    "%s: 重入写 9 后 setter defineProperty 回 7, 观察序列必须含终值 7",
+    '%s: 重入写 9 后 setter defineProperty 回 7, 观察序列必须含终值 7',
     (_label, makeMiddle) => {
-      const { middle, midSeen } = setupReentryChain(
-        makeMiddle,
-        observable,
-        "child",
-        (m) => {
-          // 真实终值 7: 若外层帧 notifiedValue 被覆写回 7, 该次落盘
-          // (9→7) 会被判「已通知过」而静默跳过 → 观察者停留在 9
-          Object.defineProperty(m, "k", dataDescriptor(7));
-        }
-      );
+      const { middle, midSeen } = setupReentryChain(makeMiddle, observable, 'child', m => {
+        // 真实终值 7: 若外层帧 notifiedValue 被覆写回 7, 该次落盘
+        // (9→7) 会被判「已通知过」而静默跳过 → 观察者停留在 9
+        Object.defineProperty(m, 'k', dataDescriptor(7));
+      });
       expect(middle.k).toBe(7);
       expect(midSeen).toEqual([undefined, 7, 9, 7]);
       expect(midSeen[midSeen.length - 1]).toBe(middle.k);

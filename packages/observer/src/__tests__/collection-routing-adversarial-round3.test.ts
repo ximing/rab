@@ -23,8 +23,8 @@
  *      duck-check 追加原生方法判定 (真实跨 realm 集合的方法是原生函数,
  *      用户类的 get/set/has 不是)。
  * */
-import vm from "vm";
-import { observable, observe, shadowObservable } from "../main";
+import vm from 'vm';
+import { observable, observe, shadowObservable } from '../main';
 
 /*
  * tsconfig 的 lib 未包含 ES2024 set-methods 类型, 用局部视图描述被测 API
@@ -42,22 +42,16 @@ type SetWithES2024Methods<T> = Set<T> & {
 const withSetMethods = <T>(s: Set<T>): SetWithES2024Methods<T> =>
   s as unknown as SetWithES2024Methods<T>;
 
-describe("GG7 round3: shadow/deep Set ES2024 set methods must stay usable", () => {
-  test("shadow: union/intersection/difference/symmetricDifference work", () => {
+describe('GG7 round3: shadow/deep Set ES2024 set methods must stay usable', () => {
+  test('shadow: union/intersection/difference/symmetricDifference work', () => {
     const s = withSetMethods(shadowObservable(new Set([1, 2, 3])));
-    expect(new Set(s.union(new Set([2, 3, 4])))).toEqual(
-      new Set([1, 2, 3, 4])
-    );
-    expect(new Set(s.intersection(new Set([2, 3, 4])))).toEqual(
-      new Set([2, 3])
-    );
+    expect(new Set(s.union(new Set([2, 3, 4])))).toEqual(new Set([1, 2, 3, 4]));
+    expect(new Set(s.intersection(new Set([2, 3, 4])))).toEqual(new Set([2, 3]));
     expect(new Set(s.difference(new Set([2])))).toEqual(new Set([1, 3]));
-    expect(new Set(s.symmetricDifference(new Set([3, 4])))).toEqual(
-      new Set([1, 2, 4])
-    );
+    expect(new Set(s.symmetricDifference(new Set([3, 4])))).toEqual(new Set([1, 2, 4]));
   });
 
-  test("shadow: isSubsetOf/isSupersetOf/isDisjointFrom return correct booleans", () => {
+  test('shadow: isSubsetOf/isSupersetOf/isDisjointFrom return correct booleans', () => {
     const s = withSetMethods(shadowObservable(new Set([1, 2])));
     expect(s.isSubsetOf(new Set([1, 2, 3]))).toBe(true);
     expect(s.isSubsetOf(new Set([1, 3]))).toBe(false);
@@ -66,15 +60,13 @@ describe("GG7 round3: shadow/deep Set ES2024 set methods must stay usable", () =
     expect(s.isDisjointFrom(new Set([2]))).toBe(false);
   });
 
-  test("shadow: set methods accept observable-proxy arguments (raw unwrap)", () => {
+  test('shadow: set methods accept observable-proxy arguments (raw unwrap)', () => {
     const s = withSetMethods(shadowObservable(new Set([1, 2, 3])));
     const other = shadowObservable(new Set([3, 4]));
-    expect(new Set(s.union(other as unknown as Set<number>))).toEqual(
-      new Set([1, 2, 3, 4])
-    );
+    expect(new Set(s.union(other as unknown as Set<number>))).toEqual(new Set([1, 2, 3, 4]));
   });
 
-  test("shadow: set methods register an iterate dependency on this", () => {
+  test('shadow: set methods register an iterate dependency on this', () => {
     const s = withSetMethods(shadowObservable(new Set([1, 2])));
     let size = 0;
     observe(() => {
@@ -85,22 +77,20 @@ describe("GG7 round3: shadow/deep Set ES2024 set methods must stay usable", () =
     expect(size).toBe(4);
   });
 
-  test("deep: union/intersection work (baseline threw, fixed alongside)", () => {
+  test('deep: union/intersection work (baseline threw, fixed alongside)', () => {
     const s = withSetMethods(observable(new Set([1, 2, 3])));
     expect(new Set(s.union(new Set([3, 4])))).toEqual(new Set([1, 2, 3, 4]));
-    expect(new Set(s.intersection(new Set([2, 3, 4])))).toEqual(
-      new Set([2, 3])
-    );
+    expect(new Set(s.intersection(new Set([2, 3, 4])))).toEqual(new Set([2, 3]));
     expect(s.isSubsetOf(new Set([1, 2, 3, 4]))).toBe(true);
   });
 
-  test("Set subclass: set methods via unknown-key branch stay usable (shadow)", () => {
+  test('Set subclass: set methods via unknown-key branch stay usable (shadow)', () => {
     class MySetSub<V> extends Set<V> {}
     const s = withSetMethods(shadowObservable(new MySetSub([1, 2])));
     expect(new Set(s.difference(new Set([1])))).toEqual(new Set([2]));
   });
 
-  test("subclass custom methods still go through instrumented traps (pin)", () => {
+  test('subclass custom methods still go through instrumented traps (pin)', () => {
     class MyMap<K, V> extends Map<K, V> {
       putTwice(k: K, v: V) {
         this.set(k, v);
@@ -109,12 +99,12 @@ describe("GG7 round3: shadow/deep Set ES2024 set methods must stay usable", () =
     }
     const sm = shadowObservable(new MyMap<string, number>());
     let dummy: number | undefined;
-    observe(() => (dummy = sm.get("a")));
-    sm.putTwice("a", 1);
+    observe(() => (dummy = sm.get('a')));
+    sm.putTwice('a', 1);
     expect(dummy).toBe(1);
   });
 
-  test("map.constructor identity is preserved (pin)", () => {
+  test('map.constructor identity is preserved (pin)', () => {
     const s = shadowObservable(new Set([1]));
     expect(s.constructor).toBe(Set);
     const m = observable(new Map());
@@ -122,15 +112,12 @@ describe("GG7 round3: shadow/deep Set ES2024 set methods must stay usable", () =
   });
 });
 
-describe("GG7 round3: cross-realm native Error subclasses must not be wrapped", () => {
+describe('GG7 round3: cross-realm native Error subclasses must not be wrapped', () => {
   const cases: Array<[string, () => unknown]> = [
-    ["TypeError", () => vm.runInNewContext("new TypeError('x')")],
-    ["EvalError", () => vm.runInNewContext("new EvalError('x')")],
-    ["RangeError", () => vm.runInNewContext("new RangeError('x')")],
-    [
-      "AggregateError",
-      () => vm.runInNewContext("new AggregateError([1], 'x')"),
-    ],
+    ['TypeError', () => vm.runInNewContext("new TypeError('x')")],
+    ['EvalError', () => vm.runInNewContext("new EvalError('x')")],
+    ['RangeError', () => vm.runInNewContext("new RangeError('x')")],
+    ['AggregateError', () => vm.runInNewContext("new AggregateError([1], 'x')")],
   ];
 
   for (const [name, make] of cases) {
@@ -140,21 +127,21 @@ describe("GG7 round3: cross-realm native Error subclasses must not be wrapped", 
     });
   }
 
-  test("cross-realm Error (base class) is still returned raw (pin)", () => {
+  test('cross-realm Error (base class) is still returned raw (pin)', () => {
     const e = vm.runInNewContext("new Error('x')") as object;
     expect(observable(e) === e).toBe(true);
   });
 
-  test("same-realm native error subclasses are still returned raw (pin)", () => {
-    const t = new TypeError("x");
+  test('same-realm native error subclasses are still returned raw (pin)', () => {
+    const t = new TypeError('x');
     expect(observable(t) === t).toBe(true);
   });
 
-  test("user Error subclass is still wrapped and reactive (pin)", () => {
+  test('user Error subclass is still wrapped and reactive (pin)', () => {
     class AppError extends Error {
       code = 1;
     }
-    const err = new AppError("boom");
+    const err = new AppError('boom');
     const oe = observable(err);
     expect(oe).not.toBe(err);
     let dummy: number | undefined;
@@ -165,55 +152,55 @@ describe("GG7 round3: cross-realm native Error subclasses must not be wrapped", 
   });
 });
 
-describe("GG7 round3: clear() must not read a throwing own constructor accessor", () => {
+describe('GG7 round3: clear() must not read a throwing own constructor accessor', () => {
   const makeBoomyMap = (): Map<string, number> => {
-    const raw = new Map<string, number>([["a", 1]]);
-    Object.defineProperty(raw, "constructor", {
+    const raw = new Map<string, number>([['a', 1]]);
+    Object.defineProperty(raw, 'constructor', {
       get() {
-        throw new Error("boom: constructor getter");
+        throw new Error('boom: constructor getter');
       },
       configurable: true,
     });
     return raw;
   };
 
-  test("deep: observable/get/set all work AND clear() clears + notifies", () => {
+  test('deep: observable/get/set all work AND clear() clears + notifies', () => {
     const raw = makeBoomyMap();
     const m = observable(raw);
     let dummy: number | undefined;
-    observe(() => (dummy = m.get("a")));
+    observe(() => (dummy = m.get('a')));
     expect(dummy).toBe(1);
     expect(() => m.clear()).not.toThrow();
     expect(m.size).toBe(0);
     expect(dummy).toBeUndefined();
   });
 
-  test("shadow: clear() works with a throwing constructor accessor", () => {
+  test('shadow: clear() works with a throwing constructor accessor', () => {
     const raw = makeBoomyMap();
     const m = shadowObservable(raw);
     let dummy: number | undefined;
-    observe(() => (dummy = m.get("a")));
+    observe(() => (dummy = m.get('a')));
     expect(dummy).toBe(1);
     expect(() => m.clear()).not.toThrow();
     expect(m.size).toBe(0);
     expect(dummy).toBeUndefined();
   });
 
-  test("deep: debugger still receives the pre-clear content copy", () => {
+  test('deep: debugger still receives the pre-clear content copy', () => {
     const raw = makeBoomyMap();
     const m = observable(raw);
-    let received: unknown = "unset";
-    observe(() => m.get("a"), {
-      debugger: (op) => {
-        if (op.type === "clear") received = op.oldValue;
+    let received: unknown = 'unset';
+    observe(() => m.get('a'), {
+      debugger: op => {
+        if (op.type === 'clear') received = op.oldValue;
       },
     });
     m.clear();
-    expect(received).toEqual(new Map([["a", 1]]));
+    expect(received).toEqual(new Map([['a', 1]]));
   });
 
-  test("misleading own constructor value still clears safely (pin)", () => {
-    const raw = new Map<string, number>([["a", 1]]);
+  test('misleading own constructor value still clears safely (pin)', () => {
+    const raw = new Map<string, number>([['a', 1]]);
     (raw as unknown as { constructor: unknown }).constructor = Object;
     const m = observable(raw);
     expect(() => m.clear()).not.toThrow();
@@ -221,34 +208,34 @@ describe("GG7 round3: clear() must not read a throwing own constructor accessor"
   });
 });
 
-describe("GG7 round3: user subclasses of other blacklisted built-ins keep base reactivity", () => {
+describe('GG7 round3: user subclasses of other blacklisted built-ins keep base reactivity', () => {
   class MyDate extends Date {
-    constructor(public label = "x") {
+    constructor(public label = 'x') {
       super(1000);
     }
   }
   class MyRegExp extends RegExp {
-    constructor(public label = "x") {
-      super("a");
+    constructor(public label = 'x') {
+      super('a');
     }
   }
   class MyPromise extends Promise<unknown> {
-    constructor(public label = "x") {
+    constructor(public label = 'x') {
       super(() => {});
     }
   }
   class MyString extends String {
-    constructor(public label = "x") {
-      super("s");
+    constructor(public label = 'x') {
+      super('s');
     }
   }
 
   test.each([
-    ["MyDate", () => new MyDate()],
-    ["MyRegExp", () => new MyRegExp()],
-    ["MyPromise", () => new MyPromise()],
-    ["MyString", () => new MyString()],
-  ])("%s subclass: wrapped and own properties reactive", (_name, make) => {
+    ['MyDate', () => new MyDate()],
+    ['MyRegExp', () => new MyRegExp()],
+    ['MyPromise', () => new MyPromise()],
+    ['MyString', () => new MyString()],
+  ])('%s subclass: wrapped and own properties reactive', (_name, make) => {
     const raw = make();
     const obs = observable(raw);
     expect(obs).not.toBe(raw);
@@ -256,13 +243,13 @@ describe("GG7 round3: user subclasses of other blacklisted built-ins keep base r
     observe(() => {
       dummy = (obs as unknown as { label: string }).label;
     });
-    expect(dummy).toBe("x");
-    (obs as unknown as { label: string }).label = "changed";
-    expect(dummy).toBe("changed");
-    expect((raw as unknown as { label: string }).label).toBe("changed");
+    expect(dummy).toBe('x');
+    (obs as unknown as { label: string }).label = 'changed';
+    expect(dummy).toBe('changed');
+    expect((raw as unknown as { label: string }).label).toBe('changed');
   });
 
-  test("same-realm plain Date/RegExp/Promise stay raw (pin)", () => {
+  test('same-realm plain Date/RegExp/Promise stay raw (pin)', () => {
     const d = new Date();
     expect(observable(d) === d).toBe(true);
     const re = /a/;
@@ -271,16 +258,16 @@ describe("GG7 round3: user subclasses of other blacklisted built-ins keep base r
     expect(observable(p) === p).toBe(true);
   });
 
-  test("cross-realm Date stays raw after the carve-out generalization (pin)", () => {
-    const d = vm.runInNewContext("new Date()") as object;
+  test('cross-realm Date stays raw after the carve-out generalization (pin)', () => {
+    const d = vm.runInNewContext('new Date()') as object;
     expect(observable(d) === d).toBe(true);
   });
 
-  test("user subclass of a native error subclass (extends TypeError) is wrapped", () => {
+  test('user subclass of a native error subclass (extends TypeError) is wrapped', () => {
     class AppTypeError extends TypeError {
       code = 1;
     }
-    const err = new AppTypeError("boom");
+    const err = new AppTypeError('boom');
     const oe = observable(err);
     expect(oe).not.toBe(err);
     let dummy: number | undefined;
@@ -290,10 +277,10 @@ describe("GG7 round3: user subclasses of other blacklisted built-ins keep base r
   });
 });
 
-describe("GG7 round3: forged-tag class with user get/set/has falls back to base handler", () => {
+describe('GG7 round3: forged-tag class with user get/set/has falls back to base handler', () => {
   class MyDict {
     store = new Map<string, number>();
-    label = "hello";
+    label = 'hello';
     get(k: string) {
       return this.store.get(k);
     }
@@ -305,11 +292,9 @@ describe("GG7 round3: forged-tag class with user get/set/has falls back to base 
       return this.store.has(k);
     }
   }
-  (MyDict.prototype as unknown as { [Symbol.toStringTag]: string })[
-    Symbol.toStringTag
-  ] = "Map";
+  (MyDict.prototype as unknown as { [Symbol.toStringTag]: string })[Symbol.toStringTag] = 'Map';
 
-  test("own properties are reactive through the base handler", () => {
+  test('own properties are reactive through the base handler', () => {
     const raw = new MyDict();
     const obs = observable(raw);
     expect(obs).not.toBe(raw);
@@ -317,31 +302,26 @@ describe("GG7 round3: forged-tag class with user get/set/has falls back to base 
     observe(() => {
       dummy = (obs as unknown as { label: string }).label;
     });
-    expect(dummy).toBe("hello");
-    (obs as unknown as { label: string }).label = "changed";
-    expect(dummy).toBe("changed");
-    expect(raw.label).toBe("changed");
+    expect(dummy).toBe('hello');
+    (obs as unknown as { label: string }).label = 'changed';
+    expect(dummy).toBe('changed');
+    expect(raw.label).toBe('changed');
   });
 
-  test("duck-typed methods still work through the proxy", () => {
+  test('duck-typed methods still work through the proxy', () => {
     const obs = observable(new MyDict());
-    (obs as unknown as { set(k: string, v: number): unknown }).set("k", 1);
-    expect(
-      (obs as unknown as { get(k: string): number | undefined }).get("k")
-    ).toBe(1);
+    (obs as unknown as { set(k: string, v: number): unknown }).set('k', 1);
+    expect((obs as unknown as { get(k: string): number | undefined }).get('k')).toBe(1);
   });
 
-  test("cross-realm real Map still routes to collection handlers (pin)", () => {
-    const rm = vm.runInNewContext("new Map([['a', 1]])") as Map<
-      string,
-      number
-    >;
+  test('cross-realm real Map still routes to collection handlers (pin)', () => {
+    const rm = vm.runInNewContext("new Map([['a', 1]])") as Map<string, number>;
     const m = observable(rm);
     expect(m).not.toBe(rm);
     let dummy: number | undefined;
-    observe(() => (dummy = m.get("a")));
+    observe(() => (dummy = m.get('a')));
     expect(dummy).toBe(1);
-    m.set("a", 2);
+    m.set('a', 2);
     expect(dummy).toBe(2);
   });
 });

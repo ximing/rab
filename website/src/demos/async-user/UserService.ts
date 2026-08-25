@@ -1,4 +1,4 @@
-import { Service } from "@rabjs/react";
+import { Service } from '@rabjs/react';
 
 export interface Profile {
   id: number;
@@ -7,8 +7,8 @@ export interface Profile {
 }
 
 const MOCK_DB: Record<number, Profile> = {
-  1: { id: 1, name: "Alice", bio: "响应式爱好者" },
-  2: { id: 2, name: "Bob", bio: "Service 容器重度用户" },
+  1: { id: 1, name: 'Alice', bio: '响应式爱好者' },
+  2: { id: 2, name: 'Bob', bio: 'Service 容器重度用户' },
 };
 
 /**
@@ -24,7 +24,7 @@ export class UserService extends Service {
 
   async loadUser(id: number) {
     // 模拟远程请求
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await new Promise(resolve => setTimeout(resolve, 600));
     const user = MOCK_DB[id];
     if (!user) throw new Error(`用户 ${id} 不存在`);
     this.profile = user;

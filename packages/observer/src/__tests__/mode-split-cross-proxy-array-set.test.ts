@@ -3,13 +3,13 @@
  * 共享连接表, 数组与 Set 的跨代理通知语义此前无测试锁定。
  */
 
-import { observable } from "../observable";
-import { shadowObservable } from "../shadow-observable";
-import { observe, unobserve } from "../observer";
-import { getConnectionsCount } from "../internals/reaction-track";
+import { observable } from '../observable';
+import { shadowObservable } from '../shadow-observable';
+import { observe, unobserve } from '../observer';
+import { getConnectionsCount } from '../internals/reaction-track';
 
-describe("GG6 hardening: 跨代理数组/Set 通知", () => {
-  test("shadow 代理上的 length 收缩要通知 deep 代理上注册的截断索引依赖", () => {
+describe('GG6 hardening: 跨代理数组/Set 通知', () => {
+  test('shadow 代理上的 length 收缩要通知 deep 代理上注册的截断索引依赖', () => {
     const rawArr = [1, 2, 3, 4, 5];
     const s = shadowObservable(rawArr);
     const d = observable(rawArr);
@@ -39,7 +39,7 @@ describe("GG6 hardening: 跨代理数组/Set 通知", () => {
     expect(getConnectionsCount(rawArr)).toBe(0);
   });
 
-  test("shadow 代理上的 Set.delete 要通知 deep 代理上的 has 依赖 (反之亦然)", () => {
+  test('shadow 代理上的 Set.delete 要通知 deep 代理上的 has 依赖 (反之亦然)', () => {
     const rawSet = new Set([1, 2]);
     const s = shadowObservable(rawSet);
     const d = observable(rawSet);

@@ -20,6 +20,7 @@ global (getGlobalContainer())           ← 真正的根，与 React 无关
 ```
 
 **关键事实**：
+
 - `global` 容器由 `@rabjs/service` 在模块加载时懒创建，与 React 生命周期无关
 - `bindServices` 每次创建的新容器都调用 `container.setParent(parentContainer)`，默认 parent 是 `global`
 - 从 `global` 出发递归遍历子容器，即可访问到所有已实例化的 Service
@@ -175,10 +176,7 @@ import { isUsingStaticRendering } from '@rabjs/observer';
 /**
  * 递归遍历 Container 树，通过 instanceId 查找 Service 实例
  */
-function walkContainerForInstanceId(
-  container: Container,
-  instanceId: string
-): Service | undefined {
+function walkContainerForInstanceId(container: Container, instanceId: string): Service | undefined {
   for (const definition of container.getServiceDefinitions()) {
     if (!definition.instance) continue;
     const svc = definition.instance as Service;
@@ -194,10 +192,7 @@ function walkContainerForInstanceId(
 /**
  * 递归遍历 Container 树，通过 containerName 查找容器
  */
-function walkContainerForName(
-  container: Container,
-  containerName: string
-): Container | undefined {
+function walkContainerForName(container: Container, containerName: string): Container | undefined {
   if (String(container.getName()) === containerName) return container;
   for (const child of container.getChildren()) {
     const found = walkContainerForName(child, containerName);
@@ -226,7 +221,12 @@ export function createRSRootContainerHandle(): RSRootContainerHandle {
     },
 
     listServices() {
-      const result: Array<{ instanceId: string; containerName: string; identifierLabel: string; instance: Service }> = [];
+      const result: Array<{
+        instanceId: string;
+        containerName: string;
+        identifierLabel: string;
+        instance: Service;
+      }> = [];
       function walk(container: Container) {
         const name = String(container.getName());
         for (const def of container.getServiceDefinitions()) {
@@ -234,11 +234,14 @@ export function createRSRootContainerHandle(): RSRootContainerHandle {
           const svc = def.instance as Service;
           if (!svc.instanceId) continue;
           const label =
-            typeof def.identifier === 'function'
-              ? def.identifier.name
-              : String(def.identifier);
+            typeof def.identifier === 'function' ? def.identifier.name : String(def.identifier);
           // 直接返回 Service 内存对象，供工作台调试使用
-          result.push({ instanceId: svc.instanceId, containerName: name, identifierLabel: label, instance: svc });
+          result.push({
+            instanceId: svc.instanceId,
+            containerName: name,
+            identifierLabel: label,
+            instance: svc,
+          });
         }
         for (const child of container.getChildren()) {
           walk(child);
@@ -303,12 +306,12 @@ export {};
 
 ## SSR 场景行为
 
-| 场景 | `typeof window` | `isUsingStaticRendering()` | 行为 |
-|------|----------------|---------------------------|------|
-| 浏览器正常渲染 | `'object'` | `false` | ✅ 挂载 `window.__RS_ROOT_CONTAINER__` |
-| Next.js SSR（服务端） | `'undefined'` | `true` | ⛔ 跳过，不挂载 |
-| Next.js 客户端 Hydration | `'object'` | `false` | ✅ 挂载 |
-| SSG 构建时 | `'undefined'` | `true` | ⛔ 跳过，不挂载 |
+| 场景                     | `typeof window` | `isUsingStaticRendering()` | 行为                                   |
+| ------------------------ | --------------- | -------------------------- | -------------------------------------- |
+| 浏览器正常渲染           | `'object'`      | `false`                    | ✅ 挂载 `window.__RS_ROOT_CONTAINER__` |
+| Next.js SSR（服务端）    | `'undefined'`   | `true`                     | ⛔ 跳过，不挂载                        |
+| Next.js 客户端 Hydration | `'object'`      | `false`                    | ✅ 挂载                                |
+| SSG 构建时               | `'undefined'`   | `true`                     | ⛔ 跳过，不挂载                        |
 
 > **注意**：使用者在 SSR 框架中需调用 `enableStaticRendering(true)` 声明 SSR 环境。
 
@@ -330,7 +333,9 @@ handle.listServices();
 // ]
 
 // 直接从 listServices 拿到实例并调用方法
-const { instance: cartService } = handle.listServices().find(s => s.identifierLabel === 'CartService');
+const { instance: cartService } = handle
+  .listServices()
+  .find(s => s.identifierLabel === 'CartService');
 cartService.addItem({ id: '1', name: 'Test' });
 
 // 或通过 instanceId 获取实例
@@ -339,8 +344,8 @@ cartService2.addItem({ id: '1', name: 'Test' });
 
 // 通过 containerName 直接获取容器实例
 const container = handle.getContainer('ProductPage_2');
-container?.resolve(CartService);       // 手动 resolve Service
-container?.getChildren();              // 查看子容器列表
+container?.resolve(CartService); // 手动 resolve Service
+container?.getChildren(); // 查看子容器列表
 ```
 
 ### `@rabjs/web-mcp` 集成
@@ -350,8 +355,8 @@ container?.getChildren();              // 查看子容器列表
 ```ts
 // web-mcp/registry.ts（可选优化）
 const rootContainer =
-  (typeof window !== 'undefined' && window.__RS_ROOT_CONTAINER__?.container)
-  ?? getGlobalContainer();
+  (typeof window !== 'undefined' && window.__RS_ROOT_CONTAINER__?.container) ??
+  getGlobalContainer();
 ```
 
 ### E2E 测试（Playwright / Cypress）

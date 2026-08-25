@@ -8,27 +8,27 @@
  * - unobserve 后收缩不复活 reaction
  * - 收缩后再增长+回填, 读洞依赖在回填时被通知
  * */
-import { observable, shadowObservable, observe, unobserve } from "../main";
+import { observable, shadowObservable, observe, unobserve } from '../main';
 
-describe("数组 length 收缩通知加固 (GG1)", () => {
+describe('数组 length 收缩通知加固 (GG1)', () => {
   test("Object.defineProperty(arr, 'length', {value: '2'}) 字符串值收缩应通知", () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
     });
-    Object.defineProperty(arr, "length", { value: "2" });
+    Object.defineProperty(arr, 'length', { value: '2' });
     expect(arr.length).toBe(2);
     expect(runs).toBe(2);
     expect(last).toBeUndefined();
   });
 
-  test("连续收缩 (5→4→2) 读 arr[3] 只在实际删除时通知", () => {
+  test('连续收缩 (5→4→2) 读 arr[3] 只在实际删除时通知', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[3];
@@ -41,10 +41,10 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(last).toBeUndefined();
   });
 
-  test("pop 引擎内部走 trap 收缩 length, 读被删索引的 reaction 应被通知", () => {
+  test('pop 引擎内部走 trap 收缩 length, 读被删索引的 reaction 应被通知', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
@@ -56,10 +56,10 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(last).toBeUndefined();
   });
 
-  test("splice 删除中间元素后, 读尾部旧索引的 reaction 应被通知", () => {
+  test('splice 删除中间元素后, 读尾部旧索引的 reaction 应被通知', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
@@ -69,10 +69,10 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(last).toBeUndefined();
   });
 
-  test("shadow observable 数组收缩应通知非边界索引依赖", () => {
+  test('shadow observable 数组收缩应通知非边界索引依赖', () => {
     const arr = shadowObservable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
@@ -82,7 +82,7 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(last).toBeUndefined();
   });
 
-  test("unobserve 后收缩不应复活 reaction", () => {
+  test('unobserve 后收缩不应复活 reaction', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
     const reaction = observe(() => {
@@ -94,10 +94,10 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(runs).toBe(1);
   });
 
-  test("收缩→增长→回填: 读洞依赖在回填时被通知为新值", () => {
+  test('收缩→增长→回填: 读洞依赖在回填时被通知为新值', () => {
     const arr = observable([1, 2, 3, 4, 5]);
     let runs = 0;
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     observe(() => {
       runs++;
       last = arr[4];
@@ -112,11 +112,11 @@ describe("数组 length 收缩通知加固 (GG1)", () => {
     expect(last).toBe(99);
   });
 
-  test("收缩触发的 reaction 内再收缩另一个数组 (嵌套通知)", () => {
+  test('收缩触发的 reaction 内再收缩另一个数组 (嵌套通知)', () => {
     const arrA = observable([1, 2, 3, 4, 5]);
     const arrB = observable([10, 20, 30, 40, 50]);
     let bRuns = 0;
-    let bLast: unknown = "initial";
+    let bLast: unknown = 'initial';
     observe(() => {
       bRuns++;
       bLast = arrB[3];

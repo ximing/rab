@@ -143,8 +143,8 @@ describe('setState', () => {
     const result = setState(map, {
       instanceId: 'TestService#0',
       patch: {
-        total: 200,       // 合法
-        _private: 'bad',  // 非法（私有属性）
+        total: 200, // 合法
+        _private: 'bad', // 非法（私有属性）
       },
     });
 
@@ -189,7 +189,9 @@ describe('setState', () => {
     // 用 defineProperty 让 total 的 setter 抛出异常
     Object.defineProperty(svc, 'total', {
       get: () => 100,
-      set: () => { throw new TypeError('不允许修改'); },
+      set: () => {
+        throw new TypeError('不允许修改');
+      },
       configurable: true,
       enumerable: true,
     });
@@ -213,7 +215,9 @@ describe('setState', () => {
 
     Object.defineProperty(svc, 'title', {
       get: () => '原始标题',
-      set: () => { throw 'forbidden string error'; }, // 非 Error 对象
+      set: () => {
+        throw 'forbidden string error';
+      }, // 非 Error 对象
       configurable: true,
       enumerable: true,
     });

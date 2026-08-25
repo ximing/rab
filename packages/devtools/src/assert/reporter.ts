@@ -39,33 +39,79 @@ function formatResultLine(r: AssertionResult): string {
 function formatOpDesc(r: AssertionResult): string {
   const { op, expected } = r;
   switch (op) {
-    case 'eq': { return `=== ${formatValue(expected)}`; }
-    case 'neq': { return `!== ${formatValue(expected)}`; }
-    case 'gt': { return `> ${formatValue(expected)}`; }
-    case 'gte': { return `>= ${formatValue(expected)}`; }
-    case 'lt': { return `< ${formatValue(expected)}`; }
-    case 'lte': { return `<= ${formatValue(expected)}`; }
-    case 'exists': { return 'exists'; }
-    case 'notExists': { return 'notExists'; }
-    case 'includes': { return `includes ${formatValue(expected)}`; }
-    case 'notIncludes': { return `notIncludes ${formatValue(expected)}`; }
-    case 'matches': { return `matches /${String(expected)}/`; }
-    case 'type': { return `typeof === "${String(expected)}"`; }
-    case 'length': { return `length === ${formatValue(expected)}`; }
-    case 'lengthGt': { return `length > ${formatValue(expected)}`; }
-    case 'lengthGte': { return `length >= ${formatValue(expected)}`; }
-    case 'lengthLt': { return `length < ${formatValue(expected)}`; }
-    case 'lengthLte': { return `length <= ${formatValue(expected)}`; }
-    case 'deepEq': { return `deepEq ${formatValue(expected)}`; }
+    case 'eq': {
+      return `=== ${formatValue(expected)}`;
+    }
+    case 'neq': {
+      return `!== ${formatValue(expected)}`;
+    }
+    case 'gt': {
+      return `> ${formatValue(expected)}`;
+    }
+    case 'gte': {
+      return `>= ${formatValue(expected)}`;
+    }
+    case 'lt': {
+      return `< ${formatValue(expected)}`;
+    }
+    case 'lte': {
+      return `<= ${formatValue(expected)}`;
+    }
+    case 'exists': {
+      return 'exists';
+    }
+    case 'notExists': {
+      return 'notExists';
+    }
+    case 'includes': {
+      return `includes ${formatValue(expected)}`;
+    }
+    case 'notIncludes': {
+      return `notIncludes ${formatValue(expected)}`;
+    }
+    case 'matches': {
+      return `matches /${String(expected)}/`;
+    }
+    case 'type': {
+      return `typeof === "${String(expected)}"`;
+    }
+    case 'length': {
+      return `length === ${formatValue(expected)}`;
+    }
+    case 'lengthGt': {
+      return `length > ${formatValue(expected)}`;
+    }
+    case 'lengthGte': {
+      return `length >= ${formatValue(expected)}`;
+    }
+    case 'lengthLt': {
+      return `length < ${formatValue(expected)}`;
+    }
+    case 'lengthLte': {
+      return `length <= ${formatValue(expected)}`;
+    }
+    case 'deepEq': {
+      return `deepEq ${formatValue(expected)}`;
+    }
     case 'between': {
       const [lo, hi] = expected as [number, number];
       return `between [${lo}, ${hi}]`;
     }
-    case 'hasKeys': { return `hasKeys ${formatValue(expected)}`; }
-    case 'matchObject': { return `matchObject ${formatValue(expected)}`; }
-    case 'some': { return `some(...)`; }
-    case 'every': { return `every(...)`; }
-    default: { return String(op); }
+    case 'hasKeys': {
+      return `hasKeys ${formatValue(expected)}`;
+    }
+    case 'matchObject': {
+      return `matchObject ${formatValue(expected)}`;
+    }
+    case 'some': {
+      return `some(...)`;
+    }
+    case 'every': {
+      return `every(...)`;
+    }
+    default: {
+      return String(op);
+    }
   }
 }
 
@@ -90,7 +136,10 @@ function formatValue(value: unknown): string {
  * @param result 断言结果
  * @param options 报告选项
  */
-export function printAssertResult(result: AssertResult & { instanceId?: string }, options: ReportOptions = {}): void {
+export function printAssertResult(
+  result: AssertResult & { instanceId?: string },
+  options: ReportOptions = {}
+): void {
   const { collapsed = false, verbose = true } = options;
 
   // 如果全部通过且 verbose=false，不输出
@@ -113,9 +162,9 @@ export function printAssertResult(result: AssertResult & { instanceId?: string }
       } else {
         console.warn(
           `  ✗ ${r.path} ${formatOpDesc(r)}\n` +
-          `      Expected: ${formatValue(r.expected)}\n` +
-          `      Actual:   ${formatValue(r.actual)}` +
-          (r.message ? `\n      Message:  ${r.message}` : '')
+            `      Expected: ${formatValue(r.expected)}\n` +
+            `      Actual:   ${formatValue(r.actual)}` +
+            (r.message ? `\n      Message:  ${r.message}` : '')
         );
       }
     }

@@ -77,12 +77,11 @@ describe('WsClient', () => {
     const registerMsg = JSON.parse(ws.sent[0]);
     expect(registerMsg).toMatchObject({ kind: 'register', deviceId: 'dev-1' });
 
-    ws.simulateServerMessage(JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} }));
-    await waitFor(
-      () => ws.sent.some((s) => JSON.parse(s).kind === 'result'),
-      'executor result sent'
+    ws.simulateServerMessage(
+      JSON.stringify({ kind: 'command', id: 'c1', type: 'ping', payload: {} })
     );
-    const resultMsg = JSON.parse(ws.sent.find((s) => JSON.parse(s).kind === 'result')!);
+    await waitFor(() => ws.sent.some(s => JSON.parse(s).kind === 'result'), 'executor result sent');
+    const resultMsg = JSON.parse(ws.sent.find(s => JSON.parse(s).kind === 'result')!);
     expect(resultMsg).toMatchObject({ id: 'c1', status: 'ok', result: { pong: true } });
   });
 
@@ -92,7 +91,7 @@ describe('WsClient', () => {
     const ws = FakeWebSocket.instances[0];
     ws.simulateOpen();
     await waitFor(
-      () => ws.sent.filter((s) => JSON.parse(s).kind === 'ping').length >= 2,
+      () => ws.sent.filter(s => JSON.parse(s).kind === 'ping').length >= 2,
       'at least two heartbeat pings'
     );
   });
@@ -104,10 +103,7 @@ describe('WsClient', () => {
     first.simulateOpen();
     first.onclose?.(); // 模拟服务端断开
 
-    await waitFor(
-      () => FakeWebSocket.instances.length >= 2,
-      'reconnect created a second socket'
-    );
+    await waitFor(() => FakeWebSocket.instances.length >= 2, 'reconnect created a second socket');
     expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
     const second = FakeWebSocket.instances[1];
     second.simulateOpen();
@@ -120,7 +116,7 @@ describe('WsClient', () => {
     const first = FakeWebSocket.instances[0];
     first.simulateOpen();
     client.disconnect();
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1200));
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });

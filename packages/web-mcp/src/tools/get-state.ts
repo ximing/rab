@@ -12,11 +12,7 @@
 
 import type { Service } from '@rabjs/service';
 
-import type {
-  GetStateInput,
-  GetStateResult,
-  WebMcpToolDefinition,
-} from '../types';
+import type { GetStateInput, GetStateResult, WebMcpToolDefinition } from '../types';
 import { serializeModel, serializeStateSafe } from '../utils/serialize';
 
 /**
@@ -26,10 +22,7 @@ import { serializeModel, serializeStateSafe } from '../utils/serialize';
  * @param input 工具输入参数
  * @returns 状态快照（标量值 + 复杂对象摘要）
  */
-export function getState(
-  instanceMap: Map<string, Service>,
-  input: GetStateInput
-): GetStateResult {
+export function getState(instanceMap: Map<string, Service>, input: GetStateInput): GetStateResult {
   const { instanceId, keys } = input;
 
   // 查找实例
@@ -50,12 +43,11 @@ export function getState(
 /**
  * get_state Tool 的 WebMCP 定义
  */
-export function createGetStateTool(
-  instanceMap: Map<string, Service>
-): WebMcpToolDefinition {
+export function createGetStateTool(instanceMap: Map<string, Service>): WebMcpToolDefinition {
   return {
     name: 'get_state',
-    description: '获取指定 Service 实例的状态快照。标量字段（string/number/boolean/null）返回当前值，复杂对象字段只返回类型摘要（"[Object]"/"[Array(N)]"）以避免大对象序列化 crash。如需验证对象内部，请使用 assert_state + 点分路径。',
+    description:
+      '获取指定 Service 实例的状态快照。标量字段（string/number/boolean/null）返回当前值，复杂对象字段只返回类型摘要（"[Object]"/"[Array(N)]"）以避免大对象序列化 crash。如需验证对象内部，请使用 assert_state + 点分路径。',
     inputSchema: {
       type: 'object',
       properties: {

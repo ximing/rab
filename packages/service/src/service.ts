@@ -1,16 +1,13 @@
-import { observable } from "@rabjs/observer";
+import { observable } from '@rabjs/observer';
 
-import { cleanupAllDebounces } from "./decorators/debounce";
-import { cleanupAllMemos } from "./decorators/memo";
-import { setupEventListeners, cleanupEventListeners } from "./decorators/on";
-import { cleanupAllThrottles } from "./decorators/throttle";
-import { EventSystem, type EventScope } from "./event";
-import {
-  bindTrackedEventListener,
-  unbindTrackedEventListeners,
-} from "./event-listener-registry";
-import { Container } from "./ioc";
-import { getCurrentInstantiatingContainer } from "./ioc/globals";
+import { cleanupAllDebounces } from './decorators/debounce';
+import { cleanupAllMemos } from './decorators/memo';
+import { setupEventListeners, cleanupEventListeners } from './decorators/on';
+import { cleanupAllThrottles } from './decorators/throttle';
+import { EventSystem, type EventScope } from './event';
+import { bindTrackedEventListener, unbindTrackedEventListeners } from './event-listener-registry';
+import { Container } from './ioc';
+import { getCurrentInstantiatingContainer } from './ioc/globals';
 
 /**
  * 方法状态类型定义
@@ -97,8 +94,7 @@ export class Service {
   constructor() {
     // 获取当前实例关联的容器（由 Container 在实例化时建立）
     // 首先尝试从 WeakMap 中获取，如果失败则从当前正在实例化的容器中获取
-    let container: Container | null | undefined =
-      Container.getContainerOf?.(this);
+    let container: Container | null | undefined = Container.getContainerOf?.(this);
     if (!container) {
       container = getCurrentInstantiatingContainer();
     }
@@ -135,7 +131,7 @@ export class Service {
     for (const methodName of methodNames) {
       const originalMethod = prototype[methodName];
 
-      if (typeof originalMethod === "function") {
+      if (typeof originalMethod === 'function') {
         // 初始化状态
         (instance.$model as any)[methodName] = {
           loading: false,
@@ -166,24 +162,12 @@ export class Service {
 
     // 遍历原型链上的所有属性
     let current = prototype;
-    while (
-      current &&
-      current !== Object.prototype &&
-      current !== Service.prototype
-    ) {
+    while (current && current !== Object.prototype && current !== Service.prototype) {
       for (const name of Object.getOwnPropertyNames(current)) {
-        if (
-          name !== "constructor" &&
-          !name.startsWith("_") &&
-          !methodNames.includes(name)
-        ) {
+        if (name !== 'constructor' && !name.startsWith('_') && !methodNames.includes(name)) {
           // 使用 getOwnPropertyDescriptor 来检查属性类型，避免触发 getter
           const descriptor = Object.getOwnPropertyDescriptor(current, name);
-          if (
-            descriptor &&
-            descriptor.value &&
-            typeof descriptor.value === "function"
-          ) {
+          if (descriptor && descriptor.value && typeof descriptor.value === 'function') {
             methodNames.push(name);
           }
         }
@@ -214,7 +198,7 @@ export class Service {
       const result: any = originalMethod(...args);
 
       // 检查是否是 Promise（异步方法）
-      if (result && typeof result.then === "function") {
+      if (result && typeof result.then === 'function') {
         const modelState = observableInstance.$model[methodName as keyof ExtractMethods<Service>];
         // 异步方法：立即设置 loading 状态
         modelState.loading = true;
@@ -267,7 +251,7 @@ export class Service {
   public on<T = any>(
     eventName: string,
     handler: (data: T) => void,
-    scope: EventScope = "container"
+    scope: EventScope = 'container'
   ): this {
     bindTrackedEventListener(this, {
       eventName,
@@ -275,7 +259,7 @@ export class Service {
       scope,
       once: false,
       container: this._container,
-      source: "manual",
+      source: 'manual',
     });
     return this;
   }
@@ -309,7 +293,7 @@ export class Service {
   public once<T = any>(
     eventName: string,
     handler: (data: T) => void,
-    scope: EventScope = "container"
+    scope: EventScope = 'container'
   ): this {
     bindTrackedEventListener(this, {
       eventName,
@@ -317,7 +301,7 @@ export class Service {
       scope,
       once: true,
       container: this._container,
-      source: "manual",
+      source: 'manual',
     });
     return this;
   }
@@ -353,11 +337,7 @@ export class Service {
    * }
    * ```
    */
-  public off(
-    eventName: string,
-    handler?: Function,
-    scope: EventScope = "container"
-  ): this {
+  public off(eventName: string, handler?: Function, scope: EventScope = 'container'): this {
     unbindTrackedEventListeners(this, {
       eventName,
       handler: handler as ((...args: any[]) => void) | undefined,
@@ -394,11 +374,7 @@ export class Service {
    * }
    * ```
    */
-  public emit<T = any>(
-    eventName: string,
-    data?: T,
-    scope: EventScope = "container"
-  ): this {
+  public emit<T = any>(eventName: string, data?: T, scope: EventScope = 'container'): this {
     const emitter = EventSystem.getEmitter(scope, this._container);
     emitter.emit(eventName, data);
     return this;

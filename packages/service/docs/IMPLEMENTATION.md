@@ -174,8 +174,8 @@ export function getServiceConfig(): ServiceConfig {
 #### 使用方式
 
 ```typescript
-import { unstable_batchedUpdates } from "react-dom";
-import { configureService } from "@rabjs/service";
+import { unstable_batchedUpdates } from 'react-dom';
+import { configureService } from '@rabjs/service';
 
 configureService({
   reactionScheduler: unstable_batchedUpdates,
@@ -186,9 +186,7 @@ configureService({
 
 ```typescript
 // @rabjs/react/src/configureService.ts
-export function configureServiceForReact(
-  batchedUpdates: (callback: () => void) => void
-): void {
+export function configureServiceForReact(batchedUpdates: (callback: () => void) => void): void {
   configureService({
     reactionScheduler: batchedUpdates,
   });
@@ -278,7 +276,7 @@ service.name = "new"; // 只有 ComponentB 重新渲染
 ### 1. Observable 特性测试
 
 ```typescript
-it("Service 实例应该是 observable 的", () => {
+it('Service 实例应该是 observable 的', () => {
   class TestService extends Service {
     count = 0;
   }
@@ -287,7 +285,7 @@ it("Service 实例应该是 observable 的", () => {
   expect(isObservable(service)).toBe(true);
 });
 
-it("Service 属性变化应该触发 reaction", () => {
+it('Service 属性变化应该触发 reaction', () => {
   class TestService extends Service {
     count = 0;
     increment() {
@@ -312,7 +310,7 @@ it("Service 属性变化应该触发 reaction", () => {
 ### 2. 批量更新测试
 
 ```typescript
-it("批量更新应该包装状态更新", async () => {
+it('批量更新应该包装状态更新', async () => {
   let batchCount = 0;
   const batchedUpdates = jest.fn((callback: () => void) => {
     batchCount++;
@@ -325,8 +323,8 @@ it("批量更新应该包装状态更新", async () => {
 
   class TestService extends Service {
     async fetchData() {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return "data";
+      await new Promise(resolve => setTimeout(resolve, 10));
+      return 'data';
     }
   }
 
@@ -341,11 +339,11 @@ it("批量更新应该包装状态更新", async () => {
 ### 3. 方法拦截测试
 
 ```typescript
-it("异步方法应该自动管理 loading 状态", async () => {
+it('异步方法应该自动管理 loading 状态', async () => {
   class TestService extends Service {
     async fetchData() {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return "data";
+      await new Promise(resolve => setTimeout(resolve, 10));
+      return 'data';
     }
   }
 
@@ -358,7 +356,7 @@ it("异步方法应该自动管理 loading 状态", async () => {
   expect(service.$model.fetchData.loading).toBe(true);
 
   const result = await promise;
-  expect(result).toBe("data");
+  expect(result).toBe('data');
   expect(service.$model.fetchData.loading).toBe(false);
   expect(service.$model.fetchData.error).toBe(null);
 });
@@ -410,8 +408,8 @@ it("异步方法应该自动管理 loading 状态", async () => {
 
 ```typescript
 // src/index.tsx
-import { unstable_batchedUpdates } from "react-dom";
-import { configureServiceForReact } from "@rabjs/react";
+import { unstable_batchedUpdates } from 'react-dom';
+import { configureServiceForReact } from '@rabjs/react';
 
 configureServiceForReact(unstable_batchedUpdates);
 ```
@@ -482,7 +480,7 @@ configureService({
 
 ```typescript
 class UserService extends Service {
-  @persist("localStorage")
+  @persist('localStorage')
   preferences = {};
 }
 ```

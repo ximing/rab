@@ -14,16 +14,16 @@
  *
  * 复现脚本: /tmp/g2-attack-nested-set.ts
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("转发帧: 嵌套 set 路由只属于栈顶帧 (G2b)", () => {
-  test("setter 同 key defineProperty 后嵌套普通赋值, middle/child 各只通知一次", () => {
+describe('转发帧: 嵌套 set 路由只属于栈顶帧 (G2b)', () => {
+  test('setter 同 key defineProperty 后嵌套普通赋值, middle/child 各只通知一次', () => {
     const middle: Record<string, unknown> = observable({ side: 0 });
     const gpRaw: Record<string, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(this: unknown, _v: number) {
-        Object.defineProperty(middle, "k", {
+        Object.defineProperty(middle, 'k', {
           value: 3,
           writable: true,
           enumerable: true,
@@ -57,13 +57,13 @@ describe("转发帧: 嵌套 set 路由只属于栈顶帧 (G2b)", () => {
     expect(childCalls).toBe(2);
   });
 
-  test("对称 (shadow 中层): shadow middle 上同场景同样单通知", () => {
+  test('对称 (shadow 中层): shadow middle 上同场景同样单通知', () => {
     const middle: Record<string, unknown> = shadowObservable({ side: 0 });
     const gpRaw: Record<string, unknown> = {};
-    Object.defineProperty(gpRaw, "k", {
+    Object.defineProperty(gpRaw, 'k', {
       configurable: true,
       set(this: unknown, _v: number) {
-        Object.defineProperty(middle, "k", {
+        Object.defineProperty(middle, 'k', {
           value: 3,
           writable: true,
           enumerable: true,

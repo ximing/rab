@@ -1,11 +1,7 @@
-import {
-  Debounce,
-  cancelDebounce,
-  cleanupAllDebounces,
-} from "../../decorators/debounce";
-import { Service } from "../../service";
+import { Debounce, cancelDebounce, cleanupAllDebounces } from '../../decorators/debounce';
+import { Service } from '../../service';
 
-describe("Debounce 装饰器", () => {
+describe('Debounce 装饰器', () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -14,8 +10,8 @@ describe("Debounce 装饰器", () => {
     jest.useRealTimers();
   });
 
-  describe("基础防抖功能", () => {
-    it("应该在延迟后执行最后一次调用", () => {
+  describe('基础防抖功能', () => {
+    it('应该在延迟后执行最后一次调用', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -43,7 +39,7 @@ describe("Debounce 装饰器", () => {
       expect(service.callCount).toBe(1);
     });
 
-    it("应该支持 leading: true", () => {
+    it('应该支持 leading: true', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -64,7 +60,7 @@ describe("Debounce 装饰器", () => {
       expect(service.callCount).toBe(1);
     });
 
-    it("应该支持 maxWait 选项", () => {
+    it('应该支持 maxWait 选项', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -94,8 +90,8 @@ describe("Debounce 装饰器", () => {
     });
   });
 
-  describe("清理功能", () => {
-    it("cancelDebounce 应该清理指定方法的定时器", () => {
+  describe('清理功能', () => {
+    it('cancelDebounce 应该清理指定方法的定时器', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -111,14 +107,14 @@ describe("Debounce 装饰器", () => {
       expect(service.callCount).toBe(0);
 
       // 清理定时器
-      cancelDebounce(service, "debouncedMethod");
+      cancelDebounce(service, 'debouncedMethod');
 
       // 延迟结束后不应该执行
       jest.advanceTimersByTime(1000);
       expect(service.callCount).toBe(0);
     });
 
-    it("cleanupAllDebounces 应该清理所有 Debounce 定时器", () => {
+    it('cleanupAllDebounces 应该清理所有 Debounce 定时器', () => {
       class TestService extends Service {
         count1 = 0;
         count2 = 0;
@@ -150,7 +146,7 @@ describe("Debounce 装饰器", () => {
       expect(service.count2).toBe(0);
     });
 
-    it("清理后应该重置状态，允许重新调用", () => {
+    it('清理后应该重置状态，允许重新调用', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -167,7 +163,7 @@ describe("Debounce 装饰器", () => {
       expect(service.callCount).toBe(0);
 
       // 清理
-      cancelDebounce(service, "debouncedMethod");
+      cancelDebounce(service, 'debouncedMethod');
 
       // 清理后立即调用应该能重新开始防抖
       service.debouncedMethod();
@@ -175,7 +171,7 @@ describe("Debounce 装饰器", () => {
       expect(service.callCount).toBe(1);
     });
 
-    it("在 Service destroy 时应该清理定时器", () => {
+    it('在 Service destroy 时应该清理定时器', () => {
       class TestService extends Service {
         callCount = 0;
 
@@ -203,8 +199,8 @@ describe("Debounce 装饰器", () => {
     });
   });
 
-  describe("返回值处理", () => {
-    it("应该返回最近一次执行的结果", () => {
+  describe('返回值处理', () => {
+    it('应该返回最近一次执行的结果', () => {
       class TestService extends Service {
         counter = 0;
 

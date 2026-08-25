@@ -1,10 +1,7 @@
-import { EventScope } from "../event";
-import {
-  bindTrackedEventListener,
-  cleanupTrackedEventListeners,
-} from "../event-listener-registry";
-import { Container } from "../ioc";
-import { Service } from "../service";
+import { EventScope } from '../event';
+import { bindTrackedEventListener, cleanupTrackedEventListeners } from '../event-listener-registry';
+import { Container } from '../ioc';
+import { Service } from '../service';
 
 /**
  * @On 装饰器选项
@@ -64,13 +61,11 @@ export function On(eventName: string, options?: OnOptions): MethodDecorator {
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    if (typeof originalMethod !== "function") {
-      throw new TypeError(
-        `@On 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`
-      );
+    if (typeof originalMethod !== 'function') {
+      throw new TypeError(`@On 装饰器只能用于方法，但 ${String(propertyKey)} 不是一个方法`);
     }
 
-    const scope = options?.scope ?? "container";
+    const scope = options?.scope ?? 'container';
 
     // 在类的原型上存储事件监听元数据
     if (!target.__eventListeners) {
@@ -108,12 +103,9 @@ export function getEventListenerMetadata(target: any): Array<{
  * @param propertyKey 属性名
  * @returns 是否被装饰
  */
-export function isEventListener(
-  target: any,
-  propertyKey: string | symbol
-): boolean {
+export function isEventListener(target: any, propertyKey: string | symbol): boolean {
   const metadata = getEventListenerMetadata(target);
-  return metadata.some((item) => item.propertyKey === propertyKey);
+  return metadata.some(item => item.propertyKey === propertyKey);
 }
 
 /**
@@ -123,10 +115,7 @@ export function isEventListener(
  * @param service Service 实例
  * @param container 可选的容器实例，如果不提供则从 Service 实例中获取
  */
-export function setupEventListeners(
-  service: Service,
-  container?: Container
-): void {
+export function setupEventListeners(service: Service, container?: Container): void {
   const prototype = Object.getPrototypeOf(service);
   const metadata = getEventListenerMetadata(prototype);
 
@@ -152,7 +141,7 @@ export function setupEventListeners(
         scope,
         once: isOnce,
         container: targetContainer,
-        source: "decorator",
+        source: 'decorator',
       });
     } catch (error) {
       throw new Error(

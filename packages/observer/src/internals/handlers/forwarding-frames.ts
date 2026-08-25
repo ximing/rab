@@ -7,7 +7,7 @@
  * 打标记, 外层 receiver 的帧却在"另一个栈"上 —— 抑制逻辑完全失效
  * (链上 reaction 双通知)。帧栈必须全局唯一。
  * */
-import { proxyToRaw } from "../proxy-raw-map";
+import { proxyToRaw } from '../proxy-raw-map';
 
 export interface ForwardingSetFrame {
   target: object;
@@ -113,11 +113,7 @@ export function markForwardedDefineProperty(target: object, key: PropertyKey): b
  * 跳过通知前据此判断「窗口内是否又发生了新的同 key 落盘」(值一致才是真正的
  * 重复通知, 不一致必须按差值补发, 见 ForwardingSetFrame.notifiedValue 注释)。
  * */
-export function markNotifiedInFlightFrames(
-  target: object,
-  key: PropertyKey,
-  value: unknown
-): void {
+export function markNotifiedInFlightFrames(target: object, key: PropertyKey, value: unknown): void {
   if (forwardingSetFrames.length === 0) {
     return;
   }

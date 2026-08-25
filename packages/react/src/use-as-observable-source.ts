@@ -2,8 +2,8 @@
  * useAsObservableSource Hook - 将 props 转换为 observable 对象
  * 参考 mobx-react-lite 实现
  */
-import { observable } from "@rabjs/observer";
-import { useRef } from "react";
+import { observable } from '@rabjs/observer';
+import { useRef } from 'react';
 
 /**
  * 将 props 或其他值转换为 observable 对象

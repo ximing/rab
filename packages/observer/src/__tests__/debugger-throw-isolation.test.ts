@@ -11,11 +11,11 @@
  * 那条路径 (registerRunningReactionForOperation) 的错误归属 reaction 执行
  * 本身, 不在本测试范围。这里只在通知期 (op.type === "set") 抛错。
  * */
-import { observable, observe } from "../main";
-import type { Reaction } from "../main";
+import { observable, observe } from '../main';
+import type { Reaction } from '../main';
 
-describe("debugger 抛错的错误隔离", () => {
-  test("queue 时 debugger 抛错不得阻止同批其余 reaction 执行 (错误在调用点 rethrow)", () => {
+describe('debugger 抛错的错误隔离', () => {
+  test('queue 时 debugger 抛错不得阻止同批其余 reaction 执行 (错误在调用点 rethrow)', () => {
     const state = observable({ x: 1 });
     const r1Runs: number[] = [];
     let r2Runs = 0;
@@ -25,9 +25,9 @@ describe("debugger 抛错的错误隔离", () => {
         r1Runs.push(state.x);
       },
       {
-        debugger: (op) => {
-          if (op.type === "set") {
-            throw new Error("dbg boom");
+        debugger: op => {
+          if (op.type === 'set') {
+            throw new Error('dbg boom');
           }
         },
       }
@@ -41,7 +41,7 @@ describe("debugger 抛错的错误隔离", () => {
 
     expect(() => {
       state.x = 2;
-    }).toThrow("dbg boom");
+    }).toThrow('dbg boom');
 
     // r2 必须仍被通知 (修复前: 循环在 r1 的 debugger 处终止, r2 不执行)
     expect(r2Runs).toBe(2);
@@ -51,18 +51,18 @@ describe("debugger 抛错的错误隔离", () => {
     // 错误隔离不影响后续批次
     expect(() => {
       state.x = 3;
-    }).toThrow("dbg boom");
+    }).toThrow('dbg boom');
     expect(r2Runs).toBe(3);
     expect(r1Runs).toEqual([1, 2, 3]);
   });
 
-  test("同批多个 throwing debugger: 第一个错误被 rethrow, 其余 reaction 仍执行", () => {
+  test('同批多个 throwing debugger: 第一个错误被 rethrow, 其余 reaction 仍执行', () => {
     const state = observable({ x: 1 });
     let r2Runs = 0;
     observe(() => void state.x, {
-      debugger: (op) => {
-        if (op.type === "set") {
-          throw new Error("first");
+      debugger: op => {
+        if (op.type === 'set') {
+          throw new Error('first');
         }
       },
     });
@@ -71,40 +71,40 @@ describe("debugger 抛错的错误隔离", () => {
       r2Runs++;
     });
     observe(() => void state.x, {
-      debugger: (op) => {
-        if (op.type === "set") {
-          throw new Error("second");
+      debugger: op => {
+        if (op.type === 'set') {
+          throw new Error('second');
         }
       },
     });
     expect(() => {
       state.x = 2;
-    }).toThrow("first");
+    }).toThrow('first');
     expect(r2Runs).toBe(2);
   });
 
-  test("debugger 抛错后 isDebugging 复位, 后续 debugger 仍被调用", () => {
+  test('debugger 抛错后 isDebugging 复位, 后续 debugger 仍被调用', () => {
     const state = observable({ x: 1 });
     const events: string[] = [];
     observe(() => void state.x, {
-      debugger: (op) => {
+      debugger: op => {
         events.push(op.type);
-        if (op.type === "set") {
-          throw new Error("dbg");
+        if (op.type === 'set') {
+          throw new Error('dbg');
         }
       },
     });
     expect(() => {
       state.x = 2;
-    }).toThrow("dbg");
+    }).toThrow('dbg');
     expect(() => {
       state.x = 3;
-    }).toThrow("dbg");
+    }).toThrow('dbg');
     // 两次 set 的 debugger 都触发了 (标志未卡死)
-    expect(events.filter((t) => t === "set").length).toBe(2);
+    expect(events.filter(t => t === 'set').length).toBe(2);
   });
 
-  test("debugger 抛错不影响 reaction 自身的调度 (scheduler 仍收到入队)", () => {
+  test('debugger 抛错不影响 reaction 自身的调度 (scheduler 仍收到入队)', () => {
     const state = observable({ x: 1 });
     const queue = new Set<Reaction>();
     let runs = 0;
@@ -115,9 +115,9 @@ describe("debugger 抛错的错误隔离", () => {
       },
       {
         scheduler: queue,
-        debugger: (op) => {
-          if (op.type === "set") {
-            throw new Error("dbg");
+        debugger: op => {
+          if (op.type === 'set') {
+            throw new Error('dbg');
           }
         },
       }
@@ -125,7 +125,7 @@ describe("debugger 抛错的错误隔离", () => {
     expect(queue.size).toBe(0); // 首跑同步执行, 未经过 scheduler
     expect(() => {
       state.x = 2;
-    }).toThrow("dbg");
+    }).toThrow('dbg');
     // debugger 抛错不得吞掉调度本身: reaction 必须仍被入队
     expect(queue.size).toBe(1);
     const [r] = queue;

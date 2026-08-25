@@ -2,10 +2,10 @@
  * 使用 FinalizationRegistry 管理 Reaction 的生命周期
  * 当组件卸载时自动清理 Reaction，防止内存泄漏
  */
-import type { Reaction } from "@rabjs/observer";
-import { unobserve } from "@rabjs/observer";
+import type { Reaction } from '@rabjs/observer';
+import { unobserve } from '@rabjs/observer';
 
-import { UniversalFinalizationRegistry } from "./universal-finalization-registry";
+import { UniversalFinalizationRegistry } from './universal-finalization-registry';
 
 /**
  * 创建 FinalizationRegistry 用于自动清理已卸载组件的 Reaction

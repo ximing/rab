@@ -6,10 +6,10 @@
  * - base 与 shadow 混合使用时互不干扰;
  * - 收缩触发的 reaction 内再次收缩不破坏后续通知。
  */
-import { observable, observe, shadowObservable } from "../main";
+import { observable, observe, shadowObservable } from '../main';
 
-describe("length 收缩通知的调度与交互行为", () => {
-  test("Set 型 scheduler: 一次收缩把窗口内的索引依赖各入队一次", () => {
+describe('length 收缩通知的调度与交互行为', () => {
+  test('Set 型 scheduler: 一次收缩把窗口内的索引依赖各入队一次', () => {
     const arr = observable([0, 1, 2, 3, 4, 5]) as number[];
     const queued = new Set<object>();
     const queue = {
@@ -30,9 +30,9 @@ describe("length 收缩通知的调度与交互行为", () => {
     expect(queued.size).toBe(1);
   });
 
-  test("pop 的收缩路径通知被删除索引的依赖并读到 undefined", () => {
+  test('pop 的收缩路径通知被删除索引的依赖并读到 undefined', () => {
     const arr = observable([1, 2, 3, 4, 5]) as number[];
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     let runs = 0;
     observe(() => {
       runs++;
@@ -45,9 +45,9 @@ describe("length 收缩通知的调度与交互行为", () => {
     expect(last).toBeUndefined();
   });
 
-  test("splice 的收缩路径通知被截断索引的依赖", () => {
+  test('splice 的收缩路径通知被截断索引的依赖', () => {
     const arr = observable([1, 2, 3, 4, 5]) as number[];
-    let last: unknown = "initial";
+    let last: unknown = 'initial';
     let runs = 0;
     observe(() => {
       runs++;
@@ -60,7 +60,7 @@ describe("length 收缩通知的调度与交互行为", () => {
     expect(last).toBeUndefined();
   });
 
-  test("base 与 shadow 混合使用: 交叉收缩互不干扰", () => {
+  test('base 与 shadow 混合使用: 交叉收缩互不干扰', () => {
     const sarr = shadowObservable([1, 2, 3, 4, 5]) as number[];
     const barr = observable({ list: [1, 2, 3, 4, 5] }) as { list: number[] };
     let s = 0;
@@ -83,7 +83,7 @@ describe("length 收缩通知的调度与交互行为", () => {
     expect(b).toBe(2);
   });
 
-  test("收缩触发的 reaction 内再次收缩: 不破坏后续通知", () => {
+  test('收缩触发的 reaction 内再次收缩: 不破坏后续通知', () => {
     const arr = observable([1, 2, 3, 4, 5, 6, 7, 8]) as number[];
     let cascades = 0;
     let armed = false;
