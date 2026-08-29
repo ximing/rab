@@ -1,5 +1,22 @@
 # @rabjs/react
 
+## 9.3.4
+
+### Patch Changes
+
+- 08833d1: `@Memo` getters now notify outer `observe` / `observer` when their deps change (#196). Observer exports `notify(target, key)` for this; React re-exports it.
+- ab1dc86: `useReaction(effect)` now runs on mount and tracks dependencies by default (`immediate` defaults to true, #195). Passing `immediate: false` still primes the reaction once so later updates fire.
+- db9feae: Class `view()` skips reaction creation when `enableStaticRendering(true)` is set, matching `observer()` / `useObserver` so SSR does not leak subscriptions (#197).
+- Updated dependencies [f067d9f]
+- Updated dependencies [647b3d3]
+- Updated dependencies [08833d1]
+- Updated dependencies [94f2fc3]
+- Updated dependencies [906c86a]
+- Updated dependencies [5203be4]
+- Updated dependencies [baf2986]
+  - @rabjs/observer@9.3.4
+  - @rabjs/service@9.3.4
+
 ## 9.3.3
 
 ### Patch Changes

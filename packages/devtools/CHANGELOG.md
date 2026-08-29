@@ -1,5 +1,13 @@
 # @rabjs/devtools
 
+## 9.3.4
+
+### Patch Changes
+
+- Updated dependencies [08833d1]
+  - @rabjs/service@9.3.4
+  - @rabjs/shared@9.3.4
+
 ## 9.3.3
 
 ### Patch Changes

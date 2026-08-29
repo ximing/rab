@@ -1,5 +1,11 @@
 # @rabjs/service
 
+## 9.3.4
+
+### Patch Changes
+
+- 08833d1: `@Memo` getters now notify outer `observe` / `observer` when their deps change (#196). Observer exports `notify(target, key)` for this; React re-exports it.
+
 ## 9.3.3
 
 ## 9.3.2
