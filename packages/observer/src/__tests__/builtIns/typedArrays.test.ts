@@ -1,6 +1,8 @@
 import { observable, isObservable, shadowObservable } from '../../main';
 
-const TypedArrays: Array<new (length: number) => ArrayBufferView> = [
+type UninstrumentedTypedArray = ArrayBufferView & { readonly length: number };
+
+const TypedArrays: Array<new (length: number) => UninstrumentedTypedArray> = [
   Int8Array,
   Uint8Array,
   Uint8ClampedArray,
