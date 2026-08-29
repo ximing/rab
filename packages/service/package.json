@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/service",
-  "version": "9.3.3",
+  "version": "9.3.4",
   "description": "Observable Service containers, lifecycle, and method models (loading/error) for the rab AI-first state architecture",
   "main": "lib/main.cjs",
   "module": "lib/main.js",

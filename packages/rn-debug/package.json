@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/rn-debug",
-  "version": "9.3.3",
+  "version": "9.3.4",
   "description": "RABjs React Native 调试 SDK - 长连接接收指令并顺序执行",
   "type": "module",
   "main": "lib/main.cjs",

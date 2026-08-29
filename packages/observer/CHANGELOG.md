@@ -1,5 +1,21 @@
 # @rabjs/observer
 
+## 9.3.4
+
+### Patch Changes
+
+- f067d9f: Tighten collection builtin-method forwarding (#193): only own methods on Map/Set prototypes are forwarded (so `valueOf`/`toString` stay on the proxy and no longer subscribe to iterate). ES2024 methods also subscribe to an observable `other` operand, and cross-realm `Set.union` is applied to the raw target instead of throwing.
+- 647b3d3: Map/Set `forEach` now forwards `thisArg` and passes the observable proxy as the third callback argument, so writes like `map.set(...)` inside `forEach` notify reactions (#191). Shadow collections do the same for the third argument while still exposing raw values.
+- 08833d1: `@Memo` getters now notify outer `observe` / `observer` when their deps change (#196). Observer exports `notify(target, key)` for this; React re-exports it.
+- 94f2fc3: Fix two leftover observer issues from PR #91:
+
+  - **#92**：跨 realm Map/Set 在 `observable()` 包装前已预置 observable proxy key 时，条目现在会归一化为 raw（`instanceof` 对跨 realm 集合不成立，改用与集合路由相同的 tag + duck-check）。此前 `has`/`get`/`delete` 双身份都失灵，再 `set` 同一逻辑 key 还会产生重复条目。
+  - **#93**：新增 `batch(fn)`；数组变异方法（`push`/`pop`/`splice`/`fill` 等）一次调用只通知每个 reaction 一次，且读到最终值。`batch` 之外的单次赋值仍立即同步执行。`Array.prototype.push.call(arr, ...)` 仍不自动 batch。
+
+- 906c86a: Deep `Set` `keys()` / `entries()` / `forEach` now wrap members the same way as `values()`, restoring the native `keys === values` and `entryKey === entryValue` identity (#192). Map keys stay raw.
+- 5203be4: `observable()` 不再包装 TypedArray / DataView（`ArrayBuffer.isView`）。此前 9 种旧 TypedArray 被错误包进 base proxy，`length`/`fill`/`[...ta]` 抛 `incompatible receiver`（#190）；`BigInt64Array` / `Float16Array` 则本来就不包装。现在与 Date 一样原样返回，方法可用。若曾依赖 `ta[0] =` 触发 reaction，请改用普通数组，或把 view 放在容器里替换整段 buffer（`state.bytes = new Uint8Array(...)`）。
+- baf2986: `wrapKey` now WeakRef-wraps function collection keys the same as object keys, so `observe(() => wm.has(fn))` no longer pins `fn` for the life of the WeakMap (#194).
+
 ## 9.3.3
 
 ## 9.3.2
