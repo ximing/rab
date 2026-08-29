@@ -133,6 +133,156 @@ export function registerRunningReactionForOperation(operation: Operation): void 
 }
 
 /*
+ * MobX 式 batch/transaction (issue #93):
+ * 变更期间把待触发的 reaction 收进去重队列, 最外层 batch 结束时统一 flush。
+ * 嵌套 batch 只在 depth 回到 0 时 flush。batch 外的单次赋值仍立即同步执行
+ * (不改默认调度语义)。数组变异方法 (push/pop/splice/...) 在 get trap 里
+ * 被包进 batch, 一次方法调用内部的多条 trap 写入只通知每个 reaction 一次。
+ * */
+let batchDepth = 0;
+let isFlushing = false;
+const pendingReactionSet = new Set<Reaction>();
+const pendingReactions: Reaction[] = [];
+let flushHasError = false;
+let flushFirstError: unknown;
+
+function recordFlushError(error: unknown): void {
+  if (!flushHasError) {
+    flushHasError = true;
+    flushFirstError = error;
+  }
+}
+
+function throwFlushErrorIfAny(): void {
+  if (!flushHasError) {
+    return;
+  }
+  const error = flushFirstError;
+  flushHasError = false;
+  flushFirstError = undefined;
+  throw error;
+}
+
+/**
+ * 把一段同步变更收成一批: 同一 reaction 去重, 结束后统一触发。
+ * 嵌套调用安全; 回调的返回值原样传出。
+ */
+export function batch<T>(fn: () => T): T {
+  batchDepth++;
+  try {
+    return fn();
+  } finally {
+    batchDepth--;
+    if (batchDepth === 0) {
+      flushQueuedReactions();
+    }
+  }
+}
+
+const ARRAY_MUTATOR_KEYS = new Set([
+  'copyWithin',
+  'fill',
+  'pop',
+  'push',
+  'reverse',
+  'shift',
+  'sort',
+  'splice',
+  'unshift',
+]);
+
+const wrappedArrayMutators = new WeakMap<Function, Function>();
+
+function wrapArrayMutator(fn: Function): Function {
+  const cached = wrappedArrayMutators.get(fn);
+  if (cached) {
+    return cached;
+  }
+  const wrapped = function (this: unknown, ...args: unknown[]): unknown {
+    return batch(() => Reflect.apply(fn, this, args));
+  };
+  Object.defineProperty(wrapped, 'name', { value: fn.name, configurable: true });
+  Object.defineProperty(wrapped, 'length', { value: fn.length, configurable: true });
+  wrappedArrayMutators.set(fn, wrapped);
+  return wrapped;
+}
+
+/*
+ * 数组变异方法经 get trap 取出时包进 batch, 使引擎方法内部的多条
+ * [[Set]]/[[Delete]] 在一次用户调用里只 flush 一轮。非数组 / 非变异
+ * 方法名原样返回, 热路径 (索引读) 不受影响。
+ */
+export function wrapIfArrayMutator(target: object, key: PropertyKey, value: unknown): unknown {
+  if (
+    typeof value === 'function' &&
+    typeof key === 'string' &&
+    ARRAY_MUTATOR_KEYS.has(key) &&
+    Array.isArray(target)
+  ) {
+    return wrapArrayMutator(value);
+  }
+  return value;
+}
+
+function scheduleReaction(reaction: Reaction): void {
+  /*
+   * 根据 reaction 的调度策略,决定如何执行该 reaction。
+   * 函数类型 scheduler:
+   * observe(fn, {
+   *    scheduler: (reaction) => {
+   *      setTimeout(reaction, 0) // 异步执行
+   *    }
+   * })
+   * 对象类型 scheduler (如 Set/Queue):
+   * observe(fn, {
+   *    scheduler: new Set() // 批量收集,稍后统一执行
+   * })
+   * 无 scheduler: 立即同步执行
+   * observe(fn) // 默认同步执行
+   * */
+  if (typeof reaction.scheduler === 'function') {
+    reaction.scheduler(reaction);
+  } else if (typeof reaction.scheduler === 'object' && reaction.scheduler !== null) {
+    reaction.scheduler.add(reaction);
+  } else {
+    reaction();
+  }
+}
+
+function runQueuedReaction(reaction: Reaction): void {
+  if (reaction.unobserved) {
+    return;
+  }
+  if (reactionStack.has(reaction)) {
+    return;
+  }
+  try {
+    scheduleReaction(reaction);
+  } catch (error) {
+    recordFlushError(error);
+  }
+}
+
+function flushQueuedReactions(): void {
+  if (isFlushing) {
+    return;
+  }
+  isFlushing = true;
+  try {
+    while (pendingReactions.length > 0) {
+      const list = pendingReactions.splice(0);
+      pendingReactionSet.clear();
+      for (let i = 0; i < list.length; i++) {
+        runQueuedReaction(list[i]);
+      }
+    }
+  } finally {
+    isFlushing = false;
+    throwFlushErrorIfAny();
+  }
+}
+
+/*
  * 作用: 当数据发生变化时,找出所有依赖该数据的 reactions 并触发它们。
  * 在 Proxy 的 set/delete/add/clear 等修改操作中被调用:
  * */
@@ -162,9 +312,12 @@ export function queueReactionsForOperation(operation: Operation): void {
     const length = reactionsArray.length;
     // 优化: 提前检查 reactionStack 是否为空,避免重复调用 has()
     const stackSize = reactionStack.size;
+    const defer = batchDepth > 0 || isFlushing;
     // 单个 reaction(或其 scheduler 调用 / 其 debugger)抛错不得中断同批其余
     // reaction; 收集本批第一个错误,全部执行完毕后在变更调用点 rethrow。
     // 异步执行的错误(如 setTimeout 里的 reaction)天然不经过这里。
+    // batch 期间错误先记到 flush 槽, 由最外层 batch 结束时再抛 —— 不能在
+    // 单条 trap 里抛, 否则会打断 Array#splice 等引擎方法的剩余写入。
     let firstError: unknown;
     let hasError = false;
     for (let i = 0; i < length; i++) {
@@ -174,21 +327,6 @@ export function queueReactionsForOperation(operation: Operation): void {
       // 这里把整个链路都排除了，但是可能出现一个问题，就是父节点已经渲染过的组件，如果这个arr有变化，就无法重新渲染了
       // 但是这种属于不正当用法才能出现的case，正常情况下，我们不应该在render中做set操作
       if (stackSize === 0 || !reactionStack.has(reaction)) {
-        /*
-         * 根据 reaction 的调度策略,决定如何执行该 reaction。
-         * 函数类型 scheduler:
-         * observe(fn, {
-         *    scheduler: (reaction) => {
-         *      setTimeout(reaction, 0) // 异步执行
-         *    }
-         * })
-         * 对象类型 scheduler (如 Set/Queue):
-         * observe(fn, {
-         *    scheduler: new Set() // 批量收集,稍后统一执行
-         * })
-         * 无 scheduler: 立即同步执行
-         * observe(fn) // 默认同步执行
-         * */
         try {
           // debugger 单独隔离: throwing debugger 的错误并入首错收集,
           // 但不得吞掉本 reaction 自身的调度 (scheduler/reaction 仍要执行)
@@ -200,12 +338,13 @@ export function queueReactionsForOperation(operation: Operation): void {
               firstError = error;
             }
           }
-          if (typeof reaction.scheduler === 'function') {
-            reaction.scheduler(reaction);
-          } else if (typeof reaction.scheduler === 'object' && reaction.scheduler !== null) {
-            reaction.scheduler.add(reaction);
+          if (defer) {
+            if (!pendingReactionSet.has(reaction)) {
+              pendingReactionSet.add(reaction);
+              pendingReactions.push(reaction);
+            }
           } else {
-            reaction();
+            scheduleReaction(reaction);
           }
         } catch (error) {
           if (!hasError) {
@@ -216,7 +355,11 @@ export function queueReactionsForOperation(operation: Operation): void {
       }
     }
     if (hasError) {
-      throw firstError;
+      if (defer) {
+        recordFlushError(firstError);
+      } else {
+        throw firstError;
+      }
     }
   }
 }

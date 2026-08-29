@@ -4,14 +4,12 @@
  *
  * 覆盖范围：索引读写依赖、length 读写依赖（含收缩通知与字符串数值折叠）、
  * 增长不误报、枚举依赖（Object.keys / for...in / 展开）、变异方法（push/pop/
- * shift/unshift/splice/fill/sort/reverse）的通知次数现状钉子、reaction 内自变异
- * 不死循环、稀疏数组、Array 子类。
+ * shift/unshift/splice/fill/sort/reverse）一次调用合并为单次通知（#93）、
+ * reaction 内自变异不死循环、稀疏数组、Array 子类。
  *
- * 关于"方法通知次数现状钉子"（引用 #93）：数组变异方法的通知次数由引擎方法
- * 内部的原语写入序列穿透 proxy trap 决定（例如 pop = length 收缩 + delete 尾索引，
- * 各通知一次），当前有意保留"多次通知"的现状（最终值始终正确）。
- * 未来若合并为单次通知（行为改善），这些用例失败是预期的、是好事——
- * 更新断言并在 changeset 注明即可。
+ * 关于方法通知次数（#93）：数组变异方法内部的原语写入序列仍会穿透 proxy trap，
+ * 但方法调用被包进 batch，同一 reaction 在方法结束后只触发一次，且读到最终值。
+ * 直接 `arr[i] =` / `arr.length =` 仍是立即同步通知（不经过 batch）。
  */
 import { observable, observe, isObservable, resetGlobalConfig } from '../../main';
 
@@ -223,7 +221,7 @@ describe('数组 observable 契约：枚举依赖（键集合观察）', () => {
   });
 });
 
-describe('数组 observable 契约：变异方法通知次数现状钉子（#93，有意保留）', () => {
+describe('数组 observable 契约：变异方法一次调用合并为单次通知（#93）', () => {
   test('push(单项)：length 与内容依赖各恰通知一次，返回新长度', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
@@ -235,64 +233,64 @@ describe('数组 observable 契约：变异方法通知次数现状钉子（#93�
     expect(join.last()).toBe('1,2,3,4');
   });
 
-  test('push(多项)：现状为每个新增元素各通知一次（2 项 → 2 次）（#93）', () => {
+  test('push(多项)：一次方法调用 length 依赖只通知一次（#93）', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
     arr.push(4, 5);
-    expect(len.runs()).toBe(3);
+    expect(len.runs()).toBe(2);
     expect(len.last()).toBe(5);
   });
 
-  test('pop：现状通知两次（length 收缩 + 尾索引 delete，#93），返回被弹出元素，最终值正确', () => {
+  test('pop：一次方法调用只通知一次（#93），返回被弹出元素，最终值正确', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
     const join = counter(() => arr.join(','));
     expect(arr.pop()).toBe(3);
-    expect(len.runs()).toBe(3);
+    expect(len.runs()).toBe(2);
     expect(len.last()).toBe(2);
-    expect(join.runs()).toBe(3);
+    expect(join.runs()).toBe(2);
     expect(join.last()).toBe('1,2');
   });
 
-  test('shift：现状 length 依赖通知两次、内容依赖通知四次并含中间状态（#93），最终值正确', () => {
+  test('shift：一次方法调用只通知一次（#93），最终值正确，不暴露中间状态', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
     const join = counter(() => arr.join(','));
     const idx0 = counter(() => arr[0]);
     expect(arr.shift()).toBe(1);
-    expect(len.runs()).toBe(3);
+    expect(len.runs()).toBe(2);
     expect(len.last()).toBe(2);
-    expect(join.runs()).toBe(5);
+    expect(join.runs()).toBe(2);
     expect(join.last()).toBe('2,3');
     expect(idx0.runs()).toBe(2);
     expect(idx0.last()).toBe(2);
   });
 
-  test('unshift：现状 length 依赖通知一次、内容依赖通知多次（#93），最终值正确', () => {
+  test('unshift：一次方法调用只通知一次（#93），最终值正确', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
     const join = counter(() => arr.join(','));
     expect(arr.unshift(0)).toBe(4);
     expect(len.runs()).toBe(2);
     expect(len.last()).toBe(4);
-    expect(join.runs()).toBe(5);
+    expect(join.runs()).toBe(2);
     expect(join.last()).toBe('0,1,2,3');
   });
 
-  test('splice 删除：现状 length 依赖通知三次（#93），返回被删元素组成的普通（未包装）数组', () => {
+  test('splice 删除：一次方法调用只通知一次（#93），返回被删元素组成的普通（未包装）数组', () => {
     const arr = observable<number[]>([1, 2, 3, 4, 5]);
     const len = counter(() => arr.length);
     const idx1 = counter(() => arr[1]);
     const removed = arr.splice(1, 2);
     expect(removed).toEqual([2, 3]);
     expect(isObservable(removed)).toBe(false);
-    expect(len.runs()).toBe(4);
+    expect(len.runs()).toBe(2);
     expect(len.last()).toBe(3);
     expect(idx1.runs()).toBe(2);
     expect(idx1.last()).toBe(4);
   });
 
-  test('splice 插入：现状 length 依赖通知一次（#93），最终值正确', () => {
+  test('splice 插入：一次方法调用 length 依赖只通知一次（#93），最终值正确', () => {
     const arr = observable<number[]>([1, 10, 11, 5]);
     const len = counter(() => arr.length);
     arr.splice(2, 0, 20);
@@ -301,16 +299,19 @@ describe('数组 observable 契约：变异方法通知次数现状钉子（#93�
     expect(arr.join(',')).toBe('1,10,20,11,5');
   });
 
-  test('fill(既有范围)：不通知 length/枚举依赖，只通知被改写的索引；返回数组自身', () => {
+  test('fill(既有范围)：不通知 length/枚举依赖；多索引内容依赖只通知一次；返回数组自身', () => {
     const arr = observable<number[]>([1, 2, 3]);
     const len = counter(() => arr.length);
     const keys = counter(() => Object.keys(arr).length);
     const idx1 = counter(() => arr[1]);
+    const join = counter(() => arr.join(','));
     expect(arr.fill(0)).toBe(arr);
     expect(len.runs()).toBe(1);
     expect(keys.runs()).toBe(1);
     expect(idx1.runs()).toBe(2);
     expect(idx1.last()).toBe(0);
+    expect(join.runs()).toBe(2);
+    expect(join.last()).toBe('0,0,0');
     expect(arr.join(',')).toBe('0,0,0');
   });
 
@@ -354,6 +355,14 @@ describe('数组 observable 契约：变异方法通知次数现状钉子（#93�
     expect(arr.shift()).toBeUndefined();
     expect(len.runs()).toBe(1);
     expect(len.last()).toBe(0);
+  });
+
+  test('pin: Array.prototype.push.call 不走包装方法，多项 push 仍逐条通知', () => {
+    const arr = observable<number[]>([1]);
+    const len = counter(() => arr.length);
+    Array.prototype.push.call(arr, 2, 3);
+    expect(len.runs()).toBe(3);
+    expect(len.last()).toBe(3);
   });
 });
 
@@ -417,7 +426,7 @@ describe('数组 observable 契约：Array 子类', () => {
     expect(arr instanceof MyArray).toBe(true);
     const c = counter(() => arr.length);
     arr.push(1, 2);
-    expect(c.runs()).toBe(3);
+    expect(c.runs()).toBe(2);
     expect(c.last()).toBe(2);
     arr[0] = 10;
     const idx = counter(() => arr[0]);

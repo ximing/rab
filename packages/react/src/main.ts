@@ -29,7 +29,7 @@ export { printDebugValue } from './utils/print-debug-value';
 export { observable, shadowObservable } from '@rabjs/observer';
 
 // Observer API - Create reactions that respond to observable changes
-export { observe, unobserve } from '@rabjs/observer';
+export { observe, unobserve, batch } from '@rabjs/observer';
 export type { ObserveOptions } from '@rabjs/observer';
 
 // Configuration API - Configure global defaults

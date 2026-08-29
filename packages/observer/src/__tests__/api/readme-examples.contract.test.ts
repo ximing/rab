@@ -5,7 +5,7 @@
  * Scope: packages/observer/README.md 正文中的每一个可执行示例与注释断言
  * （如「// 立即执行一次: 0」「// 重新运行: 1」「// 停止追踪」）、
  * "observe / unobserve" 章节对 scheduler 两形态与 unobserve 的承诺、
- * "unobserve 之后'在途执行'的语义" 章节的每一条，以及 "已知限制" 小节的
+ * "unobserve 之后'在途执行'的语义" 章节的每一条、"batch" 章节，以及 "已知限制" 小节的
  * 全部 6 条可执行行为。JSDoc @example（observable.ts / shadow-observable.ts /
  * configure.ts）不在本文件——归各 API 模块自己的契约文件钉。
  *
@@ -14,7 +14,15 @@
  * ES2024 Set 方法返回包装成员），这些用例失败是预期的——改断言 + changeset
  * 注明即可，同时必须同步更新 README 措辞。
  */
-import { observable, observe, unobserve, isObservable, raw, resetGlobalConfig } from '../../main';
+import {
+  observable,
+  observe,
+  unobserve,
+  batch,
+  isObservable,
+  raw,
+  resetGlobalConfig,
+} from '../../main';
 import type { Reaction, ReactionScheduler } from '../../main';
 
 // 全模块纪律：configure 契约污染是跨文件最大风险，任何用例结束后清空全局配置。
@@ -284,6 +292,49 @@ describe("README 'unobserve 之后在途执行的语义（重要）' 章节逐�
       r();
     }
     expect(runs).toBe(1); // 冲刷时无条目，不再执行
+  });
+});
+
+describe("README 'batch' 章节", () => {
+  test('batch 内两次赋值同一 reaction 只重跑一次，且读到最终值（README 主示例）', () => {
+    const state = observable({ a: 1, b: 1 });
+    const logs: number[] = [];
+    observe(() => {
+      logs.push(state.a + state.b); // README: 立即执行一次: 2
+    });
+    expect(logs).toEqual([2]);
+
+    batch(() => {
+      state.a = 10;
+      state.b = 20;
+    }); // README: 只重新运行一次: 30
+    expect(logs).toEqual([2, 30]);
+  });
+
+  test('数组变异方法自动进入 batch：push 多项 length 依赖只通知一次', () => {
+    const arr = observable<number[]>([1]);
+    let runs = 0;
+    let last = 0;
+    observe(() => {
+      last = arr.length;
+      runs++;
+    });
+    expect(runs).toBe(1);
+    arr.push(2, 3);
+    expect(runs).toBe(2);
+    expect(last).toBe(3);
+  });
+
+  test('直接索引赋值仍立即同步通知（不经过 batch）', () => {
+    const arr = observable<number[]>([1, 2, 3]);
+    const seen: number[] = [];
+    observe(() => {
+      seen.push(arr[0]);
+    });
+    arr[0] = 10;
+    expect(seen).toEqual([1, 10]);
+    arr[0] = 20;
+    expect(seen).toEqual([1, 10, 20]);
   });
 });
 

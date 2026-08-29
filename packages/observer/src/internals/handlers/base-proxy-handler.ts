@@ -11,6 +11,7 @@ import { proxyToRaw } from '../proxy-raw-map';
 import {
   queueReactionsForOperation,
   registerRunningReactionForOperation,
+  wrapIfArrayMutator,
 } from '../reaction-runner';
 import { iterationKeyFor } from '../reaction-track';
 import { hasOwnProperty, isObject, ownDataValue, toRawIfProxy } from '../utils';
@@ -58,6 +59,14 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   }
   // 如果当前有 reaction 在运行,建立 (target.key -> reaction) 的依赖
   registerRunningReactionForOperation({ target, key, receiver, type: 'get' });
+
+  // 数组变异方法包进 batch, 一次调用内部的多条 trap 写入只通知一次 (#93)
+  if (typeof result === 'function') {
+    const wrapped = wrapIfArrayMutator(target, key, result);
+    if (wrapped !== result) {
+      return wrapped;
+    }
+  }
 
   // 处理不可配置且不可写的属性
   // Proxy 有一个不变式(invariant):

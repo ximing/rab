@@ -65,9 +65,77 @@ export function toRawIfProxy<T>(value: T): T {
  * proxy key 依旧不可达（Vue 3 的集合 instrumentation 存在同样边缘），
  * 由 collection-unwrap-prepopulated-normalization.test.ts 的 pin 测试
  * 明确该边界。一次性 O(n) 成本，仅在首次包装时发生。
+ *
+ * 跨 realm (issue #92 / G5×G7): `instanceof Map` 对 vm.runInNewContext /
+ * iframe / RN 远程调试里的 Map 不成立，但 collection-handler 的 G7 路由
+ * (tag + duck-check) 仍会把它送进 instrumented trap。此处必须用同一套
+ * 判定，否则预置的 proxy key 永不被归一化，查找/通知身份永久分裂。
+ * 不直接 import isMapTarget：collection-handler 已依赖本模块的
+ * toRawIfProxy，循环依赖会在模块初始化期把守卫变成 undefined。
+ * 伪造 tag / 抛错 toStringTag 必须安全跳过（与 G7 路由回落 base handler 对齐）。
  */
-export function normalizeCollectionEntries(target: object): void {
+const objectToString = Object.prototype.toString;
+const nativeFunctionToString = Function.prototype.toString;
+
+function safeObjectTag(target: object): string | undefined {
+  try {
+    return objectToString.call(target);
+  } catch {
+    return undefined;
+  }
+}
+
+function isNativeLikeFunction(fn: unknown): boolean {
+  if (typeof fn !== 'function') {
+    return false;
+  }
+  try {
+    return nativeFunctionToString.call(fn).includes('[native code]');
+  } catch {
+    return false;
+  }
+}
+
+function isRewritableMap(target: object): target is Map<unknown, unknown> {
   if (target instanceof Map) {
+    return true;
+  }
+  if (safeObjectTag(target) !== '[object Map]') {
+    return false;
+  }
+  const map = target as Map<unknown, unknown>;
+  try {
+    return (
+      isNativeLikeFunction(map.get) &&
+      isNativeLikeFunction(map.set) &&
+      isNativeLikeFunction(map.has)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isRewritableSet(target: object): target is Set<unknown> {
+  if (target instanceof Set) {
+    return true;
+  }
+  if (safeObjectTag(target) !== '[object Set]') {
+    return false;
+  }
+  const set = target as Set<unknown>;
+  try {
+    return (
+      isNativeLikeFunction(set.add) &&
+      isNativeLikeFunction(set.has) &&
+      isNativeLikeFunction(set.delete)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function normalizeCollectionEntries(target: object): void {
+  if (isRewritableMap(target)) {
     for (const [key, value] of target) {
       const rawKey = toRawIfProxy(key);
       const rawValue = toRawIfProxy(value);
@@ -80,7 +148,7 @@ export function normalizeCollectionEntries(target: object): void {
     }
     return;
   }
-  if (target instanceof Set) {
+  if (isRewritableSet(target)) {
     for (const value of target) {
       const rawValue = toRawIfProxy(value);
       if (!Object.is(rawValue, value)) {

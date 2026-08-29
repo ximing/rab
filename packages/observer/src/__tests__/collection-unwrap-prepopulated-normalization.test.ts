@@ -17,6 +17,7 @@
  * pin 测试明确该边界，防止后续误判为回归。
  */
 
+import vm from 'vm';
 import { observable, shadowObservable, observe, unobserve, raw } from '../main';
 
 describe('collection wrap-time normalization (G5 review round 3, issue 1)', () => {
@@ -176,5 +177,103 @@ describe('collection wrap-time normalization (G5 review round 3, issue 1)', () =
     expect(wm.get(proxyKey)).toBe(1);
     ws.add(keyObj);
     expect(ws.has(proxyKey)).toBe(true);
+  });
+});
+
+/*
+ * G5×G7 盲区 (issue #92): 跨 realm Map/Set 的 instanceof 对本 realm 构造函数
+ * 不成立, normalizeCollectionEntries 若只靠 instanceof 会跳过归一化;
+ * 而集合 trap 经 tag+duck-check 仍会路由进 instrumented handler, 入口
+ * toRawIfProxy 照常解包 —— 存储身份 (proxy) 与查找/通知身份 (raw) 永久分裂。
+ * 触发条件: RN 远程调试 / iframe / vm.runInNewContext + 包装前预置 proxy key。
+ */
+describe('collection wrap-time normalization: cross-realm prepopulated proxy keys (issue #92)', () => {
+  test('跨 realm Map 预置 proxy key：包装时归一化为 raw，任一身份都可达且不产生双条目', () => {
+    const keyObj = { id: 'xr-map' };
+    const box = observable({ keyObj });
+    const proxyKey = box.keyObj;
+
+    const rawMap = vm.runInNewContext('new Map()') as Map<unknown, unknown>;
+    rawMap.set(proxyKey, 42);
+
+    expect(rawMap instanceof Map).toBe(false);
+    expect(Object.prototype.toString.call(rawMap)).toBe('[object Map]');
+
+    const m = observable(rawMap);
+
+    expect(raw(m).get(keyObj)).toBe(42);
+    expect(m.has(proxyKey)).toBe(true);
+    expect(m.has(keyObj)).toBe(true);
+    expect(m.get(proxyKey)).toBe(42);
+    expect(m.get(keyObj)).toBe(42);
+    expect(m.size).toBe(1);
+
+    m.set(keyObj, 99);
+    expect(m.size).toBe(1);
+    expect(m.get(proxyKey)).toBe(99);
+    expect(m.delete(proxyKey)).toBe(true);
+    expect(m.size).toBe(0);
+  });
+
+  test('跨 realm Set 预置 proxy 值：包装时归一化，has/delete 双身份可达', () => {
+    const valObj = { id: 'xr-set' };
+    const box = observable({ valObj });
+    const proxyVal = box.valObj;
+
+    const rawSet = vm.runInNewContext('new Set()') as Set<unknown>;
+    rawSet.add(proxyVal);
+
+    const s = observable(rawSet);
+
+    expect(raw(s).has(valObj)).toBe(true);
+    expect(s.has(proxyVal)).toBe(true);
+    expect(s.has(valObj)).toBe(true);
+    expect(s.size).toBe(1);
+
+    s.add(valObj);
+    expect(s.size).toBe(1);
+    expect(s.delete(proxyVal)).toBe(true);
+    expect(s.size).toBe(0);
+  });
+
+  test('跨 realm Map 归一化后依赖通知身份对齐', () => {
+    const keyObj = { id: 'xr-notify' };
+    const box = observable({ keyObj });
+    const proxyKey = box.keyObj;
+
+    const rawMap = vm.runInNewContext('new Map()') as Map<unknown, unknown>;
+    rawMap.set(proxyKey, 1);
+    const m = observable(rawMap);
+
+    const seen: unknown[] = [];
+    const reaction = observe(() => {
+      seen.push(m.get(keyObj));
+    });
+    expect(seen).toEqual([1]);
+
+    m.set(proxyKey, 2);
+    expect(seen).toEqual([1, 2]);
+
+    unobserve(reaction);
+  });
+
+  test('shadowObservable 的跨 realm Map 同样归一化', () => {
+    const keyObj = { id: 'xr-shadow' };
+    const valObj = { v: 5 };
+    const box = observable({ keyObj, valObj });
+    const proxyKey = box.keyObj;
+    const proxyVal = box.valObj;
+
+    const rawMap = vm.runInNewContext('new Map()') as Map<unknown, unknown>;
+    rawMap.set(proxyKey, proxyVal);
+    const sm = shadowObservable(rawMap);
+
+    expect(raw(sm).get(keyObj)).toBe(valObj);
+    expect(sm.has(proxyKey)).toBe(true);
+    expect(sm.get(proxyKey)).toBe(valObj);
+    expect(sm.get(keyObj)).toBe(valObj);
+    expect(sm.size).toBe(1);
+    expect(sm.delete(keyObj)).toBe(true);
+    expect(sm.size).toBe(0);
   });
 });

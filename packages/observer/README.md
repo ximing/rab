@@ -3,7 +3,7 @@
 `@rabjs/observer` 是 rab 的响应式内核：`observable` 把对象/数组/集合包装成细粒度可观察代理，`observe` 把普通函数变成 reaction——执行期间自动记录它读取了哪些属性，之后只有这些属性变化时才重新运行。
 
 ```ts
-import { observable, observe, unobserve } from '@rabjs/observer';
+import { observable, observe, unobserve, batch } from '@rabjs/observer';
 
 const state = observable({ count: 0 });
 
@@ -32,6 +32,26 @@ unobserve(reaction); // 停止追踪, 之后变更不再触发
 
 该语义由 `src/__tests__/unobserve-post-cancel-semantics.test.ts`、`src/__tests__/unobserve-nested-in-flight.test.ts` 与 `src/__tests__/edge-cases/reactionRunner-coverage.test.ts` 固化。
 
+## batch
+
+`batch(fn)` 把一段同步变更收成一批：同一 reaction 去重，最外层 `batch` 结束时才触发，且读到最终值。嵌套调用安全，返回值原样传出。`batch` 之外的单次赋值仍立即同步执行。
+
+```ts
+const state = observable({ a: 1, b: 1 });
+observe(() => {
+  console.log(state.a + state.b); // 立即执行一次: 2
+});
+
+batch(() => {
+  state.a = 10;
+  state.b = 20;
+}); // 只重新运行一次: 30
+```
+
+数组变异方法（`push` / `pop` / `shift` / `unshift` / `splice` / `fill` / `sort` / `reverse` / `copyWithin`）从代理上取出时会自动进入 `batch`，一次方法调用只通知每个 reaction 一次。直接 `arr[i] =` / `arr.length =` 仍立即同步通知。
+
+经 `Array.prototype.push.call(arr, ...)` 调用原生方法不会自动 batch（不经过 get trap 取出的包装函数）。
+
 ## 已知限制
 
 - **私有字段（`#field`）**：含私有字段的类实例被 `observable()` 包装后，通过代理调用会抛错（`TypeError: Cannot read private member #x from an object whose class did not declare it`）。这是 Proxy 的 brand check 限制——私有字段只认"声明它的类构造出的原始实例"，代理对象通不过检查。绕过方式：
@@ -52,7 +72,7 @@ unobserve(reaction); // 停止追踪, 之后变更不再触发
 
 ## 升级与回归
 
-`src/__tests__/api/` 下是 **API 契约测试层**：按公开导出（`observable` / `shadowObservable` / `observe` / `unobserve` / 数组 / 集合 / `raw` 等工具与 `configure` / README 示例）组织，每个用例钉住一条"业务可以依赖的行为承诺"，而不是内部实现细节。它是升级时的破坏性变更检测层。
+`src/__tests__/api/` 下是 **API 契约测试层**：按公开导出（`observable` / `shadowObservable` / `observe` / `unobserve` / `batch` / 数组 / 集合 / `raw` 等工具与 `configure` / README 示例）组织，每个用例钉住一条"业务可以依赖的行为承诺"，而不是内部实现细节。它是升级时的破坏性变更检测层。
 
 **升级 `@rabjs/observer` 后如何借用**：把本仓库拉下来，在 `packages/observer` 下运行
 
@@ -68,7 +88,7 @@ npx jest src/__tests__/api
 - 修改 `src/__tests__/api/` 下任何断言都必须在 changeset 中标注（patch 级别除非显式标注 `breaking`）；破坏性变更需在 PR 里说明迁移路径。
 - 引入新行为时，先在契约层补测试、再实现——契约先行，避免"实现定了才发现没钉住"。
 
-**已知限制的钉子**：契约层也钉住了上文"已知限制"中的当前行为（如数组方法的通知次数、accessor 属性同值写入必通知，用例名中引用了 issue 编号 #92 / #93）。如果未来这些行为得到改善，对应契约用例失败是**预期且是好事**——更新断言使其反映新行为，并在 changeset 中注明即可。
+**已知限制的钉子**：契约层也钉住了上文"已知限制"中的当前行为（如 accessor 属性同值写入必通知）。如果未来这些行为得到改善，对应契约用例失败是**预期且是好事**——更新断言使其反映新行为，并在 changeset 中注明即可。
 
 ## License
 
