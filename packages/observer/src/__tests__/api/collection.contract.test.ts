@@ -452,6 +452,48 @@ describe('契约: key/value 的 proxy 解包与双向身份一致（G5）', () =
     // keys() 返回 raw，key 半边不在响应式图内——不触发是当前已知行为
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  test('Set keys/values/entries/iterator 成员身份一致且均包装（#192）', () => {
+    const item = { id: 1 };
+    const s = observable(new Set([item]));
+    const fromKeys = [...s.keys()][0];
+    const fromValues = [...s.values()][0];
+    const [entryKey, entryValue] = [...s.entries()][0];
+    const fromIter = [...s][0];
+
+    expect(fromKeys).toBe(fromValues);
+    expect(entryKey).toBe(entryValue);
+    expect(fromKeys).toBe(fromIter);
+    expect(fromKeys).toBe(entryKey);
+    expect(isObservable(fromKeys)).toBe(true);
+    expect(raw(fromKeys as object)).toBe(item);
+  });
+
+  test('经 Set.keys() 拿到的成员写入会通知（#192）', () => {
+    const item = { id: 1 };
+    const s = observable(new Set([item]));
+    const seen: number[] = [];
+    const reaction = observe(() => {
+      seen.push(([...s.keys()][0] as { id: number }).id);
+    });
+    expect(seen).toEqual([1]);
+    ([...s.keys()][0] as { id: number }).id = 2;
+    expect(seen).toEqual([1, 2]);
+    unobserve(reaction);
+  });
+
+  test('Set.forEach 的 value 与 key 是同一包装（#192）', () => {
+    const item = { id: 1 };
+    const s = observable(new Set([item]));
+    let pairs = 0;
+    s.forEach((value, key) => {
+      expect(value).toBe(key);
+      expect(isObservable(value)).toBe(true);
+      expect(raw(value as object)).toBe(item);
+      pairs++;
+    });
+    expect(pairs).toBe(1);
+  });
 });
 
 describe('契约: forEach 回调 thisArg 与第三参是 proxy（#191）', () => {

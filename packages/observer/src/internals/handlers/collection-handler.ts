@@ -68,26 +68,33 @@ export function isAnyCollectionTarget(target: object): target is Collection {
  * patchIterator 是为了确保通过迭代器访问集合元素时,返回的嵌套对象也是可观察的,从而保持深度响应式的特性。
  * 这样无论用户如何访问数据(直接 get、forEach、还是迭代器),都能正确建立响应式依赖关系。
  * 包装返回值: 每次调用 next() 时,将返回的值通过 observableChild() 转换为可观察对象
- * 区分 entries: 对于 entries() 方法,需要特殊处理,因为它返回 [key, value] 对,只需要包装 value[1](值部分)
+ *   - value: values() / Set.keys() / Set 默认迭代
+ *   - map-entries: Map.entries() / Map 默认迭代 —— 只包装 value 半边, key 保持 raw (G5)
+ *   - set-entries: Set.entries() —— 两侧包成同一 child, 保持原生 k === v (#192)
  * */
+type IteratorWrapMode = 'value' | 'map-entries' | 'set-entries';
+
 function patchIterator<T>(
   iterator: PatchableIterator<T>,
   target: Collection,
-  isEntries: boolean
+  mode: IteratorWrapMode
 ): PatchableIterator<T> {
   const originalNext = iterator.next;
   iterator.next = (): IteratorResult<T> => {
     // eslint-disable-next-line prefer-const
     let { done, value } = originalNext.call(iterator);
     if (!done) {
-      if (isEntries) {
-        // For entries iterator, value is [key, value] tuple
+      if (mode === 'map-entries') {
         (value as [unknown, unknown])[1] = observableChild(
           (value as [unknown, unknown])[1],
           target
         );
+      } else if (mode === 'set-entries') {
+        const tuple = value as [unknown, unknown];
+        const wrapped = observableChild(tuple[0], target);
+        tuple[0] = wrapped;
+        tuple[1] = wrapped;
       } else {
-        // For values iterator, wrap the value
         value = observableChild(value, target) as T;
       }
     }
@@ -266,12 +273,10 @@ export const collectionHandlers = {
     // 写入 raw 绕过 trap（issue #191）。value 仍经 observableChild 包装。
     const observed = this;
     (target as Map<unknown, unknown> | Set<unknown>).forEach((value: unknown, key: unknown) => {
-      callback.call(
-        thisArg,
-        observableChild(value, target),
-        key,
-        observed as Map<unknown, unknown>
-      );
+      const wrappedValue = observableChild(value, target);
+      // Set 的 key 就是 value, 两侧必须是同一包装 (#192); Map 的 key 保持 raw (G5)
+      const wrappedKey = isSetTarget(target) ? wrappedValue : key;
+      callback.call(thisArg, wrappedValue, wrappedKey, observed as Map<unknown, unknown>);
     });
   },
   keys(this: Collection): IterableIterator<unknown> {
@@ -284,13 +289,12 @@ export const collectionHandlers = {
       key: '' as PropertyKey,
       type: 'iterate',
     });
-    // TODO: 考虑一下是否需要 patchIterator  对比 vue Reactive Mobx 看一下大家是怎么决策的
-    // 现状（有意的不对称, G5 审查 issue #5 留档）: 集合内部只存 raw 身份,
-    // values()/Symbol.iterator/entries 的 value 半边经 patchIterator 包装为
-    // observable, 而 keys()/entries 的 key 半边直接返回 raw —— 用户在 reaction
-    // 里 [...m.keys()] 后直接读 key 对象属性将不被追踪。与 Vue 3 (reactive 的
-    // key 不包装) 一致; 若未来决定对齐 values 的深度语义, 需另行评估通知面。
-    // 行为由 collection-unwrap-iteration-and-shadow.test.ts:123 pin 住。
+    // Map keys 保持 raw (G5, 与 Vue 3 一致)。Set 的 key 就是 value,
+    // 必须与 values() 包成同一 child, 否则破坏原生 keys===values (#192)。
+    if (isSetTarget(target)) {
+      const iterator = target.keys() as PatchableIterator<unknown>;
+      return patchIterator(iterator, target, 'value') as IterableIterator<unknown>;
+    }
     return target.keys() as IterableIterator<unknown>;
   },
   values(this: Collection): IterableIterator<unknown> {
@@ -304,7 +308,7 @@ export const collectionHandlers = {
       type: 'iterate',
     });
     const iterator = target.values() as PatchableIterator<unknown>;
-    return patchIterator(iterator, target, false) as IterableIterator<unknown>;
+    return patchIterator(iterator, target, 'value') as IterableIterator<unknown>;
   },
   entries(this: Collection): IterableIterator<[unknown, unknown]> {
     const target = proxyToRaw.get(this);
@@ -317,7 +321,8 @@ export const collectionHandlers = {
       type: 'iterate',
     });
     const iterator = target.entries() as PatchableIterator<[unknown, unknown]>;
-    return patchIterator(iterator, target, true) as IterableIterator<[unknown, unknown]>;
+    const mode: IteratorWrapMode = isSetTarget(target) ? 'set-entries' : 'map-entries';
+    return patchIterator(iterator, target, mode) as IterableIterator<[unknown, unknown]>;
   },
   [Symbol.iterator](this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);
@@ -330,7 +335,9 @@ export const collectionHandlers = {
       type: 'iterate',
     });
     const iterator = target[Symbol.iterator]() as PatchableIterator<unknown>;
-    return patchIterator(iterator, target, isMapTarget(target)) as IterableIterator<unknown>;
+    // Map 默认迭代是 entries; Set 默认迭代是 values
+    const mode: IteratorWrapMode = isMapTarget(target) ? 'map-entries' : 'value';
+    return patchIterator(iterator, target, mode) as IterableIterator<unknown>;
   },
   get size(): number {
     // In getter context, 'this' refers to the proxy (Collection instance)
