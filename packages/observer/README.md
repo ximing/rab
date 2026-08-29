@@ -70,6 +70,8 @@ batch(() => {
 
 - **ES2024 Set 方法（`union`/`intersection`/`difference` 等）返回原始成员**：deep 模式下这些新方法返回的结果集合中元素不经 `observableChild` 包装（与 `values()`/迭代器的深度语义不对称）。旧 React Native JSC 无这些方法，不受影响；需要深度响应式时请用 `values()`/展开等已插桩路径。
 
+- **TypedArray / DataView 不包装**：`Uint8Array`、`Float32Array`、`BigInt64Array`、`Float16Array`、`DataView` 以及其它 `ArrayBuffer.isView` 为真的对象（含跨 realm 与 TypedArray 子类），`observable()` / `shadowObservable()` 原样返回。原因与 Date 相同：`length` / `buffer` / `fill` / 迭代依赖内部槽，Proxy 当 `this` 会抛 `incompatible receiver`。需要响应式请用普通数组，或把 view 放在 observable 容器里、通过替换整段 buffer 通知（`state.bytes = new Uint8Array(...)`）。原地 `state.bytes[0] = 1` 不会触发 reaction。
+
 ## 升级与回归
 
 `src/__tests__/api/` 下是 **API 契约测试层**：按公开导出（`observable` / `shadowObservable` / `observe` / `unobserve` / `batch` / 数组 / 集合 / `raw` 等工具与 `configure` / README 示例）组织，每个用例钉住一条"业务可以依赖的行为承诺"，而不是内部实现细节。它是升级时的破坏性变更检测层。

@@ -589,8 +589,8 @@ const blacklistTagLocalPrototypes = new Map<string, object | undefined>([
  * (子类同样继承 tag, 如 class MyDate extends Date 也落入黑名单; 用户
  * 子类的 carve-out 见 blacklistTagLocalPrototypes 注释 —— 子类自有
  * 属性是普通属性, base 包装可用; 原生实例无论同/跨 realm 均拒绝包装。)
- * 注意: typed array 不在黑名单 —— 它们与普通数组一样走 base proxy handler
- * (索引读写经 Reflect 转发可用), 保持既有行为。
+ * TypedArray / DataView 不走这张 tag 表, 见 shouldInstrument 的
+ * ArrayBuffer.isView 早退 (issue #190)。
  * */
 const nonInstrumentableTags = new Set([
   '[object Date]',
@@ -629,15 +629,6 @@ const nonInstrumentableTags = new Set([
 const handlers = new Map<Function, HandlerValue>([
   [Object, false],
   [Array, false],
-  [Int8Array, false],
-  [Uint8Array, false],
-  [Uint8ClampedArray, false],
-  [Int16Array, false],
-  [Uint16Array, false],
-  [Int32Array, false],
-  [Uint32Array, false],
-  [Float32Array, false],
-  [Float64Array, false],
 ]);
 
 // some (usually stateless) built-in objects can not be and should not be wrapped by Proxies
@@ -647,6 +638,20 @@ export function shouldInstrument(obj: object | Function): boolean {
   // functions are first-class observables in this system
   if (typeof obj === 'function') {
     return true;
+  }
+
+  // issue #190: TypedArray / DataView 的 length、buffer、fill/set/迭代
+  // 都走内部槽 brand-check, Proxy 当 this 会抛 incompatible receiver。
+  // ArrayBuffer.isView 覆盖全部 TypedArray (含 BigInt64/Float16 及以后
+  // 新增)、DataView、跨 realm 与 TypedArray 子类; 与 Date 一样不包装。
+  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function') {
+    try {
+      if (ArrayBuffer.isView(obj)) {
+        return false;
+      }
+    } catch {
+      // isView 抛错时不据此拒绝, 落到后面的 tag / constructor 路径
+    }
   }
 
   // #7/#9: 集合 (含子类与跨 realm 实例) 路由到 instrumented 方法

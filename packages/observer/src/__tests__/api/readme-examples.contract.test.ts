@@ -6,7 +6,7 @@
  * （如「// 立即执行一次: 0」「// 重新运行: 1」「// 停止追踪」）、
  * "observe / unobserve" 章节对 scheduler 两形态与 unobserve 的承诺、
  * "unobserve 之后'在途执行'的语义" 章节的每一条、"batch" 章节，以及 "已知限制" 小节的
- * 全部 6 条可执行行为。JSDoc @example（observable.ts / shadow-observable.ts /
+ * 可执行行为。JSDoc @example（observable.ts / shadow-observable.ts /
  * configure.ts）不在本文件——归各 API 模块自己的契约文件钉。
  *
  * 用例按 README 行文组织；每个用例独立自包含，不依赖其他用例的顺序或状态。
@@ -609,6 +609,36 @@ describe("README '已知限制' 小节（钉当前行为；行为改善时这些
 
       const rest = [...withMethods.difference(new Set([{ id: 9 }]))][0];
       expect(isObservable(rest)).toBe(false);
+    });
+  });
+
+  describe('限制 8：TypedArray / DataView 不包装（#190）', () => {
+    test('observable(Uint8Array) 原样返回，length/fill/展开不抛', () => {
+      const bytes = new Uint8Array([1, 2, 3]);
+      const obs = observable(bytes);
+      expect(obs).toBe(bytes);
+      expect(isObservable(obs)).toBe(false);
+      expect(obs.length).toBe(3);
+      expect(obs.fill(0)).toBe(bytes);
+      expect([...obs]).toEqual([0, 0, 0]);
+    });
+
+    test('嵌套 TypedArray 保持 raw；替换整段 buffer 仍通知容器', () => {
+      const first = new Uint8Array([1]);
+      const state = observable({ bytes: first });
+      expect(state.bytes).toBe(first);
+      expect(isObservable(state.bytes)).toBe(false);
+
+      let runs = 0;
+      observe(() => {
+        void state.bytes;
+        runs++;
+      });
+      expect(runs).toBe(1);
+      state.bytes[0] = 9;
+      expect(runs).toBe(1); // 原地写入不通知
+      state.bytes = new Uint8Array([2]);
+      expect(runs).toBe(2);
     });
   });
 });

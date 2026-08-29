@@ -10,8 +10,8 @@
  * - options（proxyHandlers / collectionHandlers / reactionHandlers）语义:
  *   per-raw 键控、first-wins、partial 回落默认
  * - 值比较语义（数据属性 Object.is / accessor 同值必通知 #93）
- * - 数组 / 普通对象 / typed array / 集合 / 函数的路由
- * - 不可包装对象（Date 等内置、跨 realm 内置）原样返回
+ * - 数组 / 普通对象 / 集合 / 函数的路由
+ * - 不可包装对象（Date、TypedArray/DataView、跨 realm 内置）原样返回
  * - 安全边界（__proto__ 赋值抛 TypeError、原型链 constructor 不包装）
  * - README 已知限制: 私有字段 (#field) 双面（限制 + raw(this) workaround）
  *
@@ -191,18 +191,14 @@ describe('observable() 公开行为契约', () => {
       expect(seen).toBe(9);
     });
 
-    test('typed array：与普通数组一样被包装且索引读写响应式', () => {
-      const ta = observable(new Uint8Array([1, 2, 3]));
-      expect(isObservable(ta)).toBe(true);
-      let runs = 0;
-      let seen: number | undefined;
-      observe(() => {
-        seen = ta[0];
-        runs++;
-      });
-      ta[0] = 7;
-      expect(runs).toBe(2);
-      expect(seen).toBe(7);
+    test('typed array：与 Date 一样不包装，length/方法可用（#190）', () => {
+      const raw = new Uint8Array([1, 2, 3]);
+      const ta = observable(raw);
+      expect(ta).toBe(raw);
+      expect(isObservable(ta)).toBe(false);
+      expect(ta.length).toBe(3);
+      expect(ta.fill(0)).toBe(ta);
+      expect([...ta]).toEqual([0, 0, 0]);
     });
 
     test('Map：get/set 走插桩方法，读写被追踪', () => {
@@ -276,6 +272,9 @@ describe('observable() 公开行为契约', () => {
       ['Promise', () => Promise.resolve(1)],
       ['ArrayBuffer', () => new ArrayBuffer(8)],
       ['Error', () => new Error('boom')],
+      ['Uint8Array', () => new Uint8Array([1, 2, 3])],
+      ['DataView', () => new DataView(new ArrayBuffer(8))],
+      ['BigInt64Array', () => new BigInt64Array(2)],
     ])('依赖内部槽位的内置对象（%s）作为参数传入时原样返回，不包装', (_name, factory) => {
       const builtIn = factory();
       expect(observable(builtIn)).toBe(builtIn);
@@ -290,10 +289,27 @@ describe('observable() 公开行为契约', () => {
       expect(state.when.getFullYear()).toBe(2020);
     });
 
+    test('嵌套 TypedArray 保持 raw，length/方法不抛（#190）', () => {
+      const bytes = new Uint8Array([1, 2, 3]);
+      const state = observable({ bytes });
+      expect(state.bytes).toBe(bytes);
+      expect(isObservable(state.bytes)).toBe(false);
+      expect(state.bytes.length).toBe(3);
+      expect(state.bytes.fill(9)).toBe(bytes);
+    });
+
     test('跨 realm 内置对象（vm 隔离环境）同样原样返回，不包装', () => {
       const crossRealmDate = vm.runInNewContext('new Date(2020, 0, 1)');
       expect(observable(crossRealmDate)).toBe(crossRealmDate);
       expect(isObservable(crossRealmDate)).toBe(false);
+    });
+
+    test('跨 realm TypedArray 同样原样返回，方法可用（#190）', () => {
+      const crossRealmTa = vm.runInNewContext('new Uint8Array([1, 2, 3])') as Uint8Array;
+      expect(observable(crossRealmTa)).toBe(crossRealmTa);
+      expect(isObservable(crossRealmTa)).toBe(false);
+      expect(crossRealmTa.length).toBe(3);
+      expect(crossRealmTa.fill(0)).toBe(crossRealmTa);
     });
 
     test('跨 realm 普通对象仍被正常包装且深层响应式', () => {
