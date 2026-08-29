@@ -52,6 +52,8 @@ hydrateRoot(document.getElementById("root")!, <App />);
    enableStaticRendering(true);
    ```
 
+   `observer()`、`useObserver` 和类组件 `view()` 在该标记为 true 时都不会创建 reaction。`renderToString` 不会走 `componentWillUnmount`，否则 reaction 会一直订着 store。
+
 2. **Service 在服务端仍然可用**
 
    ```typescript

@@ -369,7 +369,7 @@ if (has(ProductService)) {
 
 #### enableStaticRendering(enable)
 
-服务端渲染时禁用响应式追踪。
+服务端渲染时禁用响应式追踪。`observer`、`useObserver` 和类组件 `view()` 都不会创建 reaction（`renderToString` 不会 unmount，否则会泄漏订阅）。
 
 ```tsx
 if (typeof window === 'undefined') {

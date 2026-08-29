@@ -8,6 +8,7 @@ import { observe, unobserve, type Reaction } from '@rabjs/observer';
 import { ComponentType, ComponentClass } from 'react';
 
 import { observer } from './observer';
+import { isUsingStaticRendering } from './static-rendering';
 import { notifyReactStore } from './utils/notify-react-store';
 import { IS_REACTIVE_COMPONENT, isClassComponent } from './utils/react-helper';
 
@@ -50,6 +51,11 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
 
     constructor(props: P, context: any) {
       super(props, context);
+
+      // SSR：不建 reaction。renderToString 不会 unmount，否则会泄漏订阅。
+      if (isUsingStaticRendering()) {
+        return;
+      }
 
       // 保存原始 render 方法（在这里调用 super.render 获取基类的 render）
       const originalRender = super.render.bind(this);

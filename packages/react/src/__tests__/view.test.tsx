@@ -7,6 +7,8 @@ import { Component } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { observable } from '@rabjs/observer';
+import { renderToString } from 'react-dom/server';
+import { enableStaticRendering } from '../static-rendering';
 import { view } from '../view';
 
 describe('view', () => {
@@ -380,6 +382,40 @@ describe('view', () => {
       render(<ReactiveCounter ref={ref} />);
 
       expect(ref.current).toBeInstanceOf(Counter);
+    });
+  });
+
+  describe('enableStaticRendering', () => {
+    afterEach(() => {
+      enableStaticRendering(false);
+    });
+
+    it('类组件在静态渲染下不创建 reaction，store 变化不触发 setState', () => {
+      const store = observable({ count: 0 });
+      let setStateCalls = 0;
+
+      class Counter extends Component {
+        setState(state: any, callback?: () => void) {
+          setStateCalls++;
+          super.setState(state, callback);
+        }
+
+        render() {
+          return <span>{store.count}</span>;
+        }
+      }
+
+      // 先 wrap 再开静态渲染：模拟模块加载时 view()、服务端入口再 enableStaticRendering(true)
+      const ReactiveCounter = view(Counter);
+      enableStaticRendering(true);
+
+      const html = renderToString(<ReactiveCounter />);
+      expect(html).toContain('0');
+      expect(setStateCalls).toBe(0);
+
+      store.count++;
+
+      expect(setStateCalls).toBe(0);
     });
   });
 
