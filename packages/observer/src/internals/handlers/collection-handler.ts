@@ -261,11 +261,18 @@ export const collectionHandlers = {
       key: '' as PropertyKey,
       type: 'iterate',
     });
-    // 将回调参数中的值转换为 observable
-    // 确保用户在回调中访问的是响应式的值
-    const wrappedCallback = (value: unknown, key: unknown): void =>
-      callback(observableChild(value, target), key, target as Map<unknown, unknown>);
-    (target as Map<unknown, unknown> | Set<unknown>).forEach(wrappedCallback as any, thisArg);
+    // 原生 forEach 是 Call(callback, thisArg, «value, key, this»)。
+    // 箭头包装会丢掉 thisArg；第三参必须是 proxy（this），否则经 map.set
+    // 写入 raw 绕过 trap（issue #191）。value 仍经 observableChild 包装。
+    const observed = this;
+    (target as Map<unknown, unknown> | Set<unknown>).forEach((value: unknown, key: unknown) => {
+      callback.call(
+        thisArg,
+        observableChild(value, target),
+        key,
+        observed as Map<unknown, unknown>
+      );
+    });
   },
   keys(this: Collection): IterableIterator<unknown> {
     const target = proxyToRaw.get(this);

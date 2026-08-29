@@ -454,6 +454,68 @@ describe('契约: key/value 的 proxy 解包与双向身份一致（G5）', () =
   });
 });
 
+describe('契约: forEach 回调 thisArg 与第三参是 proxy（#191）', () => {
+  test('Map.forEach 把 thisArg 作为 callback 的 this，第三参是 observable proxy', () => {
+    const m = observable(new Map([['a', 1]]));
+    const ctx = { tag: 1 };
+    let gotThis: unknown;
+    let third: unknown;
+    m.forEach(function (this: unknown, _v, _k, map) {
+      gotThis = this;
+      third = map;
+    }, ctx);
+    expect(gotThis).toBe(ctx);
+    expect(third).toBe(m);
+    expect(isObservable(third)).toBe(true);
+  });
+
+  test('经 Map.forEach 第三参写入走 trap，依赖该 key 的 reaction 被通知', () => {
+    const m = observable(new Map([['a', 1]]));
+    const seen: number[] = [];
+    const reaction = observe(() => {
+      seen.push(m.get('a') as number);
+    });
+    expect(seen).toEqual([1]);
+    m.forEach((_v, k, map) => {
+      map.set(k, 99);
+    });
+    expect(m.get('a')).toBe(99);
+    expect(seen).toEqual([1, 99]);
+    unobserve(reaction);
+  });
+
+  test('Set.forEach 同样保留 thisArg，第三参是 proxy，经第三参 add 会通知', () => {
+    const s = observable(new Set([1]));
+    const ctx = { tag: 2 };
+    let gotThis: unknown;
+    let third: unknown;
+    const seen: number[] = [];
+    const reaction = observe(() => {
+      seen.push(s.size);
+    });
+    expect(seen).toEqual([1]);
+    s.forEach(function (this: unknown, _v, _k, set) {
+      gotThis = this;
+      third = set;
+      set.add(2);
+    }, ctx);
+    expect(gotThis).toBe(ctx);
+    expect(third).toBe(s);
+    expect(s.has(2)).toBe(true);
+    expect(seen).toEqual([1, 2]);
+    unobserve(reaction);
+  });
+
+  test('thisArg 缺省时 callback 的 this 为 undefined（严格模式，对齐原生）', () => {
+    const m = observable(new Map([['a', 1]]));
+    let gotThis: unknown = 'unset';
+    m.forEach(function (this: unknown) {
+      gotThis = this;
+    });
+    expect(gotThis).toBeUndefined();
+  });
+});
+
 describe('契约: Map/Set 子类可用（G7）', () => {
   test('extends Map 的子类实例被 observable() 包装后，全部集合操作响应式可用且不抛错', () => {
     class MyMap<K, V> extends Map<K, V> {}

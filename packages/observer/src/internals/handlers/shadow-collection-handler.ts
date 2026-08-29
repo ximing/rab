@@ -217,8 +217,12 @@ export const shadowCollectionHandlers: CollectionHandlers = {
       key: '' as PropertyKey,
       type: 'iterate',
     });
-    // 关键区别：不包装回调参数中的值，直接传递原始值
-    (target as Map<unknown, unknown> | Set<unknown>).forEach(callback as any, thisArg);
+    // 浅层：value/key 仍是 raw。第三参必须是 proxy（this），否则经
+    // map.set 写入 raw 绕过 trap（issue #191）。thisArg 用 call 转发。
+    const observed = this;
+    (target as Map<unknown, unknown> | Set<unknown>).forEach((value: unknown, key: unknown) => {
+      callback.call(thisArg, value, key, observed as Map<unknown, unknown>);
+    });
   },
 
   // 拦截 keys 操作

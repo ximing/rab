@@ -211,6 +211,31 @@ describe('shadowObservable() 行为契约', () => {
       expect(isObservable(Array.from(set)[0])).toBe(false);
     });
 
+    it('forEach 保留 thisArg，第三参是 shadow proxy；经第三参写入通知根级依赖（#191）', () => {
+      const map = shadowObservable(new Map<string, number>([['a', 1]]));
+      const ctx = { tag: 3 };
+      let gotThis: unknown;
+      let third: unknown;
+      const sizes: number[] = [];
+      const reaction = observe(() => {
+        sizes.push(map.size);
+      });
+      expect(sizes).toEqual([1]);
+      map.forEach(function (this: unknown, _v, k, m) {
+        gotThis = this;
+        third = m;
+        m.set(k, 99);
+        m.set('b', 2);
+      }, ctx);
+      expect(gotThis).toBe(ctx);
+      expect(third).toBe(map);
+      expect(isObservable(third)).toBe(true);
+      expect(map.get('a')).toBe(99);
+      expect(map.size).toBe(2);
+      expect(sizes).toEqual([1, 2]);
+      unobserve(reaction);
+    });
+
     it('WeakMap.get 返回存入的原始对象', () => {
       const key = { id: 1 };
       const nested = { value: 1 };
