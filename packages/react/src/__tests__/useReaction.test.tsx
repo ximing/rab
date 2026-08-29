@@ -10,6 +10,31 @@ import React, { act } from 'react';
 import { observable, useLocalObservable, useReaction, observer } from '@rabjs/react';
 
 describe('useReaction Hook', () => {
+  it('默认（不传 immediate）挂载时执行一次并在依赖变化时重跑（#195）', async () => {
+    const effects: string[] = [];
+    const state = observable({ count: 0 });
+
+    const Component = observer(() => {
+      useReaction(() => {
+        effects.push(`count: ${state.count}`);
+      });
+      return <div>Count: {state.count}</div>;
+    });
+
+    render(<Component />);
+
+    await waitFor(() => {
+      expect(effects).toContain('count: 0');
+    });
+
+    act(() => {
+      state.count = 1;
+    });
+    await waitFor(() => {
+      expect(effects).toContain('count: 1');
+    });
+  });
+
   it('应该支持 immediate: true 立即执行一次', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });

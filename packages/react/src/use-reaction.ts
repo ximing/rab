@@ -13,8 +13,10 @@ import { useEffect, useRef } from 'react';
  */
 export interface UseReactionOptions extends ObserveOptions {
   /**
-   * 是否在组件挂载时立即执行一次副作用
-   * @default false
+   * 是否在组件挂载时立即执行一次副作用并收集依赖。
+   * 默认 true：与文档基础示例、useEffect 心智对齐。
+   * false 时仍会调用一次 reaction 以收集依赖，否则后续变更永远不跑（#195）。
+   * @default true
    */
   immediate?: boolean;
 }
@@ -105,7 +107,9 @@ export interface UseReactionOptions extends ObserveOptions {
  */
 export function useReaction(effect: () => void | (() => void), options?: UseReactionOptions): void {
   const reactionRef = useRef<Reaction | null>(null);
-  const { immediate, ...observeOptions } = options || {};
+  const { immediate, lazy: _ignoredLazy, ...observeOptions } = options || {};
+  // 默认立即执行并收集依赖。undefined 必须当 true，否则文档基础示例永不追踪 (#195)
+  const runOnMount = immediate !== false;
 
   useEffect(() => {
     // 如果已经有 reaction，先清理掉
@@ -113,16 +117,15 @@ export function useReaction(effect: () => void | (() => void), options?: UseReac
       unobserve(reactionRef.current);
     }
 
-    // 创建新的 reaction
-    // immediate 选项会被转换为 lazy 选项
-    // - immediate: true => lazy: false (立即执行)
-    // - immediate: false 或 undefined => lazy: true (延迟执行)
-    const shouldLazy = immediate !== true;
-
     const reaction = observe(effect, {
       ...observeOptions,
-      lazy: shouldLazy,
+      lazy: !runOnMount,
     });
+
+    // immediate: false 仍要跑一次以建立依赖，否则后续变更永远不触发
+    if (!runOnMount) {
+      reaction();
+    }
 
     reactionRef.current = reaction;
 
