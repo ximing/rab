@@ -1,5 +1,5 @@
 // reactions can call each other and form a call stack
-import { rawToOptions } from './proxy-raw-map';
+import { proxyToRaw, rawToOptions } from './proxy-raw-map';
 import {
   getReactionsForOperation,
   registerReactionForOperation,
@@ -280,6 +280,20 @@ function flushQueuedReactions(): void {
     isFlushing = false;
     throwFlushErrorIfAny();
   }
+}
+
+/*
+ * 手动通知依赖 target.key 的 reactions。
+ * accessor / @Memo 这类没有落盘 set 的属性在依赖变化后需要唤醒外层 observe。
+ * 传入 proxy 或 raw 均可。
+ * */
+export function notify(target: object, key: PropertyKey): void {
+  const rawTarget = (proxyToRaw.get(target) as object) || target;
+  queueReactionsForOperation({
+    target: rawTarget,
+    key,
+    type: 'set',
+  });
 }
 
 /*

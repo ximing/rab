@@ -1,4 +1,4 @@
-import { observe, unobserve } from '@rabjs/observer';
+import { observe, unobserve, notify } from '@rabjs/observer';
 import type { Reaction } from '@rabjs/observer';
 
 /**
@@ -153,6 +153,9 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
           // 当依赖变化时，失效缓存
           scheduler: () => {
             state.computed = false;
+            // getter 是 accessor, 依赖变化没有落盘 set; 必须唤醒读过该
+            // 属性名的外层 observe / observer 组件 (#196)
+            notify(instance, propertyKey);
           },
         }
       );

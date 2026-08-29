@@ -2,6 +2,7 @@
  * Memo 装饰器测试
  */
 
+import { observe, unobserve } from '@rabjs/observer';
 import { Service } from '../../service';
 import { Memo, invalidateMemo, cleanupAllMemos } from '../../decorators/memo';
 
@@ -441,6 +442,32 @@ describe('@Memo 装饰器', () => {
       service.items[0] = 10;
       expect(service.sum).toBe(15);
       expect(computeCount).toBe(4);
+    });
+  });
+
+  describe('外层 observe / 依赖通知（#196）', () => {
+    it('observe 读 @Memo getter 后，依赖变化必须重跑外层 reaction', () => {
+      class TestService extends Service {
+        name = 'a';
+
+        @Memo()
+        get label() {
+          return this.name.toUpperCase();
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(service.label);
+      });
+      expect(seen).toEqual(['A']);
+
+      service.name = 'b';
+      expect(seen).toEqual(['A', 'B']);
+      expect(service.label).toBe('B');
+
+      unobserve(reaction);
     });
   });
 
