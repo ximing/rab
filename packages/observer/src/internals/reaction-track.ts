@@ -15,9 +15,10 @@ type ConnectionMap = Map<StoredKey, Set<Reaction>>;
  * 存进 ConnectionMap。普通 Map 对 key 是强引用 —— 只要 observable 还活着,
  * key 对象就永远无法被 GC, 这对 WeakMap 使用者是语义破坏 (内存泄漏)。
  *
- * 修复: 对象 key 统一包装成 WeakRef 再存入 (每个 key 通过 side WeakMap
+ * 修复: 对象/函数 key 统一包装成 WeakRef 再存入 (每个 key 通过 side WeakMap
  * 缓存同一个 WeakRef 实例, 保证 Map 查找的恒等性)。Map 本身只强持有
- * WeakRef 包装对象 (几十字节), 不持有 key。
+ * WeakRef 包装对象 (几十字节), 不持有 key。函数是一等集合 key, 同样可被
+ * WeakRef / WeakMap 持有 —— wrapKey 不能只认 typeof === 'object' (#194)。
  * 遍历 (clear) 时发现 deref() 为 undefined 的死条目会顺手清除。
  *
  * 兼容: 旧 RN JSC 等无 WeakRef 的环境退化为原来的强持有行为。
@@ -28,13 +29,15 @@ const keyToWeakRef: WeakMap<object, WeakRef<object>> | null = supportsWeakRef
   : null;
 
 function wrapKey(key: PropertyKey | symbol): StoredKey {
-  if (!keyToWeakRef || typeof key !== 'object' || key === null) {
+  // 函数是有效的 WeakMap key / WeakRef 目标, 不能只认 typeof === 'object' (#194)
+  if (!keyToWeakRef || key === null || (typeof key !== 'object' && typeof key !== 'function')) {
     return key;
   }
-  let ref = keyToWeakRef.get(key);
+  const objKey = key as object;
+  let ref = keyToWeakRef.get(objKey);
   if (!ref) {
-    ref = new WeakRef(key);
-    keyToWeakRef.set(key, ref);
+    ref = new WeakRef(objKey);
+    keyToWeakRef.set(objKey, ref);
   }
   return ref;
 }

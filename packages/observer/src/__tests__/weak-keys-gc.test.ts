@@ -70,4 +70,21 @@ describe('集合依赖的对象 key 不被强持有', () => {
     (map as unknown as { set: (k: object, v: number) => void }).set(key2, 31);
     expect(seen[seen.length - 1]).toBe(31);
   });
+
+  maybeTest('WeakMap.has 注册函数 key 依赖后该函数应可被 GC（#194）', async () => {
+    const weak = observable(new WeakMap<object, number>());
+    const holder: { fn: object | null } = { fn: function handler() {} };
+    const ref = new WeakRef(holder.fn as object);
+
+    observe(() => {
+      (weak as unknown as { has: (k: object) => boolean }).has(holder.fn!);
+    });
+    expect(ref.deref()).toBeDefined();
+
+    holder.fn = null;
+    await settleAndGC();
+
+    // 修复前: wrapKey 跳过 typeof === 'function'，ConnectionMap 强持有 fn
+    expect(ref.deref()).toBeUndefined();
+  });
 });
