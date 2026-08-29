@@ -691,6 +691,7 @@ describe('契约: ES2024 Set 方法（union/intersection/difference 等）', () 
     union(other: Set<unknown>): Set<T>;
     intersection(other: Set<unknown>): Set<T>;
     difference(other: Set<unknown>): Set<T>;
+    isSubsetOf(other: Set<unknown>): boolean;
   };
   const withMethods = <T>(s: Set<T>): SetWithES2024<T> => s as unknown as SetWithES2024<T>;
 
@@ -714,5 +715,41 @@ describe('契约: ES2024 Set 方法（union/intersection/difference 等）', () 
     expect(unionMembers[0]).toBe(item);
     // 对照组：values() 路径仍返回包装成员
     expect(isObservable([...set.values()][0])).toBe(true);
+  });
+
+  test('isSubsetOf 追踪 other 操作数：other 变更必须重跑（#193）', () => {
+    const s1 = withMethods(observable(new Set([1, 2])));
+    const s2 = withMethods(observable(new Set([1, 2, 3])));
+    const seen: boolean[] = [];
+    const reaction = observe(() => {
+      seen.push(s1.isSubsetOf(s2));
+    });
+    expect(seen).toEqual([true]);
+    s2.delete(1);
+    expect(s1.isSubsetOf(s2)).toBe(false);
+    expect(seen).toEqual([true, false]);
+    unobserve(reaction);
+  });
+});
+
+describe('契约: 集合 Object.prototype 方法不被当成内置集合方法转发（#193）', () => {
+  test('Map.valueOf() 返回代理自身，constructor 保持 Map', () => {
+    const m = observable(new Map([['a', 1]]));
+    expect(m.valueOf()).toBe(m);
+    expect(m.constructor).toBe(Map);
+    expect(String(m)).toBe('[object Map]');
+  });
+
+  test('observe(String(map)) 不因 map.set 重跑（toString 不注册 iterate）', () => {
+    const m = observable(new Map([['a', 1]]));
+    let runs = 0;
+    const reaction = observe(() => {
+      void String(m);
+      runs++;
+    });
+    expect(runs).toBe(1);
+    m.set('b', 2);
+    expect(runs).toBe(1);
+    unobserve(reaction);
   });
 });

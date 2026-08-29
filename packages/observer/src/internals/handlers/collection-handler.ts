@@ -383,12 +383,21 @@ export function isBuiltinCollectionPrototypeMethod(key: PropertyKey, value: unkn
   if (key === 'constructor') {
     return false;
   }
+  // 只认集合原型的自有方法 (union 等)。valueOf/toString/hasOwnProperty
+  // 继承自 Object.prototype, 匹配会把 this 绑到 raw 并误注册 iterate (#193)。
+  let ownOnBuiltinProto = false;
   for (const proto of builtinCollectionPrototypes) {
+    if (!Object.prototype.hasOwnProperty.call(proto, key)) {
+      continue;
+    }
+    ownOnBuiltinProto = true;
     if ((proto as unknown as Record<PropertyKey, unknown>)[key] === value) {
       return true;
     }
   }
-  return false;
+  // 跨 realm: 方法名是本 realm 集合原型的自有成员, callee 是原生函数
+  // (远 realm 的 Set.prototype.union !== 本 realm 的那一个)。
+  return ownOnBuiltinProto && isNativeLikeFunction(value);
 }
 
 /*
@@ -407,6 +416,21 @@ export function forwardBuiltinCollectionMethod(
       key: '' as PropertyKey,
       type: 'iterate',
     });
+    // union/isSubsetOf 等会读 other: 若 other 是 observable 集合, 也订它的 iterate,
+    // 否则 other 变更时 reaction 看不到新结果 (#193)。
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (arg && (typeof arg === 'object' || typeof arg === 'function')) {
+        const rawArg = proxyToRaw.get(arg);
+        if (rawArg && isAnyCollectionTarget(rawArg)) {
+          registerRunningReactionForOperation({
+            target: rawArg,
+            key: '' as PropertyKey,
+            type: 'iterate',
+          });
+        }
+      }
+    }
     return Reflect.apply(fn, target, args.map(toRawIfProxy));
   };
 }

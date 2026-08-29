@@ -157,4 +157,14 @@ describe('#9 cross-realm built-ins (vm.runInNewContext)', () => {
     expect(dummy).toBe(undefined);
     expect(s.size).toBe(1);
   });
+
+  test('cross-realm Set.union 不以 proxy 为 this 抛错（#193）', () => {
+    const raw = vm.runInNewContext('new Set([1, 2])') as Set<number>;
+    const s = observable(raw) as Set<number> & {
+      union(other: Set<unknown>): Set<number>;
+    };
+    expect(s).not.toBe(raw);
+    const united = s.union(new Set([3]));
+    expect(new Set(united)).toEqual(new Set([1, 2, 3]));
+  });
 });
