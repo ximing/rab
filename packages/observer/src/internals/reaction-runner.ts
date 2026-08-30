@@ -4,6 +4,7 @@ import {
   getReactionsForOperation,
   registerReactionForOperation,
   releaseReaction,
+  restoreReaction,
 } from './reaction-track';
 import { Stack } from './stack';
 import type { Operation, Reaction } from './types';
@@ -75,12 +76,16 @@ export function runAsReaction<T extends Function, R>(
   // 如果已存在,不再执行(防止无限递归)
   // 未来可能支持显式的递归 reactions
   if (!reactionStack.has(reaction)) {
+    // 是否为该 reaction 的首次执行 (observe 首跑或 lazy 手动首跑)
+    const firstRun = !reaction.everRan;
+    // 重跑前快照上次成功运行的连接。仍先 release 再跑（通知查找发生在
+    // 进入本函数之前，调度时序不变）；失败时再 restore，避免只留下抛错
+    // 点之前读到的部分依赖 (#213)。
+    const prevCleaners = firstRun ? null : (reaction.cleaners ?? []).slice();
     // 每次执行前,清除该 reaction 之前建立的所有依赖关系 (obj -> key -> reactions)
     // 因为这次执行可能访问不同的属性,需要重新建立依赖
     releaseReaction(reaction);
 
-    // 是否为该 reaction 的首次执行 (observe 首跑或 lazy 手动首跑)
-    const firstRun = !reaction.everRan;
     try {
       // 将 reaction 推入栈顶,标记为"当前正在运行"
       // 执行原始函数 fn
@@ -96,8 +101,13 @@ export function runAsReaction<T extends Function, R>(
         // 无人再 unobserve 它, 后续每次写入都会复活这个僵尸 reaction。
         // 首跑失败即自动脱管 (标记 unobserved + 释放全部依赖连接), 再上抛。
         // 注意与重跑语义的区分: 已成功跑过的 reaction 在后续重跑中抛错
-        // (G4 错误隔离范畴) 保持存活 —— 临时性错误不杀死活着的 reaction。
+        // (G4 错误隔离范畴) 保持存活 —— 临时性错误不杀死活着的 reaction，
+        // 并把依赖回滚到上次成功运行的集合。
         reaction.unobserved = true;
+        releaseReaction(reaction);
+      } else if (!reaction.unobserved && prevCleaners) {
+        restoreReaction(reaction, prevCleaners);
+      } else {
         releaseReaction(reaction);
       }
       throw error;
