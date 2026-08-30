@@ -1,7 +1,7 @@
 import { Operation } from '@rabjs/observer';
 
 export function debuggerReaction(operation: Operation) {
-  if (['get', 'has', 'iterate'].includes(operation.type)) {
+  if (['get', 'has', 'iterate', 'key-iterate'].includes(operation.type)) {
     return;
   }
   console.log(

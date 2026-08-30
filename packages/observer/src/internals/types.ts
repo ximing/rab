@@ -1,4 +1,5 @@
-export type OperationType = 'get' | 'has' | 'iterate' | 'add' | 'set' | 'delete' | 'clear';
+export type OperationType =
+  'get' | 'has' | 'iterate' | 'key-iterate' | 'add' | 'set' | 'delete' | 'clear';
 
 export interface Operation {
   target: object;

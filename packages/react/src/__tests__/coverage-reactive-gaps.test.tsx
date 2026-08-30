@@ -265,9 +265,11 @@ describe('observer 旧版 contextTypes', () => {
 });
 
 describe('debuggerReaction', () => {
-  it('忽略 get/has/iterate，对其它 type 打日志', () => {
+  it('忽略 get/has/iterate/key-iterate，对其它 type 打日志', () => {
     const log = jest.spyOn(console, 'log').mockImplementation(() => {});
     debuggerReaction({ target: {}, key: 'k', type: 'get' } as Operation);
+    expect(log).not.toHaveBeenCalled();
+    debuggerReaction({ target: {}, key: '', type: 'key-iterate' } as Operation);
     expect(log).not.toHaveBeenCalled();
     debuggerReaction({ target: {}, key: 'k', type: 'set', value: 1, oldValue: 0 } as Operation);
     expect(log).toHaveBeenCalled();
