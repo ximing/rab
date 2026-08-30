@@ -62,16 +62,19 @@ export function Inject<T extends Service = Service>(
     });
 
     // 使用 getter/setter 拦截属性访问
-    let cachedValue: T | undefined;
-    let isInitialized = false;
+    // 缓存必须按实例隔离：装饰器闭包在类定义时只执行一次，
+    // 闭包变量是类级共享的——否则第二个实例会拿到第一个实例
+    // 从别的容器解析出的依赖（#219）
+    const instanceCache = new WeakMap<object, { value: T; initialized: boolean }>();
 
     // ✅ 正确做法：返回描述符对象，而不是调用 Object.defineProperty
     // 这样既能兼容 TypeScript experimentalDecorators，也能兼容 Babel legacy 模式
     return {
       get(this: Service): T {
-        // 如果已经初始化过，直接返回缓存的值
-        if (isInitialized) {
-          return cachedValue as T;
+        // 如果该实例已经初始化过，直接返回缓存的值
+        const cached = instanceCache.get(this);
+        if (cached?.initialized) {
+          return cached.value;
         }
 
         // 从当前 Service 实例所属的容器解析
@@ -87,13 +90,13 @@ export function Inject<T extends Service = Service>(
         // 从容器解析依赖
         try {
           // 使用类型断言，因为 identifier 可能是类、字符串或 Symbol
-          cachedValue = (
+          const resolved = (
             typeof identifier === 'function'
               ? container.resolve(identifier as new (...args: any[]) => T)
               : container.resolve<T>(identifier as string | symbol)
           ) as T;
-          isInitialized = true;
-          return cachedValue;
+          instanceCache.set(this, { value: resolved, initialized: true });
+          return resolved;
         } catch (error) {
           throw new Error(
             `Failed to inject dependency for property "${String(propertyKey)}" ` +
@@ -104,9 +107,8 @@ export function Inject<T extends Service = Service>(
       },
 
       set(this: Service, value: T): void {
-        // 允许手动设置值（用于测试或特殊场景）
-        cachedValue = value;
-        isInitialized = true;
+        // 允许手动设置值（用于测试或特殊场景），只影响当前实例
+        instanceCache.set(this, { value, initialized: true });
       },
 
       configurable: true,
