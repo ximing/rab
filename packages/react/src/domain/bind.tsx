@@ -58,6 +58,8 @@ let containerId = 0;
 type ADM = {
   container: Container | null;
   timmer: NodeJS.Timeout | null;
+  /** effect 已挂载。StrictMode 假卸载后会立刻再 setup，据此取消待执行的 destroy */
+  committed: boolean;
 };
 const universalFinalizationRegistry = new UniversalFinalizationRegistry((adm: ADM) => {
   adm.container?.destroy();
@@ -93,6 +95,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
     return {
       container,
       timmer: null,
+      committed: false,
     };
   }
   // 包裹组件
@@ -115,10 +118,24 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
     const adm = admRef.current!;
     useEffect(() => {
       // 走到这里就会确保一定会销毁了，所以可以 unregister 钩子
+      adm.committed = true;
       universalFinalizationRegistry.unregister(adm);
       return () => {
-        // 兜底进行 destroy的，业务不应该依赖此做任何事情
-        universalFinalizationRegistry.register(admRef, adm, adm);
+        // unmount 时销毁容器（#218）。不能在 cleanup 里同步 destroy：
+        // StrictMode 会立刻再跑 setup，子树仍在用这个容器。
+        // microtask 里若 committed 又为 true 则跳过；真正卸载才会 destroy。
+        // destroy 幂等，GC 仍兜底从未 commit 的 concurrent 树。
+        adm.committed = false;
+        queueMicrotask(() => {
+          if (adm.committed) {
+            return;
+          }
+          if (adm.container) {
+            adm.container.destroy();
+            adm.container = null;
+          }
+          universalFinalizationRegistry.register(admRef, adm, adm);
+        });
       };
     }, []);
     return (
