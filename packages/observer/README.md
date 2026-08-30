@@ -62,7 +62,7 @@ batch(() => {
 
 - **在途的 unobserved reaction 仍触发 debugger 事件**：`unobserve` 之后在途执行的那一次（手动调用或已排期的 scheduler 回调）执行期间，若它配置了 `debugger`，读写操作仍会收到 debugger 事件——debugger 是观察工具，不因脱管而静默。若不希望看到这些事件，在 debugger 回调里检查 reaction 的 `unobserved` 标记自行过滤。
 
-- **observe 首跑抛错即脱管**：`observe(fn)` 的首次执行（含 `lazy` reaction 的手动首跑）抛错时，异常穿透给调用者，且该 reaction 自动注销——不会留下"半成品"依赖导致后续写入复活它。已成功执行过至少一次的 reaction，后续重跑抛错则**保持存活**（依赖保留，下次变更仍会触发），错误由错误隔离机制上抛，见下条。
+- **observe 首跑抛错即脱管**：`observe(fn)` 的首次执行（含 `lazy` reaction 的手动首跑）抛错时，异常穿透给调用者，且该 reaction 自动注销——不会留下"半成品"依赖导致后续写入复活它。已成功执行过至少一次的 reaction，后续重跑抛错则**保持存活**——reaction 不会因临时性错误被注销，错误由错误隔离机制上抛，见下条。注意：失败的那次重跑只重新注册了抛错点**之前**读取的依赖；抛错点之后读取的 key 依赖要等到下一次成功重跑才会恢复，期间对这些 key 的变更不会触发（#213）。
 
 - **reaction 执行错误不中断同批**：一次数据变更触发多个 reaction 时，某个 reaction（或其 `debugger`）抛错不会阻止其余 reaction 执行；所有 reaction 跑完后，第一个错误在变更调用点 rethrow。
 
