@@ -93,18 +93,45 @@ export function iterationKeyFor(target: object): PropertyKey | symbol {
 }
 
 /*
- * Map target 判定 (通知侧)。与 collection-handler 的 isMapTarget 逻辑一致,
- * 但 reaction-track 被 reaction-runner / handlers 依赖, 反向 import 会成环,
- * 故本地实现 (instanceof + toString tag, 跨 realm 子类兼容)。
+ * Map target 判定 (通知侧, type:'set' 是否并入 ITERATION_KEY)。
+ * 不能 import collection-handler 的 isMapTarget: reaction-track ←
+ * reaction-runner ← handlers, 反向 import 成环。
+ *
+ * 判定必须与集合路由同严, 不能只看 toString tag:
+ * 伪造 `[object Map]` 的普通对象走 base set trap, 若此处当 Map 处理,
+ * 已有属性赋值会误通知 ITERATION_KEY, ownKeys 依赖被值覆盖误触发。
+ * 同 realm: instanceof Map (含自定义 toStringTag 的子类)。
+ * 跨 realm: tag + native get/set/has (与 passesCollectionDuckCheck 对齐)。
+ * throwing toStringTag getter 不得让通知路径抛错。
  * */
 const objectToString = Object.prototype.toString;
+const nativeFunctionToString = Function.prototype.toString;
+
+function isNativeLikeFunction(fn: unknown): boolean {
+  if (typeof fn !== 'function') {
+    return false;
+  }
+  try {
+    return nativeFunctionToString.call(fn).includes('[native code]');
+  } catch {
+    return false;
+  }
+}
+
 function isMapTargetLocal(target: object): boolean {
   if (target instanceof Map) {
     return true;
   }
-  // throwing Symbol.toStringTag getter 不能让通知路径抛错 (adversarial round2)
   try {
-    return objectToString.call(target) === '[object Map]';
+    if (objectToString.call(target) !== '[object Map]') {
+      return false;
+    }
+    const map = target as Map<unknown, unknown>;
+    return (
+      isNativeLikeFunction(map.get) &&
+      isNativeLikeFunction(map.set) &&
+      isNativeLikeFunction(map.has)
+    );
   } catch {
     return false;
   }

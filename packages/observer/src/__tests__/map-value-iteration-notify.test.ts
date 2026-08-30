@@ -5,6 +5,7 @@
  * key 的值覆盖；key 侧迭代（Map.keys()）不应被值覆盖误触发（#211）。
  * 语义与 Vue 3 对齐（MAP_KEY_ITERATE_KEY 的拆分设计）。
  */
+import vm from 'vm';
 import { observable, shadowObservable, observe, unobserve } from '../main';
 
 describe('Map 值覆盖通知迭代依赖（#211）', () => {
@@ -69,6 +70,8 @@ describe('Map 值覆盖通知迭代依赖（#211）', () => {
 
       map.set('new', 1);
       expect(keysSeen).toEqual([['k'], ['k', 'new']]); // 增删仍触发
+      map.delete('new');
+      expect(keysSeen).toEqual([['k'], ['k', 'new'], ['k']]);
       unobserve(reaction);
     });
 
@@ -85,6 +88,23 @@ describe('Map 值覆盖通知迭代依赖（#211）', () => {
 
       map.set('k2', 2);
       expect(count).toBe(2);
+      unobserve(reaction);
+    });
+
+    it('跨 realm Map 值覆盖仍通知 forEach（instanceof 失效，走 tag+duck-check）', () => {
+      const rm = vm.runInNewContext("new Map([['k', 1]])") as Map<string, number>;
+      const map = observable(rm);
+      let sum = 0;
+      const reaction = observe(() => {
+        sum = 0;
+        map.forEach(v => {
+          sum += v;
+        });
+      });
+      expect(sum).toBe(1);
+
+      map.set('k', 5);
+      expect(sum).toBe(5);
       unobserve(reaction);
     });
   });
@@ -116,6 +136,9 @@ describe('Map 值覆盖通知迭代依赖（#211）', () => {
 
       map.set('k', 5);
       expect(keysSeen).toEqual([['k']]);
+
+      map.set('new', 1);
+      expect(keysSeen).toEqual([['k'], ['k', 'new']]);
       unobserve(reaction);
     });
   });
@@ -131,6 +154,39 @@ describe('Map 值覆盖通知迭代依赖（#211）', () => {
 
       state.a = 99;
       expect(keysSeen).toEqual([['a', 'b']]); // 值覆盖不改变键集合
+      unobserve(reaction);
+    });
+
+    it('伪造 [object Map] tag 的普通对象赋值不触发 ownKeys 依赖', () => {
+      const fake = { [Symbol.toStringTag]: 'Map', a: 1, b: 2 };
+      const state = observable(fake);
+      const keysSeen: string[][] = [];
+      const reaction = observe(() => {
+        keysSeen.push(Object.keys(state));
+      });
+      expect(keysSeen).toEqual([['a', 'b']]);
+
+      (state as { a: number }).a = 99;
+      expect(keysSeen).toEqual([['a', 'b']]);
+      unobserve(reaction);
+    });
+
+    it('throwing toStringTag 的普通对象赋值不抛且不触发 ownKeys', () => {
+      const rawObj = { a: 1, b: 2 };
+      Object.defineProperty(rawObj, Symbol.toStringTag, {
+        get() {
+          throw new Error('boom-tag');
+        },
+      });
+      const state = observable(rawObj);
+      const keysSeen: string[][] = [];
+      const reaction = observe(() => {
+        keysSeen.push(Object.keys(state));
+      });
+      expect(() => {
+        state.a = 99;
+      }).not.toThrow();
+      expect(keysSeen).toEqual([['a', 'b']]);
       unobserve(reaction);
     });
   });
