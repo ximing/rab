@@ -31,7 +31,10 @@ export function useAsObservableSource<T extends object>(current: T): T {
   const observableRef = useRef<T | null>(null);
 
   if (!observableRef.current) {
-    observableRef.current = observable(current);
+    // 浅拷贝后再包裹：React dev 模式会 Object.freeze(props)，直接包裹
+    // 会让后续 key 写回命中 frozen 目标，proxy set trap 返回 falsish
+    // 抛 TypeError（#216）。拷贝也保证不改动调用方传入的原对象。
+    observableRef.current = observable({ ...current });
   }
 
   // 更新 observable 对象的属性
