@@ -35,6 +35,36 @@ describe('useReaction Hook', () => {
     });
   });
 
+  // 当前实现（#200）：immediate: false 仍会在 useEffect 里手动 reaction() 一次以收集依赖（#195），
+  // 因此挂载时副作用还是会跑。与选项名「不立即执行」矛盾。
+  it('immediate: false 在变更后仍会执行（#195 依赖收集）', async () => {
+    const effects: string[] = [];
+    const state = observable({ count: 0 });
+
+    const Component = observer(() => {
+      useReaction(
+        () => {
+          effects.push(`count: ${state.count}`);
+        },
+        { immediate: false }
+      );
+      return <div>Count: {state.count}</div>;
+    });
+
+    render(<Component />);
+
+    await waitFor(() => {
+      expect(effects.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+      state.count = 1;
+    });
+    await waitFor(() => {
+      expect(effects).toContain('count: 1');
+    });
+  });
+
   it('应该支持 immediate: true 立即执行一次', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });
