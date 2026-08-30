@@ -4,7 +4,7 @@
  * 集合 trap 入口都对 key 做 toRawIfProxy 归一化（依赖注册在 raw 身份），
  * notify 也必须同样解包——传 proxy 形式的 key 时否则静默漏通知（#214）。
  */
-import { observable, observe, notify } from '../main';
+import { observable, observe, notify, raw } from '../main';
 
 describe('notify 的 key 解包（#214）', () => {
   it('Map 的 key 是 observable 对象时，notify 传 proxy 形式也能命中注册的依赖', () => {
@@ -25,7 +25,7 @@ describe('notify 的 key 解包（#214）', () => {
     expect(runs).toBe(2);
 
     // raw 形式依然有效（幂等路径）
-    notify(map, (map as unknown as { toJSON?: never }) && keyObj);
+    notify(map, raw(keyObj));
     expect(runs).toBe(3);
   });
 
@@ -45,17 +45,43 @@ describe('notify 的 key 解包（#214）', () => {
     expect(runs).toBe(2);
   });
 
-  it('普通对象的 string key 不受影响', () => {
-    const state = observable({ n: 0 });
+  it('observable 函数作为 Map key 时，notify 传 proxy 形式也能命中', () => {
+    const map = observable(new Map<() => number, number>());
+    const fn = observable(function keyFn() {
+      return 0;
+    });
+    map.set(fn, 10);
+
+    let runs = 0;
+    observe(() => {
+      runs++;
+      void map.get(fn);
+    });
+    expect(runs).toBe(1);
+
+    notify(map, fn);
+    expect(runs).toBe(2);
+
+    notify(map, raw(fn));
+    expect(runs).toBe(3);
+  });
+
+  it('普通对象的 string / symbol key 不受影响', () => {
+    const sym = Symbol('k');
+    const state = observable({ n: 0, [sym]: 1 });
 
     let runs = 0;
     observe(() => {
       runs++;
       void state.n;
+      void state[sym];
     });
     expect(runs).toBe(1);
 
     notify(state, 'n');
     expect(runs).toBe(2);
+
+    notify(state, sym);
+    expect(runs).toBe(3);
   });
 });

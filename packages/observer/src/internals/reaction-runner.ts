@@ -314,12 +314,14 @@ function flushQueuedReactions(): void {
  * accessor / @Memo 这类没有落盘 set 的属性在依赖变化后需要唤醒外层 observe。
  * 传入 proxy 或 raw 均可（target 与 key 都做解包：集合 trap 入口按 raw 身份
  * 归一化注册，key 不解包会落在一个全新的 WeakRef 上，静默漏通知 #214）。
+ * key 可以是属性名，也可以是 Map/Set 的 object/function key。
  * */
-export function notify(target: object, key: PropertyKey): void {
+export function notify(target: object, key: PropertyKey | object): void {
   const rawTarget = (proxyToRaw.get(target) as object) || target;
   queueReactionsForOperation({
     target: rawTarget,
-    key: toRawIfProxy(key),
+    // 集合 trap 同样把 object key as PropertyKey 写入 Operation
+    key: toRawIfProxy(key) as PropertyKey,
     type: 'set',
   });
 }
