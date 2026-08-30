@@ -120,8 +120,5 @@ export {
 export type {
   // ServiceIdentifier 和 ServiceFactory 已从 @rabjs/service 导出
   ServiceDefinition,
-  ProviderOptions,
-  ProviderResult,
-  DomainComponent,
   DomainContextValue,
 } from './domain';

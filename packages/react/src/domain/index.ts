@@ -9,22 +9,19 @@
  *
  * @example
  * ```tsx
- * // 1. 定义 Domain 组件
- * const MainPage = () => {
+ * // 1. 定义组件内容
+ * const MainPageContent = () => {
  *   const mainPageService = useService(MainPageService);
- *   return <MainPageContent />;
+ *   return <MainPageDetail />;
  * };
  *
- * // 2. 创建 Domain
- * const { Provider } = createDomain(MainPage, [MainPageService]);
+ * // 2. 使用 bindServices 注册服务（自动 view 包裹，创建领域容器）
+ * const MainPage = bindServices(MainPageContent, [MainPageService]);
  *
- * // 3. 使用 Provider 包装组件
- * <Provider>
+ * // 3. 在应用中使用，RSRoot 提供根容器
+ * <RSRoot>
  *   <MainPage />
- * </Provider>
- *
- * // 或者使用简化 API
- * export default Provider(MainPage, [MainPageService]);
+ * </RSRoot>
  * ```
  */
 
@@ -46,8 +43,5 @@ export type {
   ServiceFactory,
   ServiceClass,
   ServiceDefinition,
-  ProviderOptions,
-  ProviderResult,
-  DomainComponent,
   DomainContextValue,
 } from './types';

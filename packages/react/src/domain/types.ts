@@ -9,7 +9,6 @@
  */
 
 import type { Container, ServiceIdentifier, ServiceFactory, ServiceClass } from '@rabjs/service';
-import type { ReactNode, ComponentType } from 'react';
 
 // 重新导出从 @rabjs/service 导入的类型，供 domain 模块内部使用
 
@@ -25,47 +24,6 @@ export type ServiceDefinition<T = any> =
       factory: ServiceFactory<T> | ServiceClass<T> | T;
     }
   | ServiceClass<T>;
-
-/**
- * Provider 配置选项
- */
-export interface ProviderOptions {
-  /**
-   * 容器名称（用于调试）
-   */
-  name?: string;
-
-  /**
-   * 是否启用严格模式
-   * 严格模式下，同一作用域链中重复注册同一服务会抛出异常
-   */
-  strict?: boolean;
-}
-
-/**
- * Domain 组件类型
- */
-export type DomainComponent<P = any> = ComponentType<P>;
-
-/**
- * Provider 返回类型
- */
-export interface ProviderResult<P = any> {
-  /**
-   * Provider 组件
-   */
-  Provider: ComponentType<{ children: ReactNode }>;
-
-  /**
-   * 原始组件
-   */
-  Component: DomainComponent<P>;
-
-  /**
-   * 获取容器（仅用于测试）
-   */
-  getContainer?: () => Container;
-}
 
 /**
  * Domain 上下文值
