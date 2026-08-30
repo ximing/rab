@@ -287,7 +287,9 @@ export const collectionHandlers = {
     registerRunningReactionForOperation({
       target,
       key: '' as PropertyKey,
-      type: 'iterate',
+      // Map.keys() 是 key 侧迭代: 值覆盖不应误触发 (#211)。Set 的 key 就是
+      // value, 仍注册在值侧 ITERATION_KEY 上 (Set 无法覆盖已有成员的值)。
+      type: isMapTarget(target) ? 'key-iterate' : 'iterate',
     });
     // Map keys 保持 raw (G5, 与 Vue 3 一致)。Set 的 key 就是 value,
     // 必须与 values() 包成同一 child, 否则破坏原生 keys===values (#192)。

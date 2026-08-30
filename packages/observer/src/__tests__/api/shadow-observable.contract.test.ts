@@ -232,7 +232,11 @@ describe('shadowObservable() 行为契约', () => {
       expect(isObservable(third)).toBe(true);
       expect(map.get('a')).toBe(99);
       expect(map.size).toBe(2);
-      expect(sizes).toEqual([1, 2]);
+      // #211 起 Map 值覆盖也通知值侧迭代依赖（size reaction 读的是
+      // ITERATION_KEY）：m.set(k, 99) 覆盖 'a' 触发一次（size 仍 1）、
+      // m.set('b', 2) 新增触发一次（size 2）；Map.forEach 会访问迭代中
+      // 新增的 'b'，回调对 'b' 的两次覆盖各触发一次（size 2）。
+      expect(sizes).toEqual([1, 1, 2, 2, 2]);
       unobserve(reaction);
     });
 

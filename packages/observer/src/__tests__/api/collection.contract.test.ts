@@ -270,7 +270,7 @@ describe('契约: 迭代的依赖与通知', () => {
     unobserve(reaction);
   });
 
-  test('已有 key 的值被覆盖不触发迭代依赖（当前行为，与 Vue 语义一致）：需要感知值变化请按 key 观察 get', () => {
+  test('已有 key 的值覆盖触发值侧迭代依赖，但不触发 Map.keys()（与 Vue 3 语义一致，#211）', () => {
     const map = observable(new Map<string, number>());
     map.set('k', 1);
     const iterateSpy = jest.fn(() => {
@@ -279,13 +279,23 @@ describe('契约: 迭代的依赖与通知', () => {
     observe(iterateSpy);
     expect(iterateSpy).toHaveBeenCalledTimes(1);
     map.set('k', 2);
-    // 迭代依赖只盯成员增删；值覆盖只通知按 key 注册的 get/has 依赖
-    expect(iterateSpy).toHaveBeenCalledTimes(1);
+    // 值序列变了：值侧迭代依赖（forEach/values/entries）重跑
+    expect(iterateSpy).toHaveBeenCalledTimes(2);
     const getSpy = jest.fn(() => map.get('k'));
     observe(getSpy);
     expect(getSpy).toHaveBeenCalledTimes(1);
     map.set('k', 3);
     expect(getSpy).toHaveBeenCalledTimes(2);
+    // key 侧迭代不被值覆盖误触发
+    const keysSpy = jest.fn(() => {
+      void map.keys();
+    });
+    observe(keysSpy);
+    expect(keysSpy).toHaveBeenCalledTimes(1);
+    map.set('k', 4);
+    expect(keysSpy).toHaveBeenCalledTimes(1);
+    map.set('k2', 1);
+    expect(keysSpy).toHaveBeenCalledTimes(2);
   });
 });
 

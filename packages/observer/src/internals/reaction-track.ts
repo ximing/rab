@@ -75,6 +75,14 @@ const setToOwner = new WeakMap<Set<Reaction>, { map: ConnectionMap; key: StoredK
 const ITERATION_KEY = Symbol('iteration key');
 
 /*
+ * key 侧迭代 (Map.keys()) 的依赖键, 与值侧迭代 (ITERATION_KEY) 分桶 (#211):
+ * Map 已有 key 的值覆盖 (type: 'set') 只通知值侧迭代, key 集合没变,
+ * keys() 不应被误触发; 增删 (add/delete/clear) 两桶都通知。
+ * 拆分设计与 Vue 3 的 MAP_KEY_ITERATE_KEY 一致。
+ * */
+const KEY_ITERATION_KEY = Symbol('key iteration key');
+
+/*
  * 迭代操作的依赖键必须与通知时的查找键一致,否则依赖永不触发:
  * - 普通对象: ownKeys trap 注册的依赖挂在 ITERATION_KEY 上,新增/删除属性时也按 ITERATION_KEY 查找
  * - 数组: 数组的 ownKeys 结果由 length 决定(索引键集合随 length 变化),
@@ -82,6 +90,24 @@ const ITERATION_KEY = Symbol('iteration key');
  * */
 export function iterationKeyFor(target: object): PropertyKey | symbol {
   return Array.isArray(target) ? 'length' : ITERATION_KEY;
+}
+
+/*
+ * Map target 判定 (通知侧)。与 collection-handler 的 isMapTarget 逻辑一致,
+ * 但 reaction-track 被 reaction-runner / handlers 依赖, 反向 import 会成环,
+ * 故本地实现 (instanceof + toString tag, 跨 realm 子类兼容)。
+ * */
+const objectToString = Object.prototype.toString;
+function isMapTargetLocal(target: object): boolean {
+  if (target instanceof Map) {
+    return true;
+  }
+  // throwing Symbol.toStringTag getter 不能让通知路径抛错 (adversarial round2)
+  try {
+    return objectToString.call(target) === '[object Map]';
+  } catch {
+    return false;
+  }
 }
 
 /*
@@ -119,10 +145,13 @@ export function registerReactionForOperation(
 ): void {
   // 处理迭代操作(如 for...of, forEach)时,使用特殊的迭代键
   // 数组用 "length"(见 iterationKeyFor 的说明),其他对象用 ITERATION_KEY
+  // Map.keys() 是 key 侧迭代, 落在独立的 KEY_ITERATION_KEY 桶 (#211)
   // 其他操作(如 get, set)使用普通的属性键 key
   let actualKey: PropertyKey | symbol = key;
   if (type === 'iterate') {
     actualKey = iterationKeyFor(target);
+  } else if (type === 'key-iterate') {
+    actualKey = KEY_ITERATION_KEY;
   }
 
   const reactionsForObj = connectionStore.get(target);
@@ -204,6 +233,14 @@ export function getReactionsForOperation(operation: Operation): Set<Reaction> {
   }
 
   if (type === 'add' || type === 'delete' || type === 'clear') {
+    // 成员增删改变键集合与值序列, 值侧与 key 侧迭代依赖都要唤醒
+    addReactionsForKey(reactionsForKey, reactionsForTarget, iterationKeyFor(target));
+    addReactionsForKey(reactionsForKey, reactionsForTarget, KEY_ITERATION_KEY);
+  } else if (type === 'set' && isMapTargetLocal(target)) {
+    // Map 已有 key 的值覆盖: 值序列变了但键集合没变 —— 值侧迭代
+    // (forEach/values/entries/Symbol.iterator/size) 必须重跑,
+    // key 侧 (keys()) 不误触发 (#211)。仅 Map; 普通对象/数组的
+    // 'set' 不改变键集合, 不通知 ITERATION_KEY (ownKeys 语义)。
     addReactionsForKey(reactionsForKey, reactionsForTarget, iterationKeyFor(target));
   }
 
