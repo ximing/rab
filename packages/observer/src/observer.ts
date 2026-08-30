@@ -23,6 +23,13 @@ export function observe<T extends Function>(fn: T, options: ObserveOptions = {})
 
   if ((fn as unknown as ReactionFunction)[IS_REACTION]) {
     reaction = fn as unknown as Reaction;
+    // 复用已 unobserve 的 reaction 意味着「重新观察」：必须重置脱管标记，
+    // 否则 runAsReaction 走 unobserved 分支——立即执行一次（复活的假象）
+    // 但不建立任何依赖，之后的数据变更永远不触发（#215）。
+    // unobserve 已调用 releaseReaction 清空连接，重置后重跑会重新注册，
+    // 无残留。reaction 在自身运行栈上自我 unobserve 的场景由
+    // runAsReaction 的 reactionStack 守卫兜底。
+    reaction.unobserved = false;
   } else {
     // Create a named function that can reference itself
     const reactionFn = function reaction(this: unknown): unknown {
