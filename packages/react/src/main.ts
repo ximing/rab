@@ -11,7 +11,7 @@ export { useObserver } from './use-observer';
 export { useLocalObservable } from './use-local-observable';
 export { useAsObservableSource } from './use-as-observable-source';
 export { useReaction } from './use-reaction';
-export type { UseReactionOptions } from './use-reaction';
+export type { UseReactionOptions, UseReactionPairOptions } from './use-reaction';
 
 // 静态渲染支持（SSR）
 export { enableStaticRendering, isUsingStaticRendering } from './static-rendering';

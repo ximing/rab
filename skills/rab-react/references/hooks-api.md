@@ -73,6 +73,35 @@ const Component = observer(() => {
 });
 ```
 
+注意：单函数形式挂载时必然执行一次 effect 以收集依赖（`immediate: false` 也不例外，
+否则后续变更永不触发）。需要「挂载不跑、变化才跑」时，使用双函数形式（MobX
+`reaction(dataFn, effect)` 风格）：
+
+```typescript
+const Component = observer(() => {
+  const state = useLocalObservable(() => ({ count: 0 }));
+
+  // 挂载只收集依赖、不执行 effect；count 变化后 effect(current, previous) 才执行
+  useReaction(
+    () => state.count,
+    (count, prevCount) => {
+      analytics.track("count_changed", { count, prevCount });
+    }
+  );
+
+  // 挂载时也立即执行一次（previous 为 undefined）
+  useReaction(
+    () => state.count,
+    (count) => {
+      document.title = `Count: ${count}`;
+    },
+    { fireImmediately: true }
+  );
+
+  return <button onClick={() => state.count++}>{state.count}</button>;
+});
+```
+
 ## useContainer - 获取当前容器
 
 ```typescript

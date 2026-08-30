@@ -35,9 +35,9 @@ describe('useReaction Hook', () => {
     });
   });
 
-  // 当前实现（#200）：immediate: false 仍会在 useEffect 里手动 reaction() 一次以收集依赖（#195），
-  // 因此挂载时副作用还是会跑。与选项名「不立即执行」矛盾。
-  it('immediate: false 在变更后仍会执行（#195 依赖收集）', async () => {
+  // #200：单函数形式里副作用与依赖收集是同一个函数，immediate: false 无法
+  // 跳过挂载首跑（否则后续变更永不触发）。钉住诚实的契约，并指向双函数形式。
+  it('immediate: false 挂载时仍会执行一次以收集依赖，变更后再执行（#200 契约）', async () => {
     const effects: string[] = [];
     const state = observable({ count: 0 });
 
@@ -54,14 +54,14 @@ describe('useReaction Hook', () => {
     render(<Component />);
 
     await waitFor(() => {
-      expect(effects.length).toBeGreaterThan(0);
+      expect(effects).toEqual(['count: 0']);
     });
 
     act(() => {
       state.count = 1;
     });
     await waitFor(() => {
-      expect(effects).toContain('count: 1');
+      expect(effects).toEqual(['count: 0', 'count: 1']);
     });
   });
 
@@ -277,5 +277,128 @@ describe('useReaction Hook', () => {
 
     // effects 数量不应该增加
     expect(effects.length).toBe(effectsBeforeUnmount);
+  });
+});
+
+describe('useReaction 双函数形式（#200）', () => {
+  it('默认挂载不执行 effect，依赖变化后才执行并拿到 (current, previous)', async () => {
+    const calls: Array<[number, number | undefined]> = [];
+    const state = observable({ count: 0 });
+
+    const Component = observer(() => {
+      useReaction(
+        () => state.count,
+        (current, previous) => {
+          calls.push([current, previous]);
+        }
+      );
+      return <div>Count: {state.count}</div>;
+    });
+
+    render(<Component />);
+
+    // 挂载只收集依赖，不跑 effect
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(calls).toEqual([]);
+
+    act(() => {
+      state.count = 1;
+    });
+    await waitFor(() => {
+      expect(calls).toEqual([[1, 0]]);
+    });
+
+    act(() => {
+      state.count = 2;
+    });
+    await waitFor(() => {
+      expect(calls).toEqual([
+        [1, 0],
+        [2, 1],
+      ]);
+    });
+  });
+
+  it('fireImmediately: true 挂载时立即执行一次，previous 为 undefined', async () => {
+    const calls: Array<[number, number | undefined]> = [];
+    const state = observable({ count: 0 });
+
+    const Component = observer(() => {
+      useReaction(
+        () => state.count,
+        (current, previous) => {
+          calls.push([current, previous]);
+        },
+        { fireImmediately: true }
+      );
+      return <div>Count: {state.count}</div>;
+    });
+
+    render(<Component />);
+
+    await waitFor(() => {
+      expect(calls).toEqual([[0, undefined]]);
+    });
+
+    act(() => {
+      state.count = 1;
+    });
+    await waitFor(() => {
+      expect(calls).toEqual([
+        [0, undefined],
+        [1, 0],
+      ]);
+    });
+  });
+
+  it('dataFn 可以派生数据，effect 只在依赖变化后拿到派生值', async () => {
+    const names: string[] = [];
+    const state = observable({ first: 'a', last: 'b' });
+
+    const Component = observer(() => {
+      useReaction(
+        () => `${state.first}-${state.last}`,
+        full => {
+          names.push(full);
+        }
+      );
+      return <div>{state.first}</div>;
+    });
+
+    render(<Component />);
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(names).toEqual([]);
+
+    act(() => {
+      state.last = 'c';
+    });
+    await waitFor(() => {
+      expect(names).toEqual(['a-c']);
+    });
+  });
+
+  it('卸载后依赖变化不再执行 effect', async () => {
+    const calls: number[] = [];
+    const state = observable({ count: 0 });
+
+    const Component = observer(() => {
+      useReaction(
+        () => state.count,
+        current => {
+          calls.push(current);
+        }
+      );
+      return <div>Count: {state.count}</div>;
+    });
+
+    const { unmount } = render(<Component />);
+    unmount();
+
+    act(() => {
+      state.count = 1;
+    });
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(calls).toEqual([]);
   });
 });
