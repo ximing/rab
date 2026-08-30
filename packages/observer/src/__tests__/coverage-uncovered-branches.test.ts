@@ -9,6 +9,7 @@ import {
   batch,
   isObservable,
   resetGlobalConfig,
+  type Reaction,
 } from '../main';
 
 afterEach(() => {
@@ -28,7 +29,7 @@ describe('未覆盖分支：公开/半公开行为', () => {
   });
 
   test('reaction 在自身执行栈上再次调用自身：不递归，返回 undefined', () => {
-    let r: (() => unknown) | undefined;
+    let r: Reaction | undefined;
     let runs = 0;
     r = observe(
       () => {
@@ -38,7 +39,7 @@ describe('未覆盖分支：公开/半公开行为', () => {
       },
       { lazy: true }
     );
-    r();
+    r!();
     expect(runs).toBe(1);
   });
 
