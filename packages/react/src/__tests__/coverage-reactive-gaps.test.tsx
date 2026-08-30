@@ -200,8 +200,8 @@ describe('view 类组件 shouldComponentUpdate', () => {
     expect(screen.getByTestId('box')).toHaveTextContent('0:1:2');
   });
 
-  // 当前行为（#198）：view() 优先调用用户 SCU；返回 false 会吞掉 scheduler 的 setState({})。
-  it('当前行为：用户 shouldComponentUpdate 返回 false 会吞掉 observable 触发的更新', () => {
+  // #198：响应式刷新必须到达 render。用户 SCU 只应拦截 props / 自身 state 更新。
+  it('用户 shouldComponentUpdate 返回 false 不会吞掉 observable 触发的更新（#198）', () => {
     const store = observable({ n: 0 });
     class Frozen extends Component {
       shouldComponentUpdate() {
@@ -217,7 +217,34 @@ describe('view 类组件 shouldComponentUpdate', () => {
     act(() => {
       store.n = 1;
     });
-    expect(screen.getByTestId('n')).toHaveTextContent('0');
+    expect(screen.getByTestId('n')).toHaveTextContent('1');
+  });
+
+  it('用户 shouldComponentUpdate 返回 false 仍拦截 props 触发的更新（#198）', () => {
+    const store = observable({ n: 0 });
+    class Frozen extends Component<{ a: number }> {
+      shouldComponentUpdate() {
+        return false;
+      }
+      render() {
+        return (
+          <span data-testid="n">
+            {store.n}:{this.props.a}
+          </span>
+        );
+      }
+    }
+    const ViewFrozen = view(Frozen);
+    const { rerender } = render(<ViewFrozen a={1} />);
+    expect(screen.getByTestId('n')).toHaveTextContent('0:1');
+    rerender(<ViewFrozen a={2} />);
+    expect(screen.getByTestId('n')).toHaveTextContent('0:1');
+    // observable 更新仍要到达 render；SCU 拦下的那次 render 被跳过，
+    // 但 React 仍更新了实例的 this.props，forceUpdate 后显示新 props
+    act(() => {
+      store.n = 1;
+    });
+    expect(screen.getByTestId('n')).toHaveTextContent('1:2');
   });
 });
 
