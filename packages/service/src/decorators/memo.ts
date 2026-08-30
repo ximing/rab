@@ -231,6 +231,10 @@ export function invalidateMemo(instance: any, propertyKey: string | symbol): voi
   const cleanupMethodName = `__cleanup_memo_${String(propertyKey)}`;
   if (typeof instance[cleanupMethodName] === 'function') {
     instance[cleanupMethodName]();
+    // 手动失效与依赖变化路径（scheduler 里的 notify，见 #196）对齐：
+    // 失效后必须唤醒读过该属性名的外层 observe / observer 组件 (#199)。
+    // cleanupAllMemos / Service.destroy 不走这里，销毁路径不唤醒已卸载的 UI。
+    notify(instance, propertyKey);
   }
 }
 

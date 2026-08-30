@@ -7,8 +7,8 @@ import { Service } from '../service';
 import { Action, Memo, invalidateMemo, cleanupAllMemos } from '../decorators';
 
 describe('invalidateMemo 与外部 observe', () => {
-  // 当前行为（#199）：invalidateMemo 只清缓存/reaction，不 notify(instance, key)。
-  it('当前行为：invalidateMemo 不清醒读过该 getter 的外层 observe', () => {
+  // #199：invalidateMemo 清缓存后必须 notify(instance, key)，唤醒读过该 getter 的外层 observe。
+  it('invalidateMemo 唤醒读过该 getter 的外层 observe（#199）', () => {
     let external = 1;
     let computeCount = 0;
 
@@ -31,8 +31,8 @@ describe('invalidateMemo 与外部 observe', () => {
     external = 2;
     invalidateMemo(service, 'value');
 
-    expect(seen).toEqual([1]);
-    expect(computeCount).toBe(1);
+    expect(seen).toEqual([1, 2]);
+    expect(computeCount).toBe(2);
     expect(service.value).toBe(2);
     expect(computeCount).toBe(2);
   });
