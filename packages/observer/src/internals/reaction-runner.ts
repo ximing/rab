@@ -7,6 +7,7 @@ import {
 } from './reaction-track';
 import { Stack } from './stack';
 import type { Operation, Reaction } from './types';
+import { toRawIfProxy } from './utils';
 
 /*
  * 用于追踪当前正在执行的 reaction
@@ -311,13 +312,14 @@ function flushQueuedReactions(): void {
 /*
  * 手动通知依赖 target.key 的 reactions。
  * accessor / @Memo 这类没有落盘 set 的属性在依赖变化后需要唤醒外层 observe。
- * 传入 proxy 或 raw 均可。
+ * 传入 proxy 或 raw 均可（target 与 key 都做解包：集合 trap 入口按 raw 身份
+ * 归一化注册，key 不解包会落在一个全新的 WeakRef 上，静默漏通知 #214）。
  * */
 export function notify(target: object, key: PropertyKey): void {
   const rawTarget = (proxyToRaw.get(target) as object) || target;
   queueReactionsForOperation({
     target: rawTarget,
-    key,
+    key: toRawIfProxy(key),
     type: 'set',
   });
 }
