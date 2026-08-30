@@ -65,10 +65,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       this._reactiveRender = observe(originalRender, {
         // 使用 lazy 模式，不立即执行
         lazy: true,
-        // 当 observable 变化时，通过 setState 触发组件更新
+        // 当 observable 变化时，通过 forceUpdate 触发组件更新。
+        // 必须用 forceUpdate 而不是 setState({})：forceUpdate 绕过
+        // shouldComponentUpdate，用户 SCU 返回 false 时不会吞掉响应式
+        // 刷新；用户 SCU 只拦截 props / 自身 state 触发的更新 (#198)
         scheduler: () => {
           notifyReactStore(() => {
-            this.setState({});
+            this.forceUpdate();
           });
         },
       });
@@ -91,7 +94,8 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     /**
      * 优化 shouldComponentUpdate
      * 只在 props 或 state 变化时更新
-     * observable 的变化通过 scheduler 触发，不需要在这里处理
+     * observable 的变化通过 scheduler 的 forceUpdate 触发，绕过本方法，
+     * 因此用户自定义 SCU 不会吞掉响应式刷新 (#198)
      */
     shouldComponentUpdate(
       nextProps: Readonly<P>,
