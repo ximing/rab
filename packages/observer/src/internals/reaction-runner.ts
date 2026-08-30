@@ -169,12 +169,38 @@ function throwFlushErrorIfAny(): void {
  */
 export function batch<T>(fn: () => T): T {
   batchDepth++;
+  let fnError: unknown;
+  let hasFnError = false;
   try {
     return fn();
+  } catch (error) {
+    hasFnError = true;
+    fnError = error;
+    throw error;
   } finally {
     batchDepth--;
     if (batchDepth === 0) {
-      flushQueuedReactions();
+      // flush 抛出的错误不得覆盖回调自身的在途异常（#212）：
+      // finally 中抛出新错误会按 JS 语义替换原始异常，调用方 catch 到的
+      // 会是 reaction 的错误、自己的错误被静默吞掉。回调抛错时优先重抛
+      // 原始异常，flush 错误在原始异常是 Error 且尚无 cause 时附加为 cause。
+      try {
+        flushQueuedReactions();
+      } catch (flushError) {
+        if (!hasFnError) {
+          throw flushError;
+        }
+        // Error.cause 需要 es2022 lib，这里用窄化断言访问以兼容现有 target
+        const fnErrorWithCause = fnError as Error & { cause?: unknown };
+        if (
+          fnError instanceof Error &&
+          flushError instanceof Error &&
+          fnErrorWithCause.cause === undefined
+        ) {
+          fnErrorWithCause.cause = flushError;
+        }
+        throw fnError;
+      }
     }
   }
 }
