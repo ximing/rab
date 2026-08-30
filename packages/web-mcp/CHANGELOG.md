@@ -1,5 +1,13 @@
 # @rabjs/web-mcp
 
+## 9.3.5
+
+### Patch Changes
+
+- Updated dependencies [fff3c7f]
+  - @rabjs/service@9.3.5
+  - @rabjs/shared@9.3.5
+
 ## 9.3.4
 
 ### Patch Changes

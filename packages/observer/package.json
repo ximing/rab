@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/observer",
-  "version": "9.3.4",
+  "version": "9.3.5",
   "description": "Fine-grained reactivity — observable state, computed values, and reactions for the rab state architecture",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
