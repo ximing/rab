@@ -232,13 +232,21 @@ export function cancelThrottle(instance: any, propertyKey: string | symbol): voi
  * ```
  */
 export function cleanupAllThrottles(instance: any): void {
-  const proto = Object.getPrototypeOf(instance);
-  const propertyNames = Object.getOwnPropertyNames(proto);
-
-  for (const propertyName of propertyNames) {
-    const cleanupMethodName = `__cleanup_throttle_${propertyName}`;
-    if (typeof instance[cleanupMethodName] === 'function') {
-      instance[cleanupMethodName]();
+  // 沿原型链上溯：装饰器成员可能定义在任意基类上，只扫直接原型
+  // 会漏掉继承的清理方法（#221）
+  const seen = new Set<string>();
+  let current = Object.getPrototypeOf(instance);
+  while (current && current !== Object.prototype) {
+    for (const propertyName of Object.getOwnPropertyNames(current)) {
+      if (seen.has(propertyName)) {
+        continue;
+      }
+      seen.add(propertyName);
+      const cleanupMethodName = `__cleanup_throttle_${propertyName}`;
+      if (typeof instance[cleanupMethodName] === 'function') {
+        instance[cleanupMethodName]();
+      }
     }
+    current = Object.getPrototypeOf(current);
   }
 }
