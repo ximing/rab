@@ -469,6 +469,46 @@ describe('@Memo 装饰器', () => {
 
       unobserve(reaction);
     });
+
+    it('observe 读 @Memo getter 后，invalidateMemo 必须重跑外层 reaction（#199）', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get label() {
+          return `label:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(service.label);
+      });
+      expect(seen).toEqual(['label:1']);
+
+      external = 2;
+      invalidateMemo(service, 'label');
+      expect(seen).toEqual(['label:1', 'label:2']);
+      expect(service.label).toBe('label:2');
+
+      unobserve(reaction);
+    });
+
+    it('invalidateMemo 未被 observe 读过的 getter 时不通知任何人', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get label() {
+          return `label:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      expect(() => invalidateMemo(service, 'label')).not.toThrow();
+      expect(service.label).toBe('label:1');
+    });
   });
 
   describe('性能测试', () => {
