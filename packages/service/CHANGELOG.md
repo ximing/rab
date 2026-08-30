@@ -1,5 +1,11 @@
 # @rabjs/service
 
+## 9.3.5
+
+### Patch Changes
+
+- fff3c7f: `invalidateMemo(instance, key)` now notifies outer `observe` / `observer` reactions after clearing the cache (#199), aligning the manual invalidation path with the dependency-change path from #196. `cleanupAllMemos` / `Service.destroy` keep the previous no-notify behavior.
+
 ## 9.3.4
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @rabjs/react
 
+## 9.3.5
+
+### Patch Changes
+
+- 7feb1c8: `view()` class components now flush reactive updates with `forceUpdate` instead of `setState({})`, so a user-defined `shouldComponentUpdate` returning `false` can no longer swallow observable-triggered re-renders (#198). User SCU still governs props / own-state updates.
+- Updated dependencies [fff3c7f]
+  - @rabjs/service@9.3.5
+  - @rabjs/observer@9.3.5
+
 ## 9.3.4
 
 ### Patch Changes

@@ -1,5 +1,7 @@
 # @rabjs/observer
 
+## 9.3.5
+
 ## 9.3.4
 
 ### Patch Changes
