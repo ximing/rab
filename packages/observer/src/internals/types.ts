@@ -15,7 +15,7 @@ export interface Reaction extends Function {
   unobserved?: boolean;
   // 是否已成功完整执行过至少一次。首次执行 (observe 首跑 / lazy 手动首跑)
   // 抛错时 reaction 自动脱管 (见 runAsReaction); 已成功跑过的 reaction
-  // 后续重跑抛错则保持存活 (G4 错误隔离语义)。
+  // 后续重跑抛错则保持存活，依赖回滚到上次成功运行的集合 (G4 / #213)。
   everRan?: boolean;
   scheduler?: ReactionScheduler | Function;
   debugger?: (operation: Operation) => void;

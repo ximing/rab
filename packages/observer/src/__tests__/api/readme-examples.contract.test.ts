@@ -489,6 +489,31 @@ describe("README '已知限制' 小节（钉当前行为；行为改善时这些
       state.count = 2; // reaction 仍存活
       expect(runs).toBe(3);
     });
+
+    test('重跑抛错后依赖回滚为上次成功运行的集合（含抛错点之后的 key）', () => {
+      const state = observable({ a: 1, b: 1 });
+      let runs = 0;
+      let throwing = false;
+      observe(() => {
+        runs++;
+        if (throwing && state.a === 2) {
+          throw new Error('rerun boom');
+        }
+        void state.a;
+        void state.b;
+      });
+      expect(runs).toBe(1);
+
+      throwing = true;
+      expect(() => {
+        state.a = 2;
+      }).toThrow('rerun boom');
+      expect(runs).toBe(2);
+
+      throwing = false;
+      state.b = 99;
+      expect(runs).toBe(3);
+    });
   });
 
   describe('限制 5：reaction 执行错误不中断同批', () => {

@@ -334,6 +334,33 @@ export function releaseReaction(reaction: Reaction): void {
   reaction.cleaners = [];
 }
 
+/*
+ * 把 reaction 重新挂回 snapshot 里的依赖 Set。
+ * 重跑在执行前会 releaseReaction；若这次重跑抛错，抛错点之后的 key
+ * 来不及再注册，必须把上次成功运行的连接装回去，否则那些 key 的变更会漏通知 (#213)。
+ *
+ * 若同 key 在窗口内已被其它 reaction 建成新 Set，加入那份 live Set，
+ * 不要把已脱离 Map 的空 snapshot Set 塞回去（避免 #12 式 Set 分裂）。
+ * */
+export function restoreReaction(reaction: Reaction, snapshot: Set<Reaction>[]): void {
+  releaseReaction(reaction);
+  for (const oldSet of snapshot) {
+    const owner = setToOwner.get(oldSet);
+    if (!owner) {
+      continue;
+    }
+    let liveSet = owner.map.get(owner.key);
+    if (!liveSet) {
+      owner.map.set(owner.key, oldSet);
+      liveSet = oldSet;
+    }
+    if (!liveSet.has(reaction)) {
+      liveSet.add(reaction);
+      reaction.cleaners.push(liveSet);
+    }
+  }
+}
+
 function releaseReactionKeyConnection(this: Reaction, reactionsForKey: Set<Reaction>): void {
   reactionsForKey.delete(this);
   // #12: Set 已空时把 entry 从所属 ConnectionMap 里删掉, 避免空 entry 永久残留。
