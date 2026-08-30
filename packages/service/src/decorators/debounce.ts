@@ -66,93 +66,119 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
     const trailing = options?.trailing ?? true;
     const maxWait = options?.maxWait;
 
-    // 使用闭包存储状态
-    let timerId: ReturnType<typeof setTimeout> | null = null;
-    let lastCallTime = 0;
-    let lastInvokeTime = 0;
-    let lastArgs: any[] = [];
-    let lastThis: any;
-    let result: any;
+    // 状态必须按实例隔离：装饰器闭包在类定义时只执行一次，
+    // 闭包变量是类级共享的——一个实例的调用会被另一个实例覆盖，
+    // 一个实例 destroy 会取消所有实例的 pending 调用（#220）
+    interface DebounceState {
+      timerId: ReturnType<typeof setTimeout> | null;
+      lastCallTime: number;
+      lastInvokeTime: number;
+      lastArgs: any[];
+      lastThis: any;
+      result: any;
+    }
+    const instanceStates = new WeakMap<object, DebounceState>();
+    const getState = (instance: object): DebounceState => {
+      let state = instanceStates.get(instance);
+      if (!state) {
+        state = {
+          timerId: null,
+          lastCallTime: 0,
+          lastInvokeTime: 0,
+          lastArgs: [],
+          lastThis: undefined,
+          result: undefined,
+        };
+        instanceStates.set(instance, state);
+      }
+      return state;
+    };
 
     // 清理函数
-    const cleanup = () => {
-      if (timerId !== null) {
-        clearTimeout(timerId);
-        timerId = null;
+    const cleanup = (state: DebounceState) => {
+      if (state.timerId !== null) {
+        clearTimeout(state.timerId);
+        state.timerId = null;
       }
-      lastCallTime = 0;
-      lastInvokeTime = 0;
-      lastArgs = [];
-      lastThis = undefined;
-      result = undefined;
+      state.lastCallTime = 0;
+      state.lastInvokeTime = 0;
+      state.lastArgs = [];
+      state.lastThis = undefined;
+      state.result = undefined;
     };
 
     // 取消定时器
-    const cancelTimer = () => {
-      if (timerId !== null) {
-        clearTimeout(timerId);
-        timerId = null;
+    const cancelTimer = (state: DebounceState) => {
+      if (state.timerId !== null) {
+        clearTimeout(state.timerId);
+        state.timerId = null;
       }
     };
 
     // 执行函数
-    const invokeFunc = () => {
-      lastInvokeTime = Date.now();
-      result = originalMethod.apply(lastThis, lastArgs);
-      return result;
+    const invokeFunc = (state: DebounceState) => {
+      state.lastInvokeTime = Date.now();
+      state.result = originalMethod.apply(state.lastThis, state.lastArgs);
+      return state.result;
     };
 
     // 设置延迟执行
-    const startTimer = () => {
-      cancelTimer();
-      timerId = setTimeout(() => {
-        timerId = null;
+    const startTimer = (state: DebounceState) => {
+      cancelTimer(state);
+      state.timerId = setTimeout(() => {
+        state.timerId = null;
         if (trailing) {
-          invokeFunc();
+          invokeFunc(state);
         }
       }, wait);
     };
 
     descriptor.value = function (this: any, ...args: any[]) {
+      const state = getState(this);
       const now = Date.now();
-      const timeSinceLastCall = now - lastCallTime;
-      const timeSinceLastInvoke = now - lastInvokeTime;
+      const timeSinceLastCall = now - state.lastCallTime;
+      const timeSinceLastInvoke = now - state.lastInvokeTime;
 
-      lastCallTime = now;
-      lastArgs = args;
-      lastThis = this;
+      state.lastCallTime = now;
+      state.lastArgs = args;
+      state.lastThis = this;
 
       // 判断是否应该立即执行
       const shouldInvoke =
-        lastInvokeTime === 0 || // 首次调用
+        state.lastInvokeTime === 0 || // 首次调用
         timeSinceLastCall >= wait || // 距离上次调用超过 wait 时间
         (maxWait !== undefined && timeSinceLastInvoke >= maxWait); // 超过最大等待时间
 
       // 首次调用且 leading 为 true
-      if (shouldInvoke && leading && lastInvokeTime === 0) {
-        lastInvokeTime = now;
-        result = invokeFunc();
-        startTimer();
-        return result;
+      if (shouldInvoke && leading && state.lastInvokeTime === 0) {
+        state.lastInvokeTime = now;
+        state.result = invokeFunc(state);
+        startTimer(state);
+        return state.result;
       }
 
       // 超过最大等待时间，强制执行
       if (maxWait !== undefined && shouldInvoke) {
-        cancelTimer();
-        result = invokeFunc();
-        startTimer();
-        return result;
+        cancelTimer(state);
+        state.result = invokeFunc(state);
+        startTimer(state);
+        return state.result;
       }
 
       // 正常防抖逻辑
-      startTimer();
-      return result;
+      startTimer(state);
+      return state.result;
     };
 
-    // 将清理函数附加到实例上
+    // 将清理函数附加到实例上（按实例清理自己的状态）
     const cleanupMethodName = `__cleanup_debounce_${String(propertyKey)}`;
     Object.defineProperty(target, cleanupMethodName, {
-      value: cleanup,
+      value: function (this: any) {
+        const state = instanceStates.get(this);
+        if (state) {
+          cleanup(state);
+        }
+      },
       writable: true,
       enumerable: false,
       configurable: true,

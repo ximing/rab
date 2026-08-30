@@ -62,88 +62,113 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
     const leading = options?.leading ?? true;
     const trailing = options?.trailing ?? true;
 
-    // 使用闭包存储状态
-    let lastInvokeTime = 0;
-    let timerId: ReturnType<typeof setTimeout> | null = null;
-    let lastArgs: any[] = [];
-    let lastThis: any;
-    let result: any;
+    // 状态必须按实例隔离：装饰器闭包在类定义时只执行一次，
+    // 闭包变量是类级共享的——一个实例的调用会被另一个实例覆盖，
+    // 一个实例 destroy 会取消所有实例的 pending 调用（#220）
+    interface ThrottleState {
+      lastInvokeTime: number;
+      timerId: ReturnType<typeof setTimeout> | null;
+      lastArgs: any[];
+      lastThis: any;
+      result: any;
+    }
+    const instanceStates = new WeakMap<object, ThrottleState>();
+    const getState = (instance: object): ThrottleState => {
+      let state = instanceStates.get(instance);
+      if (!state) {
+        state = {
+          lastInvokeTime: 0,
+          timerId: null,
+          lastArgs: [],
+          lastThis: undefined,
+          result: undefined,
+        };
+        instanceStates.set(instance, state);
+      }
+      return state;
+    };
 
     // 清理函数
-    const cleanup = () => {
-      if (timerId !== null) {
-        clearTimeout(timerId);
-        timerId = null;
+    const cleanup = (state: ThrottleState) => {
+      if (state.timerId !== null) {
+        clearTimeout(state.timerId);
+        state.timerId = null;
       }
-      lastInvokeTime = 0;
-      lastArgs = [];
-      lastThis = undefined;
-      result = undefined;
+      state.lastInvokeTime = 0;
+      state.lastArgs = [];
+      state.lastThis = undefined;
+      state.result = undefined;
     };
 
     // 执行函数
-    const invokeFunc = () => {
-      lastInvokeTime = Date.now();
-      result = originalMethod.apply(lastThis, lastArgs);
-      return result;
+    const invokeFunc = (state: ThrottleState) => {
+      state.lastInvokeTime = Date.now();
+      state.result = originalMethod.apply(state.lastThis, state.lastArgs);
+      return state.result;
     };
 
     // 取消定时器
-    const cancelTimer = () => {
-      if (timerId !== null) {
-        clearTimeout(timerId);
-        timerId = null;
+    const cancelTimer = (state: ThrottleState) => {
+      if (state.timerId !== null) {
+        clearTimeout(state.timerId);
+        state.timerId = null;
       }
     };
 
     // 设置 trailing 定时器
-    const startTimer = () => {
-      cancelTimer();
+    const startTimer = (state: ThrottleState) => {
+      cancelTimer(state);
       if (trailing) {
-        timerId = setTimeout(() => {
-          timerId = null;
-          if (Date.now() - lastInvokeTime >= wait) {
-            invokeFunc();
+        state.timerId = setTimeout(() => {
+          state.timerId = null;
+          if (Date.now() - state.lastInvokeTime >= wait) {
+            invokeFunc(state);
           }
         }, wait);
       }
     };
 
     descriptor.value = function (this: any, ...args: any[]) {
+      const state = getState(this);
       const now = Date.now();
-      const timeSinceLastInvoke = now - lastInvokeTime;
-      const isFirstCall = lastInvokeTime === 0;
+      const timeSinceLastInvoke = now - state.lastInvokeTime;
+      const isFirstCall = state.lastInvokeTime === 0;
 
-      lastArgs = args;
-      lastThis = this;
+      state.lastArgs = args;
+      state.lastThis = this;
 
       // 首次调用
       if (isFirstCall) {
         if (leading) {
-          result = invokeFunc();
+          state.result = invokeFunc(state);
         }
-        startTimer();
-        return result;
+        startTimer(state);
+        return state.result;
       }
 
       // 在时间窗口内
       if (timeSinceLastInvoke < wait) {
         // 更新 trailing 定时器
-        startTimer();
-        return result;
+        startTimer(state);
+        return state.result;
       }
 
       // 超过时间窗口，可以执行
-      cancelTimer();
-      result = invokeFunc();
-      startTimer();
-      return result;
+      cancelTimer(state);
+      state.result = invokeFunc(state);
+      startTimer(state);
+      return state.result;
     };
 
-    // 将清理函数附加到实例上
+    // 将清理函数附加到实例上（按实例清理自己的状态）
     const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
     Object.defineProperty(target, cleanupMethodName, {
-      value: cleanup,
+      value: function (this: any) {
+        const state = instanceStates.get(this);
+        if (state) {
+          cleanup(state);
+        }
+      },
       writable: true,
       enumerable: false,
       configurable: true,
