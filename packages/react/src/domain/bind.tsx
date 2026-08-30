@@ -117,7 +117,15 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       // 走到这里就会确保一定会销毁了，所以可以 unregister 钩子
       universalFinalizationRegistry.unregister(adm);
       return () => {
-        // 兜底进行 destroy的，业务不应该依赖此做任何事情
+        // unmount 时显式销毁容器（#218）：README 承诺「卸载时销毁」，
+        // 但 FinalizationRegistry 的触发依赖 GC，空闲页面可能长期不执行，
+        // Service 的清理（事件监听、防抖定时器等）在窗口期内持续泄漏。
+        // destroy 幂等（destroyed 标记），GC 兜底路径重复调用是空操作。
+        if (adm.container) {
+          adm.container.destroy();
+          adm.container = null;
+        }
+        // 兜底：concurrent render 被丢弃、Effect 从未挂载的场景仍靠 GC
         universalFinalizationRegistry.register(admRef, adm, adm);
       };
     }, []);
