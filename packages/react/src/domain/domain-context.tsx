@@ -27,13 +27,16 @@ export function useDomainContext(): DomainContextValue {
   const contextRef = useRef(context);
   const strictContext = useContext(StrictContext);
 
-  if (!context) {
-    if (strictContext) {
-      throw new Error(`useService must be called within a bindServices`);
-    } else {
-      console.info('[WARN] 兼容模式，使用全局GlobalContainer');
-      contextRef.current = { container: getGlobalContainer() };
-    }
+  if (context) {
+    // Provider 值切换时必须跟随：ref 只在首渲染初始化，之后每次渲染
+    // 都要回写，否则 consumer 永远解析到首次的容器（#217）。
+    // 渲染期间写 ref 是 React 认可的 latest-ref 模式。
+    contextRef.current = context;
+  } else if (strictContext) {
+    throw new Error(`useService must be called within a bindServices`);
+  } else {
+    console.info('[WARN] 兼容模式，使用全局GlobalContainer');
+    contextRef.current = { container: getGlobalContainer() };
   }
   return contextRef.current!;
 }
