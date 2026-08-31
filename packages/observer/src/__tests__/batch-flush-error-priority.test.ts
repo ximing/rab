@@ -67,6 +67,121 @@ describe('batch 错误优先级（#212）', () => {
     expect((caught as Error).message).toBe('only-reaction');
   });
 
+  it('回调抛冻结的 Error：cause 赋值失败不得用 TypeError 替换原始异常', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        throw new Error('reaction-error');
+      }
+    });
+
+    // strict mode（本包产物为 ESM）下给冻结对象加属性会抛 TypeError，
+    // 修复前它从 finally 抛出并替换在途异常 —— 调用方既丢了自己的
+    // 业务错误，也丢了 reaction 的堆栈
+    const frozenError = Object.freeze(new Error('frozen-original'));
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw frozenError;
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBe(frozenError);
+    // flush 错误无处附加时至少留有日志线索，不静默丢弃
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('batch'),
+      expect.objectContaining({ message: 'reaction-error' })
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('回调抛非 Error 值：flush 错误不静默丢弃（console.warn 留线索）', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        throw new Error('reaction-error');
+      }
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'string-error';
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    // 回调的原始异常（即使是非 Error）仍然优先抛出
+    expect(caught).toBe('string-error');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('batch'),
+      expect.objectContaining({ message: 'reaction-error' })
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('回调的 Error 已有 cause：flush 错误不覆盖既有 cause，走 warn', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        throw new Error('reaction-error');
+      }
+    });
+
+    const original = new Error('with-cause');
+    (original as Error & { cause?: unknown }).cause = new Error('existing-cause');
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw original;
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBe(original);
+    expect((original as Error & { cause?: unknown }).cause).toBeInstanceOf(Error);
+    expect(((original as Error & { cause?: Error }).cause as Error).message).toBe('existing-cause');
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('可正常附加 cause 时保持 #212 行为且不 warn', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        throw new Error('reaction-error');
+      }
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const original = new Error('original');
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw original;
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBe(original);
+    expect(((original as Error & { cause?: Error }).cause as Error).message).toBe('reaction-error');
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('嵌套 batch：最内层回调的原始异常在最外层保留', () => {
     const state = observable({ a: 1 });
     observe(() => {

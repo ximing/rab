@@ -60,6 +60,70 @@ describe('observe 复用已 unobserve 的 reaction（#215）', () => {
     expect(runs).toBe(3);
   });
 
+  it('复活后首跑抛错按 firstRun 语义自动脱管，不变成零依赖僵尸（#233 交互回归）', () => {
+    const state = observable({ a: 1 });
+    let runs = 0;
+    let shouldThrow = false;
+
+    const r = observe(() => {
+      runs++;
+      void state.a;
+      if (shouldThrow) {
+        throw new Error('boom');
+      }
+    });
+    expect(runs).toBe(1);
+
+    unobserve(r);
+    shouldThrow = true;
+
+    // 复用（重新观察）：非 lazy 立即执行，本次执行抛错
+    expect(() => observe(r)).toThrow('boom');
+    // 复活视同全新首跑：失败后自动脱管，而不是保持「存活但零依赖」——
+    // 后者会让之后的变更永远静默不触发，且不再有任何错误浮出水面
+    expect(r.unobserved).toBe(true);
+
+    // 脱管后变更不触发、不抛错
+    state.a = 2;
+    expect(runs).toBe(2);
+
+    // 修复前的僵尸行为：unobserved=false、cleaners=[]，
+    // state 再变也不触发也不报错
+  });
+
+  it('复活成功后的重跑失败仍走 restore 语义（保留依赖、保持存活）', () => {
+    const state = observable({ a: 1 });
+    let runs = 0;
+    let shouldThrow = false;
+
+    const r = observe(() => {
+      runs++;
+      void state.a;
+      if (shouldThrow) {
+        throw new Error('boom');
+      }
+    });
+    unobserve(r);
+
+    // 复活成功：everRan 重新置位
+    observe(r);
+    expect(runs).toBe(2);
+    expect(r.unobserved).toBe(false);
+
+    // 之后的重跑失败不是「首跑」：走 #233 的 restore 分支——
+    // 回滚到上次成功依赖、reaction 保持存活
+    shouldThrow = true;
+    expect(() => {
+      state.a = 2;
+    }).toThrow('boom');
+    expect(r.unobserved).toBe(false);
+
+    // 依赖被回滚保留：恢复后变更继续触发
+    shouldThrow = false;
+    state.a = 3;
+    expect(runs).toBe(4);
+  });
+
   it('unobserve 语义不变：脱管后变更不再触发', () => {
     const state = observable({ a: 1 });
     let runs = 0;

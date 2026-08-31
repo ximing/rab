@@ -57,7 +57,6 @@ let containerId = 0;
 
 type ADM = {
   container: Container | null;
-  timmer: NodeJS.Timeout | null;
   /** effect 已挂载。StrictMode 假卸载后会立刻再 setup，据此取消待执行的 destroy */
   committed: boolean;
 };
@@ -65,6 +64,18 @@ const universalFinalizationRegistry = new UniversalFinalizationRegistry((adm: AD
   adm.container?.destroy();
   adm.container = null;
 });
+
+/**
+ * 旧 RN JSC/Hermes 没有 queueMicrotask（与包内 FinalizationRegistry/WeakRef
+ * 降级针对的是同一批环境），调用点做运行时探测并降级到 Promise。
+ */
+function deferToMicrotask(fn: () => void): void {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(fn);
+  } else {
+    Promise.resolve().then(fn);
+  }
+}
 export function bindServices<P extends Record<string, any> = any, TRef = any>(
   Comp: ComponentType<P>,
   servicesList: (
@@ -94,7 +105,6 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
     }
     return {
       container,
-      timmer: null,
       committed: false,
     };
   }
@@ -116,6 +126,19 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       universalFinalizationRegistry.register(admRef, adm, adm);
     }
     const adm = admRef.current!;
+    if (!adm.container) {
+      // 容器在组件仍存活时被销毁：<Activity>/Offscreen 隐藏会跑 effect
+      // cleanup，而 committed 标记 + microtask 只在 StrictMode 同帧重挂载
+      // 时能取消销毁；跨 commit 的 hide→reveal 之间 microtask 早已执行。
+      // render 时原地重建，让 reveal 后的子树拿到可用容器
+      // （代价：隐藏期间丢失 service 状态，换 reveal 后可用）。
+      // 注意原地替换 adm.container 而非整个 ADM：effect 闭包持有 adm。
+      adm.container = createADM(domainContext?.container).container;
+      // 重建发生在 render 阶段，重新挂上 GC 兜底——原注册在首次 effect
+      // setup 时已 unregister；若本次 render 被并发丢弃或树在隐藏态被
+      // 移除（不再跑 cleanup），由 finalizer 负责销毁这个容器。
+      universalFinalizationRegistry.register(admRef, adm, adm);
+    }
     useEffect(() => {
       // 走到这里就会确保一定会销毁了，所以可以 unregister 钩子
       adm.committed = true;
@@ -126,7 +149,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
         // microtask 里若 committed 又为 true 则跳过；真正卸载才会 destroy。
         // destroy 幂等，GC 仍兜底从未 commit 的 concurrent 树。
         adm.committed = false;
-        queueMicrotask(() => {
+        deferToMicrotask(() => {
           if (adm.committed) {
             return;
           }
@@ -134,7 +157,9 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
             adm.container.destroy();
             adm.container = null;
           }
-          universalFinalizationRegistry.register(admRef, adm, adm);
+          // 销毁后无需重新注册 finalizer：其函数体只销毁 container，
+          // 此处已是 null，重注册是无可达效果的 no-op。若组件仍然存活
+          // （Activity/Offscreen reveal），render 路径会重建并重新注册。
         });
       };
     }, []);

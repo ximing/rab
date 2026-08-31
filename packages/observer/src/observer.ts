@@ -29,7 +29,14 @@ export function observe<T extends Function>(fn: T, options: ObserveOptions = {})
     // unobserve 已调用 releaseReaction 清空连接，重置后重跑会重新注册，
     // 无残留。reaction 在自身运行栈上自我 unobserve 的场景由
     // runAsReaction 的 reactionStack 守卫兜底。
-    reaction.unobserved = false;
+    if (reaction.unobserved) {
+      reaction.unobserved = false;
+      // 复活视同全新首跑：unobserve 已清空依赖，残留的 everRan 会让复活后
+      // 首跑失败走进 restore 分支（快照为空），reaction 保持存活却零依赖，
+      // 之后任何变更都不再触发（#233 交互回归）。重置后按 firstRun 语义
+      // 自动脱管，与全新 observe 一个会抛错的 fn 行为一致。
+      reaction.everRan = false;
+    }
   } else {
     // Create a named function that can reference itself
     const reactionFn = function reaction(this: unknown): unknown {
