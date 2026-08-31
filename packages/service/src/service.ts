@@ -10,10 +10,17 @@ import { Container } from './ioc';
 import { getCurrentInstantiatingContainer } from './ioc/globals';
 
 /**
- * 方法状态类型定义
+ * 单个方法在 `$model` 上的状态。
+ *
+ * `loading` / `error` 都是**最近一次写入**的布尔槽，不是进行中调用的计数或队列。
+ * 同一方法重叠调用时：任意一次结算都会把 `loading` 置回 `false`（后结束的那次仍在飞也会被提前关掉）；
+ * `error` 无法区分属于哪一次调用（先失败后成功、或两路都失败时语义含糊）。
+ * 按「同一方法同时只跑一次」使用即可；需要并发追踪时请自行计数，不要依赖 `$model`。
  */
 export interface MethodState {
+  /** 最近一次调用是否仍被标为进行中。不是 pending 计数。 */
   loading: boolean;
+  /** 最近一次失败写入的异常；新调用开始时清除。重叠调用下无法对应到具体那一次。 */
   error: Error | null;
 }
 
@@ -85,8 +92,10 @@ export class Service {
   public instanceId: string = '';
 
   /**
-   * 响应式状态对象，包含所有方法的 loading 和 error 状态
-   * 类型会根据子类的方法自动推导
+   * 响应式状态对象，包含所有方法的 loading 和 error 状态。
+   * 类型会根据子类的方法自动推导。
+   *
+   * 语义见 {@link MethodState}：按方法名各一份，不支持同名方法重叠调用。
    */
   public $model: ExtractMethods<this> = {} as ExtractMethods<this>;
   protected _container: Container;

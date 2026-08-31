@@ -94,7 +94,7 @@ const Component = observer(() => {
 - 所有属性自动是响应式的（observable）
 - 所有方法默认就是 action（批量更新），**不需要也不应该再写 `@Action` 装饰器**
 - 只有需要**关闭**批量更新时才用 `@SyncAction` 标记方法
-- 异步方法自动追踪 `loading` 和 `error` 状态（通过 `$model.methodName`）
+- 异步方法自动追踪 `loading` 和 `error` 状态（通过 `$model.methodName`）。二者都是按方法名的最近一次写入，不是 pending 计数；同名方法不要重叠调用，详见 [异步操作和状态追踪](references/async-operations.md)
 
 ### 3. `useService` + `bindServices`：连接组件和 Service
 
