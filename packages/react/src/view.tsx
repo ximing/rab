@@ -57,12 +57,18 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         return;
       }
 
-      // 保存原始 render 方法（在这里调用 super.render 获取基类的 render）
+      this._reactiveRender = this._createReactiveRender();
+    }
+
+    /**
+     * 创建响应式 render
+     * 当 render 中访问的 observable 数据变化时，会触发 scheduler
+     */
+    private _createReactiveRender(): Reaction {
+      // 保存原始 render 方法（super.render 获取基类的 render）
       const originalRender = super.render.bind(this);
 
-      // 创建响应式 render
-      // 当 render 中访问的 observable 数据变化时，会触发 scheduler
-      this._reactiveRender = observe(originalRender, {
+      return observe(originalRender, {
         // 使用 lazy 模式，不立即执行
         lazy: true,
         // 当 observable 变化时，通过 forceUpdate 触发组件更新。
@@ -82,13 +88,39 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 在响应式上下文中执行原始 render
      */
     render(): React.ReactNode {
-      if (this._reactiveRender) {
-        // 在 reaction 中执行 render，建立依赖追踪
-        // reaction 是一个函数，调用它会执行传入 observe 的函数
-        return this._reactiveRender();
+      // SSR：构造时就未建 reaction，直接执行原始 render
+      if (isUsingStaticRendering()) {
+        return super.render();
       }
-      // 降级：如果 reaction 未创建，直接执行原始 render
-      return super.render();
+      // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
+      // 模拟卸载 / Suspense 隐藏→显示都会走 cWU 而不销毁实例——实例存活、
+      // reaction 已死，不重建则降级路径（裸执行 render）不再建立依赖，
+      // 组件从此静默失去响应式。unobserved 检查同理（首跑失败被
+      // runAsReaction 自动脱管的死 reaction）。
+      if (!this._reactiveRender || this._reactiveRender.unobserved) {
+        this._reactiveRender = this._createReactiveRender();
+      }
+      // 在 reaction 中执行 render，建立依赖追踪
+      // reaction 是一个函数，调用它会执行传入 observe 的函数
+      return this._reactiveRender();
+    }
+
+    /**
+     * 组件挂载 / StrictMode 模拟重挂载 / Suspense 隐藏→显示 时恢复 reaction
+     */
+    componentDidMount(): void {
+      if (super.componentDidMount) {
+        super.componentDidMount();
+      }
+
+      // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
+      // 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU 而不销毁实例，
+      // 且该路径只重放 cDM、不再触发 render——必须在这里重建 reaction
+      // 并强制重跑一次渲染以重新收集依赖，否则组件静默失去响应式。
+      if (!this._reactiveRender || this._reactiveRender.unobserved) {
+        this._reactiveRender = this._createReactiveRender();
+        this.forceUpdate();
+      }
     }
 
     /**

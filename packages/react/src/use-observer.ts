@@ -138,11 +138,17 @@ export function useObserver<T>(
 
   const adm = admRef.current!;
 
-  if (!adm.reaction) {
-    // 首次渲染或 reaction 在 subscribe 之前被 registry 清理
+  if (!adm.reaction || adm.reaction.unobserved) {
+    // 首次渲染 / reaction 在 subscribe 之前被 registry 清理 / reaction
+    // 已脱管（unobserved）。脱管的 reaction 照常执行但不再建立依赖，
+    // 不重建组件会静默失去响应式。函数组件的死亡路径（subscribe
+    // cleanup、registry finalizer）都会同时置空 reaction，unobserved
+    // 检查是纵深防御——类组件路径（view.tsx）已实证过该失败形态。
+    // 死 reaction 已释放全部依赖，直接丢弃重建。
     createReaction(adm);
     // StrictMode/ConcurrentMode/Suspense 可能意味着我们的组件
     // 被渲染和放弃多次，所以我们需要追踪泄漏的 Reactions
+    // （重建时重复注册是安全的：finalizer 幂等）
     observerFinalizationRegistry.register(admRef, adm, adm);
   }
 
