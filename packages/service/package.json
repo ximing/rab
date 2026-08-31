@@ -44,7 +44,7 @@
     "@types/node": "^26.2.0",
     "esbuild": "^0.28.2",
     "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
+    "jest-environment-jsdom": "^30.5.0",
     "ts-jest": "^29.4.12",
     "tsconfig": "workspace:*",
     "tsx": "^4.23.12",
