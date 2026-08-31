@@ -81,7 +81,10 @@ export function runAsReaction<T extends Function, R>(
     // 重跑前快照上次成功运行的连接。仍先 release 再跑（通知查找发生在
     // 进入本函数之前，调度时序不变）；失败时再 restore，避免只留下抛错
     // 点之前读到的部分依赖 (#213)。
-    const prevCleaners = firstRun ? null : (reaction.cleaners ?? []).slice();
+    // releaseReaction 不原地修改旧数组（forEach 删除后直接重新赋值为新
+    // 数组），因此持有引用即为合法快照，无需 slice 拷贝——否则每次重跑
+    // 都在热路径上白付一次 O(deps) 分配。
+    const prevCleaners = firstRun ? null : (reaction.cleaners ?? []);
     // 每次执行前,清除该 reaction 之前建立的所有依赖关系 (obj -> key -> reactions)
     // 因为这次执行可能访问不同的属性,需要重新建立依赖
     releaseReaction(reaction);
@@ -107,9 +110,10 @@ export function runAsReaction<T extends Function, R>(
         releaseReaction(reaction);
       } else if (!reaction.unobserved && prevCleaners) {
         restoreReaction(reaction, prevCleaners);
-      } else {
-        releaseReaction(reaction);
       }
+      // 其余情况（!firstRun 且已 unobserved）：unobserve() 已原子完成
+      // unobserved=true + releaseReaction，且 registerRunningReactionForOperation
+      // 在 unobserved 后拒绝新注册，无依赖可清理。
       throw error;
     } finally {
       // 无论执行成功还是失败,都要将 reaction 从栈中移除
@@ -203,12 +207,30 @@ export function batch<T>(fn: () => T): T {
         }
         // Error.cause 需要 es2022 lib，这里用窄化断言访问以兼容现有 target
         const fnErrorWithCause = fnError as Error & { cause?: unknown };
+        let attached = false;
         if (
           fnError instanceof Error &&
           flushError instanceof Error &&
           fnErrorWithCause.cause === undefined
         ) {
-          fnErrorWithCause.cause = flushError;
+          try {
+            fnErrorWithCause.cause = flushError;
+            attached = true;
+          } catch {
+            // 回调的错误对象被冻结/不可扩展时，strict mode 下赋值 cause
+            // 自身会抛 TypeError —— 绝不允许它替换回调的在途异常，
+            // 否则 #212 的错误掩蔽会以另一种形式回归。
+          }
+        }
+        if (!attached) {
+          // flush 错误无法附加到回调异常（回调抛非 Error / 已有 cause /
+          // 错误对象被冻结）。不静默吞掉 reaction 的失败堆栈——它是定位
+          // 「状态变了但副作用失败」的唯一线索。
+
+          console.warn(
+            '[rabjs/observer] batch: a reaction error during flush could not be attached to the in-flight callback error and was dropped:',
+            flushError
+          );
         }
         throw fnError;
       }
