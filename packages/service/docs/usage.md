@@ -152,6 +152,21 @@ const promise = service.fetchUser('valid-id');
 console.log(service.$model.fetchUser.error); // null
 ```
 
+## 已知限制：同名方法不要重叠调用
+
+`$model.method.loading` 是布尔开关，**不是**进行中调用的计数；`$model.method.error` 是最近一次写入，**无法**对应到具体哪一次调用。
+
+```typescript
+const a = service.fetchUser('1'); // 100ms
+const b = service.fetchUser('2'); // 10ms，同名方法第二次
+await wait(30);
+// b 已结束、a 还在飞，但 loading 已被 b 置为 false
+service.$model.fetchUser.loading; // false
+// 若 b 成功、a 随后失败（或反过来），error 只保留后结算的那次，分不清是谁的
+```
+
+实际 UI 里同一操作同时点两次的情况很少，而给 `loading` 加计数也解决不了 `error` 的二义性，因此框架**不会**改成 pending 计数。请保证同一方法同时只跑一次（按钮 disable、忽略进行中的重复点击）。若确实需要并发，请自行维护计数 / 请求 id，不要读 `$model` 当队列。
+
 ## React 集成示例
 
 ### 使用 React Hooks
