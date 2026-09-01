@@ -1,14 +1,14 @@
 # Dependabot 自动合并: 仅「纯 devDependencies + semver patch/minor」
 #
-# 策略 (与 PR #99 的清理结论一致 —— 2026-08 积压 5 个 PR 全部锁冲突的教训):
+# Version updates 已关闭（dependabot.yml `open-pull-requests-limit: 0`），
+# 之后进来的 Dependabot PR 应是 GitHub security updates。
+#
 #   自动合并: 所有涉及依赖都只出现在 devDependencies, 且更新类型是
 #             patch / minor / in-range → 先跑构建与核心测试, 绿了才 squash 合并
 #   留给人工: 生产依赖(dependencies/optionalDependencies/peerDependencies)、
-#             major 升级、安全更新(带 vulnerability label 时也留给人工, 因为
-#             需要人评估影响面) —— 只打标签不动
+#             major 升级 —— 安全修复也走这条, 方便评估影响面
 #
-# PR 级必过检查见 ci.yml。本 workflow 只负责「纯 dev patch/minor」自动合并,
-# 验证失败只评论说明, 绝不合并。
+# PR 级必过检查见 ci.yml。验证失败只评论说明, 绝不合并。
 name: Dependabot auto-merge
 
 on:
