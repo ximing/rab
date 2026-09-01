@@ -257,3 +257,38 @@ describe('view 类组件：箭头函数生命周期字段不得遮蔽包装器�
     expect(screen.getByTestId('count')).toHaveTextContent('1');
   });
 });
+
+describe('view 类组件：密封实例的降级（review followup）', () => {
+  it('构造函数 Object.preventExtensions(this)：包装器构造期不得 crash（密封实例 React 本就无法挂载，但包装器不得成为额外崩溃点）', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      class ClassComp extends React.Component {
+        componentDidMount = () => {};
+
+        constructor(props: any) {
+          super(props);
+          // 已有属性仍可写（箭头字段重绑定可行），但新增属性会抛
+          // TypeError —— view 的内部字段（_reactiveRender/_committed）
+          // 初始化必须守护，否则包装器构造期直接打崩。
+          // 注：密封实例 React 自身也挂不了（_reactInternals 赋值失败），
+          // 这里只钉「view 包装器自身不引入额外崩溃 + dev 警告」。
+          Object.preventExtensions(this);
+        }
+
+        render() {
+          return <span>ok</span>;
+        }
+      }
+      const ReactiveClass = view(ClassComp);
+
+      let instance: any = null;
+      expect(() => {
+        instance = new (ReactiveClass as any)({}, {});
+      }).not.toThrow();
+      expect(instance).toBeTruthy();
+      expect(warnSpy.mock.calls.some(args => String(args[0]).includes('密封'))).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+});

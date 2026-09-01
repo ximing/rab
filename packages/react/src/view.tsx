@@ -46,14 +46,38 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     /**
      * 响应式 render 函数
      * 会在 observable 数据变化时自动触发组件更新
+     * （declare + 构造器守护赋值，不能用类字段初始化 —— 用户构造函数
+     * 若以 Object.freeze(this) 收尾，类字段的 defineProperty 会在
+     * super() 返回后抛 TypeError，组件直接被构造期打崩）
      */
-    private _reactiveRender: Reaction | null = null;
+    declare private _reactiveRender: Reaction | null;
 
     /** 组件是否已 commit。commit 前的 render 不做依赖追踪（见 render 注释） */
-    private _committed = false;
+    declare private _committed: boolean;
 
     constructor(props: P, context: any) {
       super(props, context);
+
+      // 不可扩展实例（Object.preventExtensions/freeze）上连字段初值都
+      // 写不进去 —— 降级为 undefined（与现有 null/false 判断兼容），
+      // 组件以不可响应式形态继续存活。（完全 freeze 的实例连 React 自己
+      // 的 updater 赋值都会失败，本就不属于可挂载场景。）
+      try {
+        this._reactiveRender = null;
+        this._committed = false;
+      } catch {
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 组件实例被 preventExtensions/freeze 密封，' +
+                '响应式追踪所需的内部字段无法初始化 —— 该组件将退化为普通组件' +
+                '（不追踪 observable 变化）。'
+            );
+          } catch {
+            // 日志失败同样不得影响挂载
+          }
+        }
+      }
 
       // 注意：这里刻意不创建 reaction。构造函数/首渲染里创建并执行的
       // reaction 会立即向 store 注册依赖，而「渲染后被丢弃且永不 commit」
@@ -81,19 +105,27 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      */
     private _rebindShadowedLifecycleFields(): void {
       const self = this as unknown as Record<string, unknown>;
-      if (Object.prototype.hasOwnProperty.call(this, 'componentDidMount')) {
-        const userDidMount = self.componentDidMount as (this: unknown) => void;
-        self.componentDidMount = () => {
-          userDidMount.call(this);
-          this._onDidMount();
-        };
-      }
-      if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
-        const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
-        self.componentWillUnmount = () => {
-          userWillUnmount.call(this);
-          this._releaseReaction();
-        };
+      // 实例被完全 freeze 时下面的字段赋值会在 strict mode 抛 TypeError
+      // —— 不得让包装器成为额外的崩溃点（React 自身对 freeze 实例本就
+      // 无法挂载，这里只是防御）。失败代价是退回「字段遮蔽」旧行为
+      // （StrictMode/Suspense 路径上可能失去响应式）。
+      try {
+        if (Object.prototype.hasOwnProperty.call(this, 'componentDidMount')) {
+          const userDidMount = self.componentDidMount as (this: unknown) => void;
+          self.componentDidMount = () => {
+            userDidMount.call(this);
+            this._onDidMount();
+          };
+        }
+        if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
+          const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
+          self.componentWillUnmount = () => {
+            userWillUnmount.call(this);
+            this._releaseReaction();
+          };
+        }
+      } catch {
+        /* 构造器的字段初值守护已发警告，此处静默降级即可 */
       }
     }
 
@@ -170,9 +202,20 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 且该路径只重放 cDM、不再触发 render——同样由本方法负责复活。
      */
     private _onDidMount(): void {
-      this._committed = true;
+      // 冻结实例上写字段会抛 TypeError —— 降级跳过响应式恢复
+      // （构造器重绑失败时已发 dev 警告）
+      try {
+        this._committed = true;
+      } catch {
+        return;
+      }
       if (!this._reactiveRender || this._reactiveRender.unobserved) {
-        this._reactiveRender = this._createReactiveRender();
+        const reaction = this._createReactiveRender();
+        try {
+          this._reactiveRender = reaction;
+        } catch {
+          return;
+        }
         this.forceUpdate();
       }
     }
@@ -230,7 +273,12 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     private _releaseReaction(): void {
       if (this._reactiveRender) {
         unobserve(this._reactiveRender);
-        this._reactiveRender = null;
+        // 冻结实例上写字段会抛 —— unobserve 已完成清理目的，置空尽力而为
+        try {
+          this._reactiveRender = null;
+        } catch {
+          /* frozen instance */
+        }
       }
     }
   }
