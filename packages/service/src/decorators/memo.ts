@@ -29,6 +29,22 @@ interface CacheState {
    * 创建 reaction 那次调用的旧闭包上，后续抛错被静默吞掉 (#247)。
    */
   error?: { value: any } | null;
+  /**
+   * 本次计算期间读到的其它 memo 缓存（链式依赖 A→B）。
+   * debugger 钩子只按 reaction 的直接依赖做同步失效记账（#248），
+   * 链式场景中 batch 内写 B 的底层依赖只会让 B.computed=false，
+   * A 并不在写路径的反应集合里 —— 不带链校验的话，batch 中途读 A
+   * 拿到的仍是旧缓存。每次计算前重置，只保留最新一轮的边。
+   */
+  memoDeps?: Set<CacheState>;
+  /** 链校验重入保护（环状 memo 引用本就属于未定义行为，校验不得自旋） */
+  validating?: boolean;
+  /**
+   * 最近一次成功计算之后是否有写操作打在同步失效钩子上。
+   * debugger 置位、computeValue 清除；flush 时的 scheduler 据此区分
+   * 「待失效」与「mid-batch 已重算过」（见 scheduler 注释）。
+   */
+  dirtySinceCompute?: boolean;
 }
 
 /**
@@ -37,6 +53,49 @@ interface CacheState {
  * 这样所有 @Memo 装饰器共享一个 WeakMap，避免为每个 getter 创建独立的 WeakMap
  */
 const globalMemoCache = new WeakMap<any, Map<string | symbol, CacheState>>();
+
+/**
+ * 正在计算中的 memo 缓存（链式依赖采集用）。
+ * memo A 的 reaction 运行期间读到另一个 memo B 的 getter 时，
+ * 把 B 的 CacheState 记入 A.memoDeps（见 CacheState.memoDeps）。
+ */
+let collectingMemo: CacheState | null = null;
+
+/**
+ * 把「读取方 collectingMemo 依赖了被读 memo state」这条边记下来
+ */
+function recordMemoDep(state: CacheState): void {
+  if (collectingMemo && collectingMemo !== state) {
+    (collectingMemo.memoDeps ??= new Set()).add(state);
+  }
+}
+
+/**
+ * 链式缓存有效性校验：本 state 标记为 computed，且它上次计算读到的
+ * 所有 memo 缓存也都 (递归地) 有效，缓存才可信任。
+ * 非链式 memo（memoDeps 为空）走 O(1) 快路径，不产生额外开销。
+ */
+function isChainValid(state: CacheState): boolean {
+  const deps = state.memoDeps;
+  if (!deps || deps.size === 0) {
+    return true;
+  }
+  // 环状引用：不阻断，交回 getter 自身的递归语义（与原行为一致）
+  if (state.validating) {
+    return true;
+  }
+  state.validating = true;
+  try {
+    for (const dep of deps) {
+      if (!dep.computed || !isChainValid(dep)) {
+        return false;
+      }
+    }
+    return true;
+  } finally {
+    state.validating = false;
+  }
+}
 
 /**
  * Memo 装饰器，用于对 getter 方法进行缓存优化
@@ -153,9 +212,19 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
             lazy: true,
             // 当依赖变化时，失效缓存
             scheduler: () => {
-              state.computed = false;
+              // 但 batch 中途的读取可能已经手动重算过（dirty 在 computeValue
+              // 里被清除）—— 此时不得再盲目 computed=false，否则 flush 会
+              // 丢弃那次重算、强制 getter 再跑一遍：不纯 getter（Date.now
+              // 等）会出现 batch 内读到 A、batch 后读到 B 的值发散，且每次
+              // batch 白付一次重复计算。
+              if (state.dirtySinceCompute) {
+                state.computed = false;
+                state.dirtySinceCompute = false;
+              }
               // getter 是 accessor, 依赖变化没有落盘 set; 必须唤醒读过该
-              // 属性名的外层 observe / observer 组件 (#196)
+              // 属性名的外层 observe / observer 组件 (#196)。notify 无条件
+              // 执行：外层在重跑时读到的是当前缓存（可能正是 mid-batch 的
+              // 重算结果），是否重算由 computed/链校验决定。
               notify(instance, propertyKey);
             },
             // 同步失效钩子 (#248)：batch/flush 期间 reaction 的调度被整体
@@ -166,22 +235,40 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
             // 注册路径 (reaction 自身读依赖) 只会报 get/has/iterate 读操作，
             // 只响应写操作即可避开；isDebugging 重入窗口内漏掉的失效由
             // scheduler 里的 computed=false 在 flush 时兜底。
-            debugger: (operation: Operation) => {
-              if (
-                operation.type === 'set' ||
-                operation.type === 'add' ||
-                operation.type === 'delete' ||
-                operation.type === 'clear'
-              ) {
-                state.computed = false;
-              }
-            },
+            debugger: Object.assign(
+              (operation: Operation) => {
+                if (
+                  operation.type === 'set' ||
+                  operation.type === 'add' ||
+                  operation.type === 'delete' ||
+                  operation.type === 'clear'
+                ) {
+                  state.computed = false;
+                  state.dirtySinceCompute = true;
+                }
+              },
+              // 只看 operation.type，不消费 oldValue —— 避免本 hook 让
+              // Map/Set clear() 背上 O(n) 旧值快照的热路径开销
+              { wantsOldValue: false }
+            ),
           }
         );
       }
 
-      // 手动运行/重跑以收集最新依赖
-      state.reaction();
+      // 手动运行/重跑以收集最新依赖。
+      // 同时采集本次计算读到的其它 memo 缓存（链式依赖边）
+      // —— 上一轮依赖可能已随分支变化失效，每轮重置。
+      state.memoDeps = new Set();
+      const prevCollecting = collectingMemo;
+      collectingMemo = state;
+      try {
+        state.reaction();
+        // 本次重算已覆盖到此为止的所有写操作 —— flush 时 scheduler
+        // 不得再按旧失效记账强制重算（见 dirtySinceCompute）
+        state.dirtySinceCompute = false;
+      } finally {
+        collectingMemo = prevCollecting;
+      }
 
       // 如果计算过程中出错，抛出错误
       if (state.error) {
@@ -197,8 +284,11 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
     descriptor.get = function (this: any) {
       const state = getCacheState(this);
 
-      // 如果缓存有效，直接返回
-      if (state.computed) {
+      // 如果缓存有效（本层标记 + 链式依赖递归有效），直接返回。
+      // 链校验只覆盖 memo→memo 的中间缓存；直达 observable 的依赖由
+      // debugger 同步失效钩子 (#248) 负责。
+      if (state.computed && isChainValid(state)) {
+        recordMemoDep(state);
         return state.value;
       }
 
@@ -210,7 +300,10 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
       Reflect.has(this, propertyKey);
 
       // 否则重新计算
-      return computeValue(state, this);
+      const result = computeValue(state, this);
+      // 本次读取发生在另一个 memo 的计算中 —— 记录链式依赖边
+      recordMemoDep(state);
+      return result;
     };
 
     // 添加清理方法（可选，用于手动清理）
@@ -309,17 +402,24 @@ export interface CleanupAllMemosOptions {
 export function cleanupAllMemos(instance: any, options: CleanupAllMemosOptions = {}): void {
   const { notify: shouldNotify = true } = options;
   // 沿原型链上溯：装饰器成员可能定义在任意基类上，只扫直接原型
-  // 会漏掉继承的清理方法（#221）
-  const seen = new Set<string>();
-  const cleanedKeys: string[] = [];
+  // 会漏掉继承的清理方法（#221）。
+  // getOwnPropertyNames 不含 symbol 键 —— symbol 命名的 @Memo getter
+  // 若漏扫，其 reaction 在 destroy 后仍然存活并继续被调度。
+  const seen = new Set<string | symbol>();
+  const cleanedKeys: (string | symbol)[] = [];
   let current = Object.getPrototypeOf(instance);
   while (current && current !== Object.prototype) {
-    for (const propertyName of Object.getOwnPropertyNames(current)) {
+    const ownKeys: (string | symbol)[] = [
+      ...Object.getOwnPropertyNames(current),
+      ...Object.getOwnPropertySymbols(current),
+    ];
+    for (const propertyName of ownKeys) {
       if (seen.has(propertyName)) {
         continue;
       }
       seen.add(propertyName);
-      const cleanupMethodName = `__cleanup_memo_${propertyName}`;
+      // String() 而非模板字符串：symbol 的隐式字符串转换会抛 TypeError
+      const cleanupMethodName = `__cleanup_memo_${String(propertyName)}`;
       if (typeof instance[cleanupMethodName] === 'function') {
         instance[cleanupMethodName]();
         cleanedKeys.push(propertyName);
@@ -332,10 +432,24 @@ export function cleanupAllMemos(instance: any, options: CleanupAllMemosOptions =
   // 挂载中的外层 observer 能读到重置后的新值 (#255)；batch 合并为一次
   // 冲刷，读多个 memo 的 reaction 不会因每个 key 各重跑一次。
   if (shouldNotify && cleanedKeys.length > 0) {
-    batch(() => {
-      for (const key of cleanedKeys) {
-        notify(instance, key);
+    // flush 会重抛首个 reaction 错误 —— 但清理/teardown API 必须免抛：
+    // 挂载中 observer 的异常属于 UI 层，不得让 teardown 半途而废
+    // （与 #212 的「绝不替换在途异常」同一原则，方向相反）。
+    try {
+      batch(() => {
+        for (const key of cleanedKeys) {
+          notify(instance, key);
+        }
+      });
+    } catch (error) {
+      try {
+        console.warn(
+          '[rabjs/service] cleanupAllMemos: 通知阶段有 reaction 抛错（清理本身已完成）',
+          error
+        );
+      } catch {
+        // 日志失败同样不得影响调用方
       }
-    });
+    }
   }
 }

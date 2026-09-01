@@ -171,13 +171,20 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       return state.result;
     };
 
-    // 将清理函数附加到实例上（按实例清理自己的状态）
+    // 将清理函数附加到实例上（按实例清理自己的状态）。
+    // 连同清理哨兵键下的分离调用状态：该条目不属于任何实例，
+    // 否则实例 destroy 后 pending 定时器仍会以 this=undefined 触发，
+    // lastArgs 也被保留到进程结束（#250 引入的兜底键，清理由此兜底）。
     const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
     Object.defineProperty(target, cleanupMethodName, {
       value: function (this: any) {
         const state = instanceStates.get(stateKey(this));
         if (state) {
           cleanup(state);
+        }
+        const detachedState = instanceStates.get(detachedStateKey);
+        if (detachedState) {
+          cleanup(detachedState);
         }
       },
       writable: true,

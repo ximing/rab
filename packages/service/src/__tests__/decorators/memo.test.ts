@@ -713,6 +713,259 @@ describe('@Memo 装饰器', () => {
 
       unobserve(reaction);
     });
+
+    it('symbol 命名的 @Memo 也必须被 cleanupAllMemos 清理并通知', () => {
+      let external = 1;
+      const KEY = Symbol('label');
+
+      class TestService extends Service {
+        @Memo()
+        get [KEY]() {
+          return `s:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(service[KEY]);
+      });
+      expect(seen).toEqual(['s:1']);
+
+      external = 2;
+      cleanupAllMemos(service);
+
+      // getOwnPropertyNames 不含 symbol 键 —— 漏扫会让 symbol memo 的
+      // reaction 在 destroy 后仍然存活
+      expect(seen).toEqual(['s:1', 's:2']);
+
+      unobserve(reaction);
+    });
+
+    it('notify flush 中 reaction 抛错不得中断 cleanupAllMemos（清理 API 必须免抛）', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get a() {
+          return `a:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      // 挂载中的观察者：首次正常，cleanup 后重跑时抛错
+      let shouldThrow = false;
+      const reaction = observe(() => {
+        void service.a;
+        if (shouldThrow) {
+          throw new Error('observer-exploded');
+        }
+      });
+
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        external = 2;
+        shouldThrow = true;
+        // flush 会重抛首个 reaction 错误 —— 作为清理 API 不得把它抛给调用方
+        expect(() => cleanupAllMemos(service)).not.toThrow();
+        expect(warnSpy).toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+        unobserve(reaction);
+      }
+    });
+  });
+
+  describe('@Memo 链式依赖 mid-batch 读取（#248 链式补全）', () => {
+    it('A memo 依赖 B memo，batch 内修改 B 的底层依赖后读 A 必须是最新值', () => {
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          return this.items.reduce((a, b) => a + b, 0);
+        }
+
+        @Memo()
+        get label() {
+          return `total=${this.total}`;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.label).toBe('total=0'); // warm both caches
+
+      let midBatch = '';
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.label;
+      });
+
+      expect(midBatch).toBe('total=5');
+      expect(service.label).toBe('total=5');
+    });
+
+    it('三级链 A→B→C，batch 内修改 C 的底层依赖后读 A 必须是最新值', () => {
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get c() {
+          return this.n * 2;
+        }
+
+        @Memo()
+        get b() {
+          return this.c + 1;
+        }
+
+        @Memo()
+        get a() {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(4); // warm: c=2, b=3, a=4
+
+      let midBatch = -1;
+      batch(() => {
+        service.n = 10;
+        midBatch = service.a; // c=20, b=21, a=22
+      });
+
+      expect(midBatch).toBe(22);
+      expect(service.a).toBe(22);
+    });
+
+    it('链式 memo 在 batch 外仍保持缓存语义（不重复计算）', () => {
+      let computeB = 0;
+      let computeA = 0;
+
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get b() {
+          computeB++;
+          return this.n * 2;
+        }
+
+        @Memo()
+        get a() {
+          computeA++;
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(3);
+      expect(service.a).toBe(3);
+      expect(computeA).toBe(1);
+      expect(computeB).toBe(1);
+
+      service.n = 2;
+      expect(service.a).toBe(5);
+      expect(service.a).toBe(5);
+      expect(computeA).toBe(2);
+      expect(computeB).toBe(2);
+    });
+
+    it('getter 依赖对象属性，delete 该属性后重新计算', () => {
+      class TestService extends Service {
+        dict: Record<string, number> = { a: 1 };
+
+        @Memo()
+        get a() {
+          return this.dict.a;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(1);
+
+      delete service.dict.a;
+      expect(service.a).toBeUndefined();
+    });
+
+    it('getter 依赖 Map 元素，map.delete 后重新计算', () => {
+      class TestService extends Service {
+        map = new Map<string, number>([['a', 1]]);
+
+        @Memo()
+        get a() {
+          return this.map.get('a');
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(1);
+
+      service.map.delete('a');
+      expect(service.a).toBeUndefined();
+    });
+
+    it('batch 内 invalidateMemo(B) 后读链式 A 必须是重算后的值', () => {
+      let factor = 1;
+
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get b() {
+          return this.n * factor;
+        }
+
+        @Memo()
+        get a() {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(2); // warm
+
+      factor = 10;
+      let midBatch = -1;
+      batch(() => {
+        // notify(instance,'b') 会同步打在 A 的 debugger 上 → A 同步失效
+        invalidateMemo(service, 'b');
+        midBatch = service.a; // b=10, a=11
+      });
+
+      expect(midBatch).toBe(11);
+    });
+
+    it('batch 中途重算后，flush 不得强制二次重算（不纯 getter 前后值一致 / 不多算）', () => {
+      let computes = 0;
+
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          computes++;
+          // 末尾拼接计算序号：若 flush 再强制重算一次，值就会发散
+          return this.items.reduce((a, b) => a + b, 0) * 1000 + computes;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.total).toBe(1); // warm: 0*1000+1
+
+      let midBatch = -1;
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.total; // 重算一次: 5*1000+2
+      });
+      const postBatch = service.total;
+
+      expect(midBatch).toBe(5002);
+      // flush 的 scheduler 若盲目 computed=false，这里会变成 5003 —
+      // 值发散 + 一次浪费的 getter 执行
+      expect(postBatch).toBe(5002);
+      expect(computes).toBe(2);
+    });
   });
 
   describe('性能测试', () => {

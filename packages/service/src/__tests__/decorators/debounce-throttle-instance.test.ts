@@ -220,5 +220,52 @@ describe('@Debounce / @Throttle 每实例状态（#220）', () => {
       detached.call(undefined, 'three');
       expect(log).toEqual(['one', 'two', 'three']);
     });
+
+    it('@Debounce：实例 destroy 连同取消分离调用的 pending 定时器', () => {
+      const log: string[] = [];
+
+      class SaveService extends Service {
+        @Debounce(50)
+        save(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!.value;
+      const s = new SaveService();
+
+      detached.call(undefined, 'pending');
+      s.destroy();
+
+      jest.advanceTimersByTime(100);
+
+      // 哨兵键下的 pending 定时器也必须被取消 —— 否则销毁后仍以
+      // this=undefined 触发，且 lastArgs 被保留到进程结束
+      expect(log).toEqual([]);
+    });
+
+    it('@Throttle：trailing 分离调用的 pending 定时器在 destroy 后被取消', () => {
+      const log: string[] = [];
+
+      class ScrollService extends Service {
+        @Throttle(50, { leading: false, trailing: true })
+        handleScroll(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(
+        ScrollService.prototype,
+        'handleScroll'
+      )!.value;
+      const s = new ScrollService();
+
+      detached.call(undefined, 'pending');
+      s.destroy();
+
+      jest.advanceTimersByTime(100);
+
+      expect(log).toEqual([]);
+    });
   });
 });
