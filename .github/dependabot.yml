@@ -1,67 +1,38 @@
-# Dependabot 配置
-# - npm/pnpm workspace: 根 + 各包目录
-# - 每周一批次, 限制并发 PR 数, 避免锁文件连环冲突
-# - 自动合并策略见 .github/workflows/dependabot-auto-merge.yml:
-#   仅「纯 devDependencies + semver patch/minor」的 PR 验证后自动合并,
-#   生产依赖与 major 升级一律留给人工审阅
+# Dependabot：只处理有安全风险的升级，不追最新版。
+#
+# `open-pull-requests-limit: 0` 关闭 version updates（每周一批「跟上最新」的 PR），
+# 不影响仓库设置里已开启的 Dependabot security updates —— 有 GHSA 时仍会单独开 PR。
+#
+# 安全 PR 的合并策略见 .github/workflows/dependabot-auto-merge.yml：
+# 纯 devDependencies 的 patch/minor 安全修复验证后可自动合并；
+# 生产依赖与 major 留给人工审阅。
 version: 2
 updates:
   - package-ecosystem: npm
     directories:
-      - "/"
-      - "/configs/*"
-      - "/packages/*"
-      - "/examples/*"
-      - "/website"
+      - '/'
+      - '/configs/*'
+      - '/packages/*'
+      - '/examples/*'
+      - '/website'
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     labels:
       - dependencies
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
-    # 锁文件合并冲突时自动 rebase (而不是堆一个 rebase PR)
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
     rebase-strategy: auto
-    # typescript majors are the native compiler (no JS API). Dual-install is
-    # managed in package.json (@typescript/native + typescript6 alias).
-    ignore:
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@typescript/native"
-        update-types: ["version-update:semver-major"]
-    groups:
-      typescript:
-        patterns:
-          - "typescript"
-          - "typescript-eslint"
-          - "@typescript-eslint/*"
-      build-tools:
-        patterns:
-          - "esbuild"
-          - "vite"
-          - "@vitejs/*"
-          - "tsx"
-          - "turbo"
-      test-lint:
-        patterns:
-          - "globals"
-          - "@testing-library/*"
-          - "lint-staged"
-          - "eslint"
-          - "eslint-*"
-      node-types:
-        patterns:
-          - "@types/node"
 
-  # GitHub Actions 版本
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     labels:
       - dependencies
       - github-actions
     commit-message:
-      prefix: "ci(actions)"
+      prefix: 'ci(actions)'
