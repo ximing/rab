@@ -1,6 +1,14 @@
 /**
  * Throttle 装饰器配置选项
  */
+import { getOrCreateCleanupRegistry, findCleanup, runAllCleanups } from './cleanup-registry';
+
+/**
+ * throttle 清理注册表的 prototype 键（实现见 cleanup-registry.ts —
+ * 以真实 propertyKey 为键，避免字符串化方法名的 symbol 撞名/漏扫）
+ */
+const THROTTLE_CLEANUPS = Symbol('__rabjs_throttle_cleanups__');
+
 export interface ThrottleOptions {
   /**
    * 时间窗口（毫秒）
@@ -171,13 +179,15 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       return state.result;
     };
 
-    // 将清理函数附加到实例上（按实例清理自己的状态）。
+    // 将清理函数注册到原型注册表（按实例清理自己的状态）。
     // 连同清理哨兵键下的分离调用状态：该条目不属于任何实例，
     // 否则实例 destroy 后 pending 定时器仍会以 this=undefined 触发，
     // lastArgs 也被保留到进程结束（#250 引入的兜底键，清理由此兜底）。
-    const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
-    Object.defineProperty(target, cleanupMethodName, {
-      value: function (this: any) {
+    // 以真实 propertyKey 为键：字符串化方法名会让同 description 的
+    // symbol 方法撞名，且 cleanupAll 的字符串扫描漏掉 symbol 键。
+    const registry = getOrCreateCleanupRegistry(target, THROTTLE_CLEANUPS);
+    if (!registry.has(propertyKey)) {
+      registry.set(propertyKey, function (this: any) {
         const state = instanceStates.get(stateKey(this));
         if (state) {
           cleanup(state);
@@ -186,11 +196,8 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
         if (detachedState) {
           cleanup(detachedState);
         }
-      },
-      writable: true,
-      enumerable: false,
-      configurable: true,
-    });
+      });
+    }
 
     return descriptor;
   };
@@ -218,9 +225,9 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
  * ```
  */
 export function cancelThrottle(instance: any, propertyKey: string | symbol): void {
-  const cleanupMethodName = `__cleanup_throttle_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === 'function') {
-    instance[cleanupMethodName]();
+  const cleanup = findCleanup(instance, THROTTLE_CLEANUPS, propertyKey);
+  if (cleanup) {
+    cleanup.call(instance);
   }
 }
 
@@ -251,20 +258,7 @@ export function cancelThrottle(instance: any, propertyKey: string | symbol): voi
  */
 export function cleanupAllThrottles(instance: any): void {
   // 沿原型链上溯：装饰器成员可能定义在任意基类上，只扫直接原型
-  // 会漏掉继承的清理方法（#221）
-  const seen = new Set<string>();
-  let current = Object.getPrototypeOf(instance);
-  while (current && current !== Object.prototype) {
-    for (const propertyName of Object.getOwnPropertyNames(current)) {
-      if (seen.has(propertyName)) {
-        continue;
-      }
-      seen.add(propertyName);
-      const cleanupMethodName = `__cleanup_throttle_${propertyName}`;
-      if (typeof instance[cleanupMethodName] === 'function') {
-        instance[cleanupMethodName]();
-      }
-    }
-    current = Object.getPrototypeOf(current);
-  }
+  // 会漏掉继承的清理函数（#221）；注册表以真实 propertyKey 为键，
+  // symbol 键不再漏扫
+  runAllCleanups(instance, THROTTLE_CLEANUPS);
 }

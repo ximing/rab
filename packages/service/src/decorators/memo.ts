@@ -1,5 +1,7 @@
-import { observe, unobserve, notify, batch } from '@rabjs/observer';
+import { observe, unobserve, notify, batch, raw, getRunningReaction } from '@rabjs/observer';
 import type { Reaction, Operation } from '@rabjs/observer';
+
+import { getOrCreateCleanupRegistry, findCleanup, runAllCleanups } from './cleanup-registry';
 
 /**
  * Memo 装饰器配置选项
@@ -30,13 +32,18 @@ interface CacheState {
    */
   error?: { value: any } | null;
   /**
-   * 本次计算期间读到的其它 memo 缓存（链式依赖 A→B）。
+   * 本次计算期间读到的其它 memo 缓存（链式依赖 A→B），
+   * 映射到「A 采纳该 dep 缓存时 dep 的版本号」。
    * debugger 钩子只按 reaction 的直接依赖做同步失效记账（#248），
    * 链式场景中 batch 内写 B 的底层依赖只会让 B.computed=false，
    * A 并不在写路径的反应集合里 —— 不带链校验的话，batch 中途读 A
    * 拿到的仍是旧缓存。每次计算前重置，只保留最新一轮的边。
+   *
+   * 版本快照的作用：链上 B 在 A 上次计算之后被重算过（version 前进），
+   * 说明 A 的缓存采纳的是 B 的旧值，链校验必须判负 —— 仅靠
+   * dep.computed 会把「B 重算过但 A 没有」误判为有效（陈旧缓存）。
    */
-  memoDeps?: Set<CacheState>;
+  memoDeps?: Map<CacheState, number>;
   /** 链校验重入保护（环状 memo 引用本就属于未定义行为，校验不得自旋） */
   validating?: boolean;
   /**
@@ -45,6 +52,18 @@ interface CacheState {
    * 「待失效」与「mid-batch 已重算过」（见 scheduler 注释）。
    */
   dirtySinceCompute?: boolean;
+  /**
+   * 计算版本号，每次成功计算 +1。链上读取方在 memoDeps 里记录采纳时
+   * 的版本；本版本与快照不一致即说明缓存已被上游重算甩在身后。
+   */
+  version?: number;
+  /**
+   * 所属实例（raw）与属性名 —— debugger 据此区分「直达依赖的写」与
+   * 「链上 memo scheduler 的 notify」：后者不该标脏本缓存（见 debugger
+   * 注释），只能由链校验/版本快照裁决。
+   */
+  owner?: object;
+  key?: string | symbol;
 }
 
 /**
@@ -55,6 +74,12 @@ interface CacheState {
 const globalMemoCache = new WeakMap<any, Map<string | symbol, CacheState>>();
 
 /**
+ * memo 清理注册表的 prototype 键（实现见 cleanup-registry.ts —
+ * 以真实 propertyKey 为键，避免字符串化方法名的 symbol 撞名/漏扫）。
+ */
+const MEMO_CLEANUPS = Symbol('__rabjs_memo_cleanups__');
+
+/**
  * 正在计算中的 memo 缓存（链式依赖采集用）。
  * memo A 的 reaction 运行期间读到另一个 memo B 的 getter 时，
  * 把 B 的 CacheState 记入 A.memoDeps（见 CacheState.memoDeps）。
@@ -62,17 +87,51 @@ const globalMemoCache = new WeakMap<any, Map<string | symbol, CacheState>>();
 let collectingMemo: CacheState | null = null;
 
 /**
- * 把「读取方 collectingMemo 依赖了被读 memo state」这条边记下来
+ * 把「读取方 collectingMemo 依赖了被读 memo state」这条边记下来，
+ * 并快照被读 memo 当前的版本号（读取方采纳的就是这一版缓存）。
+ *
+ * 归属校验：只有 collecting memo 自己的 reaction 正在运行时，这次读取
+ * 才构成它的链式边。getter 的计算窗口内可能同步执行其他 reaction
+ * （如不纯 getter 写 observable 触发的即时 flush）—— 那些 reaction
+ * 读到的 memo 不得记在 collecting memo 头上，否则制造假边：
+ * 无关 memo 失效会强制本 memo 重算（不纯 getter 随之值漂移）。
  */
 function recordMemoDep(state: CacheState): void {
-  if (collectingMemo && collectingMemo !== state) {
-    (collectingMemo.memoDeps ??= new Set()).add(state);
+  if (
+    collectingMemo &&
+    collectingMemo !== state &&
+    getRunningReaction() === collectingMemo.reaction
+  ) {
+    (collectingMemo.memoDeps ??= new Map()).set(state, state.version ?? 0);
   }
 }
 
 /**
+ * 该写操作是不是打在「本 memo 链上的某个 memo getter」上的 notify。
+ * memo getter 是 accessor，没有真实的 set 落盘 —— (owner, key) 上的
+ * set 类 operation 只可能来自链上 memo scheduler 的 notify (#196)
+ * 或 invalidateMemo/cleanupAllMemos 的手动 notify。
+ */
+function isChainNotifyOp(state: CacheState, operation: Operation): boolean {
+  if (operation.type !== 'set') {
+    return false;
+  }
+  const deps = state.memoDeps;
+  if (!deps || deps.size === 0) {
+    return false;
+  }
+  for (const dep of deps.keys()) {
+    if (dep.owner === operation.target && dep.key === operation.key) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * 链式缓存有效性校验：本 state 标记为 computed，且它上次计算读到的
- * 所有 memo 缓存也都 (递归地) 有效，缓存才可信任。
+ * 所有 memo 缓存也都 (递归地) 有效、且版本仍停留在读取方采纳的那版，
+ * 缓存才可信任。
  * 非链式 memo（memoDeps 为空）走 O(1) 快路径，不产生额外开销。
  */
 function isChainValid(state: CacheState): boolean {
@@ -86,8 +145,8 @@ function isChainValid(state: CacheState): boolean {
   }
   state.validating = true;
   try {
-    for (const dep of deps) {
-      if (!dep.computed || !isChainValid(dep)) {
+    for (const [dep, adoptedVersion] of deps) {
+      if (!dep.computed || (dep.version ?? 0) !== adoptedVersion || !isChainValid(dep)) {
         return false;
       }
     }
@@ -179,6 +238,10 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
           value: undefined,
           computed: false,
           reaction: null,
+          // raw：reaction 依赖注册与 notify 的 operation.target 都是 raw
+          // 实例，isChainNotifyOp 的匹配要以同一身份为准
+          owner: raw(instance),
+          key: propertyKey,
         };
         instanceCache.set(propertyKey, state);
       }
@@ -202,6 +265,8 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
               state.value = originalGetter.call(instance);
               state.computed = true;
               state.error = null;
+              // 版本前进：链上读取方靠版本快照察觉「上游已重算」
+              state.version = (state.version ?? 0) + 1;
             } catch (error) {
               state.error = { value: error };
               state.computed = false;
@@ -233,8 +298,11 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
             // 生效，batch 中途读到的是过期缓存。debugger 是触发路径上唯一
             // 同步执行的 per-reaction 回调 (defer 判断之前)，用它做失效记账。
             // 注册路径 (reaction 自身读依赖) 只会报 get/has/iterate 读操作，
-            // 只响应写操作即可避开；isDebugging 重入窗口内漏掉的失效由
-            // scheduler 里的 computed=false 在 flush 时兜底。
+            // 只响应写操作即可避开。
+            // reentrantSafe：钩子只翻转布尔标记、绝不写 observable —— 声明后
+            // 在 isDebugging 重入窗口（用户 debugger 执行期间发生的嵌套写）
+            // 内仍然送达；否则窗口内的失效记账会被重入保护静默丢弃，
+            // dirtySinceCompute 与它是同一信号源，flush 时没有任何兜底。
             debugger: Object.assign(
               (operation: Operation) => {
                 if (
@@ -243,22 +311,32 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
                   operation.type === 'delete' ||
                   operation.type === 'clear'
                 ) {
+                  // 链上 memo 的 notify 不是失效依据：本 memo 上次计算采纳了
+                  // 哪个版本的上游缓存，由 memoDeps 的版本快照记录 —— flush 时
+                  // 若上游只是「mid-batch 重算过、值已被本 memo 采纳」，标脏会
+                  // 丢弃那次重算（不纯 getter 前后发散 + 白付一次重复计算，
+                  // 与 dirtySinceCompute 守卫同一类问题，只是隔了一层 notify）；
+                  // 若上游真的变了（版本前进 / computed=false / 被清理），
+                  // 读路径的 isChainValid 会判负并触发重算，不会漏失效。
+                  if (isChainNotifyOp(state, operation)) {
+                    return;
+                  }
                   state.computed = false;
                   state.dirtySinceCompute = true;
                 }
               },
               // 只看 operation.type，不消费 oldValue —— 避免本 hook 让
               // Map/Set clear() 背上 O(n) 旧值快照的热路径开销
-              { wantsOldValue: false }
+              { wantsOldValue: false, reentrantSafe: true }
             ),
           }
         );
       }
 
       // 手动运行/重跑以收集最新依赖。
-      // 同时采集本次计算读到的其它 memo 缓存（链式依赖边）
+      // 同时采集本次计算读到的其它 memo 缓存（链式依赖边 + 版本快照）
       // —— 上一轮依赖可能已随分支变化失效，每轮重置。
-      state.memoDeps = new Set();
+      state.memoDeps = new Map();
       const prevCollecting = collectingMemo;
       collectingMemo = state;
       try {
@@ -306,16 +384,22 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
       return result;
     };
 
-    // 添加清理方法（可选，用于手动清理）
-    const cleanupMethodName = `__cleanup_memo_${String(propertyKey)}`;
-    if (!target[cleanupMethodName]) {
-      target[cleanupMethodName] = function (this: any) {
+    // 注册清理函数（以真实 propertyKey 为键，symbol 键不会撞名）
+    const registry = getOrCreateCleanupRegistry(target, MEMO_CLEANUPS);
+    if (!registry.has(propertyKey)) {
+      registry.set(propertyKey, function (this: any) {
         const instanceCache = globalMemoCache.get(this);
         if (instanceCache) {
           const state = instanceCache.get(propertyKey);
-          if (state?.reaction) {
-            unobserve(state.reaction);
-            state.reaction = null;
+          if (state) {
+            // 标记失效：链上其它 memo 的 memoDeps 可能仍引用这个旧
+            // CacheState —— 不标负的话 isChainValid 会把已被清理的
+            // 上游误判为有效，让下游继续供出陈旧缓存
+            state.computed = false;
+            if (state.reaction) {
+              unobserve(state.reaction);
+              state.reaction = null;
+            }
           }
           instanceCache.delete(propertyKey);
 
@@ -324,7 +408,7 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
             globalMemoCache.delete(this);
           }
         }
-      };
+      });
     }
 
     return descriptor;
@@ -353,9 +437,9 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
  * ```
  */
 export function invalidateMemo(instance: any, propertyKey: string | symbol): void {
-  const cleanupMethodName = `__cleanup_memo_${String(propertyKey)}`;
-  if (typeof instance[cleanupMethodName] === 'function') {
-    instance[cleanupMethodName]();
+  const cleanup = findCleanup(instance, MEMO_CLEANUPS, propertyKey);
+  if (cleanup) {
+    cleanup.call(instance);
     // 手动失效与依赖变化路径（scheduler 里的 notify，见 #196）对齐：
     // 失效后必须唤醒读过该属性名的外层 observe / observer 组件 (#199)。
     // Service.destroy 不走这里（它调 cleanupAllMemos 且传 notify:false），
@@ -401,32 +485,11 @@ export interface CleanupAllMemosOptions {
  */
 export function cleanupAllMemos(instance: any, options: CleanupAllMemosOptions = {}): void {
   const { notify: shouldNotify = true } = options;
-  // 沿原型链上溯：装饰器成员可能定义在任意基类上，只扫直接原型
-  // 会漏掉继承的清理方法（#221）。
-  // getOwnPropertyNames 不含 symbol 键 —— symbol 命名的 @Memo getter
-  // 若漏扫，其 reaction 在 destroy 后仍然存活并继续被调度。
-  const seen = new Set<string | symbol>();
-  const cleanedKeys: (string | symbol)[] = [];
-  let current = Object.getPrototypeOf(instance);
-  while (current && current !== Object.prototype) {
-    const ownKeys: (string | symbol)[] = [
-      ...Object.getOwnPropertyNames(current),
-      ...Object.getOwnPropertySymbols(current),
-    ];
-    for (const propertyName of ownKeys) {
-      if (seen.has(propertyName)) {
-        continue;
-      }
-      seen.add(propertyName);
-      // String() 而非模板字符串：symbol 的隐式字符串转换会抛 TypeError
-      const cleanupMethodName = `__cleanup_memo_${String(propertyName)}`;
-      if (typeof instance[cleanupMethodName] === 'function') {
-        instance[cleanupMethodName]();
-        cleanedKeys.push(propertyName);
-      }
-    }
-    current = Object.getPrototypeOf(current);
-  }
+  // 沿原型链上溯收集各原型注册表里的清理函数：装饰器成员可能定义在
+  // 任意基类上，只扫直接原型会漏掉继承的清理（#221）。注册表以真实
+  // propertyKey 为键，symbol 键天然覆盖（不会像字符串化方法名那样
+  // 漏扫或撞名）。
+  const cleanedKeys = runAllCleanups(instance, MEMO_CLEANUPS);
 
   // 全部清理完成后再统一通知：与 invalidateMemo (#199) 的语义对齐，
   // 挂载中的外层 observer 能读到重置后的新值 (#255)；batch 合并为一次

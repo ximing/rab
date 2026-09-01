@@ -120,8 +120,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
           const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
           self.componentWillUnmount = () => {
-            userWillUnmount.call(this);
-            this._releaseReaction();
+            try {
+              userWillUnmount.call(this);
+            } finally {
+              // 用户字段抛错也必须释放 reaction —— React 在 cWU 抛错后
+              // 依然完成卸载，跳过清理就是确定性的订阅泄漏
+              this._releaseReaction();
+            }
           };
         }
       } catch {
@@ -164,8 +169,8 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       // 组件尚未 commit（首渲染，或将被丢弃的并发/挂起 pass）：裸执行原始
       // render，不做依赖追踪。追踪即向 store 注册；被丢弃且永不 commit 的
       // pass 没有 cWU 可清理，reaction 会永久泄漏。commit 后的首次依赖收集
-      // 由 componentDidMount 建 reaction 并 forceUpdate 的那次 render 完成
-      // （在浏览器绘制前同步发生，UI 无感知）。
+      // 由 componentDidMount 建 reaction 并同步执行一次完成（输出与本次
+      // commit 相同，直接丢弃，不触发额外 commit / componentDidUpdate）。
       if (!this._committed) {
         return super.render();
       }
@@ -195,11 +200,12 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
 
     /**
      * commit 落点：开启依赖追踪。
-     * 首渲染是裸执行的（见 render），这里创建 reaction 并强制重跑一次
-     * 渲染，让 render 在 reaction 中执行以完成首次依赖收集；
-     * componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
-     * 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU 而不销毁实例，
-     * 且该路径只重放 cDM、不再触发 render——同样由本方法负责复活。
+     * 首渲染是裸执行的（见 render），这里创建 reaction 并同步执行一次，
+     * 让 render 在 reaction 中运行以完成首次依赖收集（输出丢弃，不产生
+     * 额外 commit）；componentWillUnmount 会 unobserve 并置空 reaction，
+     * 但 StrictMode 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU
+     * 而不销毁实例，且该路径只重放 cDM、不再触发 render——同样由本方法
+     * 负责复活。
      */
     private _onDidMount(): void {
       // 冻结实例上写字段会抛 TypeError —— 降级跳过响应式恢复
@@ -216,7 +222,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         } catch {
           return;
         }
-        this.forceUpdate();
+        // 不 forceUpdate：首次依赖收集直接同步执行一次 reaction 即可
+        // （render 在追踪中再跑一遍，输出与刚 commit 的首渲染必然相同，
+        // 直接丢弃）。forceUpdate 会把「挂载」变成一次 update commit ——
+        // render 走完整双 commit，且 componentDidUpdate /
+        // getSnapshotBeforeUpdate 会紧随 mount 被触发（prevProps ===
+        // props），未做挂载防护的用户副作用被 spurious 执行。
+        reaction();
       }
     }
 

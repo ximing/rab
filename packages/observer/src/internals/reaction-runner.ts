@@ -132,6 +132,15 @@ export function runAsReaction<T extends Function, R>(
 }
 
 /*
+ * 内部用：返回当前正在执行的 reaction（无则 null）。
+ * 供上层（如 @rabjs/service 的链式 @Memo）判定一次读取归属于哪个
+ * reaction 的计算窗口 —— 同步嵌套执行的其他 reaction 不得冒名。
+ * */
+export function getRunningReaction(): Reaction | null {
+  return reactionStack.peek() ?? null;
+}
+
+/*
  * 在属性访问时,将当前正在运行的 reaction 注册为该属性的依赖。
  * 在 Proxy 的 get trap 中被调用
  * */
@@ -462,14 +471,32 @@ export function queueReactionsForOperation(operation: Operation): void {
 
 /*
  * 调用 reaction 的调试器,记录操作信息。
+ * isDebugging 重入保护：debugger 自身写 observable 会让嵌套的
+ * queueReactionsForOperation 再次进入本函数 —— 跳过以防无限递归。
+ * 例外：debugger 上声明 reentrantSafe = true 的钩子（如 @Memo 的同步
+ * 失效钩子，只翻转布尔标记、绝不写 observable）在重入窗口内仍然
+ * 送达 —— 否则窗口内打在钩子依赖上的写会静默丢失失效记账，
+ * 且没有任何 flush 兜底（钩子标记与 scheduler 的 dirtySinceCompute
+ * 是同一信号源）。
  * */
 function debugOperation(reaction: Reaction, operation: Operation): void {
-  if (reaction.debugger && !isDebugging) {
-    try {
-      isDebugging = true;
-      reaction.debugger(operation);
-    } finally {
-      isDebugging = false;
-    }
+  const debuggerFn = reaction.debugger;
+  if (!debuggerFn) {
+    return;
+  }
+  if (isDebugging && !debuggerFn.reentrantSafe) {
+    return;
+  }
+  if (isDebugging) {
+    // reentrantSafe：不重设 isDebugging（保持 true），钩子保证不写
+    // observable，不会再生嵌套操作
+    debuggerFn(operation);
+    return;
+  }
+  try {
+    isDebugging = true;
+    debuggerFn(operation);
+  } finally {
+    isDebugging = false;
   }
 }

@@ -268,4 +268,75 @@ describe('@Debounce / @Throttle 每实例状态（#220）', () => {
       expect(log).toEqual([]);
     });
   });
+
+  describe('symbol 命名方法的 destroy 清理', () => {
+    it('@Debounce：symbol 方法的 pending 定时器在 destroy 后被取消', () => {
+      const KEY = Symbol('search');
+      const log: string[] = [];
+
+      class SearchService extends Service {
+        @Debounce(50)
+        [KEY](keyword: string) {
+          log.push(keyword);
+        }
+      }
+
+      const s = new SearchService() as any;
+      s[KEY]('pending');
+      s.destroy();
+
+      jest.advanceTimersByTime(100);
+
+      // 字符串化方法名扫描漏掉 symbol 键时，定时器残留并触发
+      expect(log).toEqual([]);
+    });
+
+    it('@Throttle：symbol 方法的 trailing 定时器在 destroy 后被取消', () => {
+      const KEY = Symbol('scroll');
+      const log: string[] = [];
+
+      class ScrollService extends Service {
+        @Throttle(50, { leading: false, trailing: true })
+        [KEY](tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const s = new ScrollService() as any;
+      s[KEY]('pending');
+      s.destroy();
+
+      jest.advanceTimersByTime(100);
+
+      expect(log).toEqual([]);
+    });
+
+    it('@Debounce：同 description 的两个 symbol 方法各自注册清理，destroy 全部取消', () => {
+      const KEY1 = Symbol('a');
+      const KEY2 = Symbol('a');
+      const log: string[] = [];
+
+      class MultiService extends Service {
+        @Debounce(50)
+        [KEY1](tag: string) {
+          log.push(`k1:${tag}`);
+        }
+
+        @Debounce(50)
+        [KEY2](tag: string) {
+          log.push(`k2:${tag}`);
+        }
+      }
+
+      const s = new MultiService() as any;
+      s[KEY1]('x');
+      s[KEY2]('y');
+      s.destroy();
+
+      jest.advanceTimersByTime(100);
+
+      // 撞名时第二个键的清理注册不上，k2 的定时器残留触发
+      expect(log).toEqual([]);
+    });
+  });
 });
