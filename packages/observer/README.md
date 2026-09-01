@@ -70,6 +70,8 @@ batch(() => {
 
 - **ES2024 Set 方法（`union`/`intersection`/`difference` 等）返回原始成员**：deep 模式下这些新方法返回的结果集合中元素不经 `observableChild` 包装（与 `values()`/迭代器的深度语义不对称）。旧 React Native JSC 无这些方法，不受影响；需要深度响应式时请用 `values()`/展开等已插桩路径。
 
+- **deep 模式 `Set.keys()`/`entries()` 的键是 proxy**：为保持原生 `keys === values` 身份（#192），deep 模式 Set 的键侧迭代返回与值相同的 observable 包装。因此 proxy 键不能直接与原始集合互操作——`raw(set).has(proxyKey)` 为 `false`。逃生舱：`raw()` 可解包迭代取到的键（`raw([...set.keys()][0]) === 原始成员`），或直接用代理自身的 `has`（入参自动解包）。shadow 模式不包装，keys/entries 的键始终是原始成员。该行为由 `src/__tests__/api/collection.contract.test.ts` 与 `shadow-observable.contract.test.ts` 的契约用例钉住。
+
 - **TypedArray / DataView 不包装**：`Uint8Array`、`Float32Array`、`BigInt64Array`、`Float16Array`、`DataView` 以及其它 `ArrayBuffer.isView` 为真的对象（含跨 realm 与 TypedArray 子类），`observable()` / `shadowObservable()` 原样返回。原因与 Date 相同：`length` / `buffer` / `fill` / 迭代依赖内部槽，Proxy 当 `this` 会抛 `incompatible receiver`。需要响应式请用普通数组，或把 view 放在 observable 容器里、通过替换整段 buffer 通知（`state.bytes = new Uint8Array(...)`）。原地 `state.bytes[0] = 1` 不会触发 reaction。
 
 ## 升级与回归

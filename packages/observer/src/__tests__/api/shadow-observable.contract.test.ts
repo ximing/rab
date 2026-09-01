@@ -249,6 +249,24 @@ describe('shadowObservable() 行为契约', () => {
       expect(isObservable(weakMap.get(key) as object)).toBe(false);
     });
 
+    it('Set.keys()/entries() 返回 raw 键（与 deep 的 proxy 键相对，#256 对照契约）', () => {
+      // deep 模式为保持 keys === values 身份返回 proxy 键（#192）；
+      // shadow 浅层语义不包装，keys/entries 的键就是原始成员本身，
+      // 可直接与原始集合互操作（raw(set).has(key) 为 true）。
+      const keyObj = { id: 1 };
+      const set = shadowObservable(new Set([keyObj]));
+
+      const [key] = Array.from(set.keys());
+      expect(key).toBe(keyObj);
+      expect(isObservable(key as object)).toBe(false);
+
+      const [entry] = Array.from(set.entries());
+      expect(entry[0]).toBe(keyObj);
+      expect(entry[1]).toBe(keyObj);
+
+      expect((raw(set) as Set<unknown>).has(key)).toBe(true);
+    });
+
     it('向 shadow 集合存入 observable 代理会被解包为 raw（往返身份）', () => {
       // 已知行为（规格要求，GG5 审查确认）: shadow 集合内部只持有 raw 身份，
       // 存入的 proxy value 会被解包，get/迭代返回 raw。若未来改为保留 proxy
