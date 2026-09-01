@@ -60,14 +60,6 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   // 如果当前有 reaction 在运行,建立 (target.key -> reaction) 的依赖
   registerRunningReactionForOperation({ target, key, receiver, type: 'get' });
 
-  // 数组变异方法包进 batch, 一次调用内部的多条 trap 写入只通知一次 (#93)
-  if (typeof result === 'function') {
-    const wrapped = wrapIfArrayMutator(target, key, result);
-    if (wrapped !== result) {
-      return wrapped;
-    }
-  }
-
   // 处理不可配置且不可写的属性
   // Proxy 有一个不变式(invariant):
   // 如果属性是不可配置且不可写的,Proxy 的 get trap 必须返回与目标对象相同的值
@@ -100,6 +92,18 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   // (否则 state.constructor 会拿到 Object 构造函数的 observable 包装)
   if (!descriptor && PROTOTYPE_SENSITIVE_KEYS.has(key as string)) {
     return result;
+  }
+
+  // 数组变异方法包进 batch, 一次调用内部的多条 trap 写入只通知一次 (#93)。
+  // 必须在上方不变式检查之后 (#251): 冻结 (non-configurable + non-writable)
+  // 的自有函数属性若返回包装函数, 会违反 Proxy get 不变式抛 TypeError。
+  // 性能形状不变: 原始值早退仍在最前, getOwnPropertyDescriptor 对
+  // 函数/对象结果本来就已读取, 此处只是把 wrap 移到检查之后。
+  if (typeof result === 'function') {
+    const wrapped = wrapIfArrayMutator(target, key, result);
+    if (wrapped !== result) {
+      return wrapped;
+    }
   }
 
   // 如果返回值是对象,自动包装为 observable 实现深度响应式

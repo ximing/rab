@@ -51,14 +51,22 @@ function get(target: object, key: PropertyKey, receiver: unknown): unknown {
   if (typeof result === 'function') {
     const wrapped = wrapIfArrayMutator(target, key, result);
     if (wrapped !== result) {
+      // Proxy get 不变式 (#251): 冻结 (non-configurable + non-writable) 的
+      // 自有函数属性必须返回原值, 返回包装函数会抛 TypeError。
+      // descriptor 检查只发生在「确实要返回包装函数」的窄路径上,
+      // 普通读取的热路径不付 getOwnPropertyDescriptor 成本。
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      if (descriptor && descriptor.writable === false && descriptor.configurable === false) {
+        return result;
+      }
       return wrapped;
     }
   }
 
   // 关键区别：不进行深层包装，直接返回原始值
   // 这样嵌套对象不会被转换为 observable
-  // (返回值始终是 Reflect.get 的原样结果, 天然满足 Proxy 的
-  //  non-writable + non-configurable 不变式, 无需 descriptor 检查)
+  // (除上述变异方法包装外, 返回值始终是 Reflect.get 的原样结果,
+  //  天然满足 Proxy 的 non-writable + non-configurable 不变式)
   return result;
 }
 
