@@ -10,6 +10,9 @@ import { useEffect, useRef } from 'react';
 
 /**
  * useReaction Hook 选项（单函数形式）
+ *
+ * 注意：继承自 ObserveOptions 的 `lazy` 在本 hook 中被忽略（与 `immediate`
+ * 语义冲突，`immediate` 优先），传入时会在开发模式发出警告 (#253)。
  */
 export interface UseReactionOptions extends ObserveOptions {
   /**
@@ -193,6 +196,14 @@ function createSingleReaction(
   options?: UseReactionOptions
 ): Reaction {
   const { immediate, lazy: _ignoredLazy, ...observeOptions } = options || {};
+  // #253：lazy 与 immediate 语义冲突且一直被静默丢弃 —— 至少警告用户，
+  // 不在本轮改动运行时语义（immediate 优先）。
+  if (process.env.NODE_ENV !== 'production' && _ignoredLazy !== undefined) {
+    console.warn(
+      '[@rabjs/react] useReaction: `lazy` 选项会被忽略（与 `immediate` 语义冲突，`immediate` 优先）。' +
+        '请改用 `immediate`，或使用双函数形式 useReaction(dataFn, effectFn)。'
+    );
+  }
   // 默认立即执行并收集依赖。undefined 必须当 true，否则文档基础示例永不追踪 (#195)
   const runOnMount = immediate !== false;
 
@@ -207,6 +218,40 @@ function createSingleReaction(
   }
 
   return reaction;
+}
+
+// #249：双函数形式的 effect 必须以 untracked 方式执行（MobX reaction 语义）——
+// effect 里读取的 observable 不得注册为依赖，只有 data() 的读取构成依赖。
+// observer 未导出 untracked()，这里用一个已 unobserve 的 reaction 作「屏蔽层」：
+// runAsReaction 对 unobserved reaction 仍会把它压入运行栈（effect 的读取归属
+// 栈顶的它，而非外层正在收集依赖的 reaction），而注册逻辑对 unobserved
+// reaction 直接跳过 —— 读取因此不落在任何存活 reaction 上。
+let untrackedShield: Reaction | null = null;
+let pendingUntrackedEffect: (() => void) | null = null;
+
+function getUntrackedShield(): Reaction {
+  if (!untrackedShield) {
+    untrackedShield = observe(
+      () => {
+        pendingUntrackedEffect?.();
+      },
+      { lazy: true }
+    );
+    unobserve(untrackedShield);
+  }
+  return untrackedShield;
+}
+
+function runUntracked(fn: () => void): void {
+  const shield = getUntrackedShield();
+  // effect 内可能同步触发另一个 untracked 段（嵌套 reaction），保存/恢复外层回调
+  const prev = pendingUntrackedEffect;
+  pendingUntrackedEffect = fn;
+  try {
+    shield();
+  } finally {
+    pendingUntrackedEffect = prev;
+  }
 }
 
 function createPairReaction<T>(
@@ -227,13 +272,15 @@ function createPairReaction<T>(
         firstRun = false;
         previous = current;
         if (fireImmediately) {
-          effect(current, undefined);
+          // effect 必须 untracked：其读取不属于依赖集合 (#249)
+          runUntracked(() => effect(current, undefined));
         }
         return current;
       }
       const prev = previous;
       previous = current;
-      effect(current, prev);
+      // effect 必须 untracked：其读取不属于依赖集合 (#249)
+      runUntracked(() => effect(current, prev));
       return current;
     },
     { lazy: true }

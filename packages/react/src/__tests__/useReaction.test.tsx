@@ -401,4 +401,138 @@ describe('useReaction 双函数形式（#200）', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(calls).toEqual([]);
   });
+
+  // #249：effect 在 observe 的 tracked 回调内执行，其中读取的 observable 会被
+  // 注册为依赖 —— 违反「只有 data() 的读取构成依赖」的契约（MobX reaction 的
+  // effect 是 untracked 的）。钉住：只改 effect 读到的属性不得重跑 effect。
+  it('effect 内读取的 observable 不泄漏进依赖集合（#249）', async () => {
+    const calls: Array<[number, number | undefined]> = [];
+    const state = observable({ a: 1, b: 1 });
+
+    const Component = () => {
+      useReaction(
+        () => state.a,
+        (a, prev) => {
+          // effect 内读取 b —— 不应成为依赖
+          void state.b;
+          calls.push([a, prev]);
+        }
+      );
+      return null;
+    };
+
+    render(<Component />);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(calls).toEqual([]);
+
+    act(() => {
+      state.a = 2;
+    });
+    await waitFor(() => {
+      expect(calls).toEqual([[2, 1]]);
+    });
+
+    // 只改 b：effect 里读过 b，但 b 不是 data() 的依赖，不得触发
+    act(() => {
+      state.b = 3;
+    });
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(calls).toEqual([[2, 1]]);
+  });
+
+  it('fireImmediately: true 首跑 effect 的读取同样不泄漏进依赖集合（#249）', async () => {
+    const calls: Array<[number, number | undefined]> = [];
+    const state = observable({ a: 1, b: 1 });
+
+    const Component = () => {
+      useReaction(
+        () => state.a,
+        (a, prev) => {
+          void state.b;
+          calls.push([a, prev]);
+        },
+        { fireImmediately: true }
+      );
+      return null;
+    };
+
+    render(<Component />);
+    await waitFor(() => {
+      expect(calls).toEqual([[1, undefined]]);
+    });
+
+    // 首跑 effect 读了 b；只改 b 不得重跑 effect
+    act(() => {
+      state.b = 3;
+    });
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(calls).toEqual([[1, undefined]]);
+
+    // a 变化仍正常触发
+    act(() => {
+      state.a = 2;
+    });
+    await waitFor(() => {
+      expect(calls).toEqual([
+        [1, undefined],
+        [2, 1],
+      ]);
+    });
+  });
+});
+
+describe('useReaction 单函数形式 lazy 选项（#253）', () => {
+  it('传入 lazy 时发出 dev 警告（与 immediate 语义冲突，immediate 优先）', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const effects: number[] = [];
+      const state = observable({ count: 0 });
+
+      const Component = () => {
+        useReaction(
+          () => {
+            effects.push(state.count);
+          },
+          // lazy 被静默丢弃 —— 必须至少警告用户
+          { immediate: false, lazy: true }
+        );
+        return null;
+      };
+
+      render(<Component />);
+
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('lazy'));
+      });
+
+      // 语义不变：immediate 优先，挂载仍跑一次以收集依赖
+      await waitFor(() => {
+        expect(effects).toEqual([0]);
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('不传 lazy 时不发出 lazy 相关警告', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const state = observable({ count: 0 });
+
+      const Component = () => {
+        useReaction(() => {
+          void state.count;
+        });
+        return null;
+      };
+
+      render(<Component />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const lazyWarnings = warnSpy.mock.calls.filter(args => String(args[0]).includes('lazy'));
+      expect(lazyWarnings).toEqual([]);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
