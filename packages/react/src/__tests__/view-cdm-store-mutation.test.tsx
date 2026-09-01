@@ -15,7 +15,7 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react';
-import { observable } from '@rabjs/observer';
+import { observable, untracked } from '@rabjs/observer';
 import { getConnectionsCount } from '../../../observer/src/internals/reaction-track';
 import { proxyToRaw } from '../../../observer/src/internals/proxy-raw-map';
 import { view } from '../view';
@@ -88,6 +88,75 @@ describe('view 类组件：commit 阶段的 store 变更', () => {
     const { getByTestId } = render(<ReactiveClass />);
 
     expect(getByTestId('len').textContent).toBe('4');
+  });
+
+  it('窗口内 Map.keys() 依赖的 key 集合变更被检测（key-iterate 快照）', () => {
+    // Map.keys() 注册的是 key-iterate 依赖（#211 与值侧 iterate 分桶）：
+    // 快照必须按 key 集合捕获/对比，落入 get 分支会对 key='' 读出
+    // undefined≡undefined，key 增删永远判不出差异
+    const store = observable({ m: new Map<string, number>([['a', 1]]) });
+
+    class ClassComp extends React.Component {
+      componentDidMount() {
+        store.m.set('b', 2);
+      }
+
+      render() {
+        return <span data-testid="keys">{[...store.m.keys()].join(',')}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    const { getByTestId } = render(<ReactiveClass />);
+
+    expect(getByTestId('keys').textContent).toBe('a,b');
+  });
+
+  it('回归控制：Map.keys() 无窗口变更时不产生伪 update', () => {
+    const store = observable({ m: new Map<string, number>([['a', 1]]) });
+    const calls: string[] = [];
+
+    class ClassComp extends React.Component {
+      componentDidUpdate() {
+        calls.push('cDU');
+      }
+
+      render() {
+        return <span>{[...store.m.keys()].join(',')}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    render(<ReactiveClass />);
+
+    expect(calls).not.toContain('cDU');
+  });
+
+  it('首渲染发生在 untracked 窗口内时读取仍进快照（框架内 untracked 不得致盲探针）', () => {
+    // useReaction 双函数形式的 effect 以 untracked 运行（#249）；其中若
+    // flushSync 触发挂载，首渲染整体处于 untracked 窗口。reaction 运行边界
+    // 会重置 untracked 深度（MobX 语义），探针记录不得被外层窗口抑制——
+    // 否则窗口内的 commit 期变更丢失，DOM 停留在首渲染旧值。
+    const store = observable({ count: 0 });
+
+    class ClassComp extends React.Component {
+      componentDidMount() {
+        store.count = 9;
+      }
+
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+
+    let getByTestId: any;
+    untracked(() => {
+      ({ getByTestId } = render(<ReactiveClass />));
+    });
+
+    expect(getByTestId('count').textContent).toBe('9');
   });
 
   it('回归控制：窗口内无变更时不产生伪 update（cDU 不触发）', () => {

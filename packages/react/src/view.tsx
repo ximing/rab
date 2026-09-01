@@ -36,6 +36,26 @@ interface MountSnapshotEntry {
 const UNREADABLE = Symbol('__rabjs_view_snapshot_unreadable__');
 
 /**
+ * 沿原型链查找数据属性的值。accessor（getter）不执行 —— Reflect.get 会
+ * 真实调用用户 getter（@Memo 等），且 this 是 raw 实例：@Memo 会以 raw
+ * 身份另建一份注册不到任何依赖的 CacheState（raw 读取不过 proxy trap），
+ * 既让 getter 在挂载期多执行一次，又留下永不失效的陈旧缓存。accessor
+ * 一律返回 UNREADABLE（按「已变化」处理，宁可多更一次）。
+ */
+function readDataPropertyValue(target: object, key: PropertyKey): unknown {
+  let obj: object | null = target;
+  while (obj) {
+    const desc = Object.getOwnPropertyDescriptor(obj, key);
+    if (desc) {
+      return 'value' in desc ? desc.value : UNREADABLE;
+    }
+    obj = Object.getPrototypeOf(obj);
+  }
+  // 属性不存在：Reflect.get 也会安全地得到 undefined
+  return undefined;
+}
+
+/**
  * 读取一个被追踪位置的当前值（快照捕获与挂载时对比共用）。
  * 只读 raw target，不经过 proxy trap，不产生依赖注册；
  * 集合类型用原生方法读取，不触发任何用户代码。
@@ -53,6 +73,16 @@ function readSnapshotValue(target: object, key: PropertyKey, type: string): unkn
       }
       return Reflect.ownKeys(target);
     }
+    if (type === 'key-iterate') {
+      // Map.keys() 的 key 侧迭代依赖（#211 与值侧 iterate 分桶）：
+      // 关心 key 集合本身，快照 key 列表 —— 落入下方 get 分支会对
+      // key='' 读出 undefined≡undefined，key 增删永远判不出差异
+      if (target instanceof Map) {
+        return [...target.keys()];
+      }
+      // key-iterate 只会注册在 Map 上（Set 的 key 迭代走 iterate 桶）
+      return UNREADABLE;
+    }
     if (type === 'has') {
       if (target instanceof Map || target instanceof Set) {
         return target.has(key as never);
@@ -63,7 +93,7 @@ function readSnapshotValue(target: object, key: PropertyKey, type: string): unkn
     if (target instanceof Map) {
       return target.get(key as never);
     }
-    return Reflect.get(target, key);
+    return readDataPropertyValue(target, key);
   } catch {
     return UNREADABLE;
   }
@@ -74,15 +104,17 @@ function snapshotValueEquals(entry: MountSnapshotEntry, current: unknown): boole
   if (entry.value === UNREADABLE || current === UNREADABLE) {
     return false;
   }
-  if (entry.type === 'iterate') {
+  if (entry.type === 'iterate' || entry.type === 'key-iterate') {
     const prev = entry.value as unknown[];
     const next = current as unknown[];
     if (prev.length !== next.length) {
       return false;
     }
-    const isMap = entry.target instanceof Map;
+    // 逐对比较仅适用于 Map 的值侧 iterate（[k,v] 元组）；
+    // key-iterate 快照是纯 key 列表，与 Set/对象一样逐元素比较
+    const isPairwise = entry.type === 'iterate' && entry.target instanceof Map;
     for (let i = 0; i < prev.length; i++) {
-      if (isMap) {
+      if (isPairwise) {
         const [pk, pv] = prev[i] as [unknown, unknown];
         const [nk, nv] = next[i] as [unknown, unknown];
         if (!Object.is(pk, nk) || !Object.is(pv, nv)) {
@@ -405,6 +437,15 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
           this.forceUpdate();
           return;
         }
+        if (!snapshot) {
+          // cDM 重放（StrictMode 模拟重挂载 / Suspense·Offscreen 隐藏→显示）
+          // 没有伴随 render，没有快照可比对 —— 隐藏/卸载窗口内的依赖变化
+          // 无从检测。按 master 语义无条件 forceUpdate：render 阶段重跑
+          // （顺带完成复活 reaction 的首次依赖收集），DOM 反映当前值，
+          // 不停留在隐藏前的旧值上。
+          this.forceUpdate();
+          return;
+        }
         // 不 forceUpdate：窗口内无变化时，首次依赖收集直接同步执行一次
         // reaction 即可（render 在追踪中再跑一遍，输出与刚 commit 的首渲染
         // 相同，直接丢弃）。forceUpdate 会把「挂载」变成一次 update commit ——
@@ -470,6 +511,18 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 清理 reaction，释放内存
      */
     private _releaseReaction(): void {
+      // cWU 之后实例未必销毁（StrictMode 模拟卸载 / Suspense·Offscreen 隐藏）：
+      // 重置 _committed，让后续 render 回到 commit 前的探针路径 —— 隐藏树被
+      // props/context 驱动重渲染时若在 committed 路径重建并执行存活 reaction，
+      // 而子树随后在隐藏中被删除（React 不重放 cWU），reaction 永不 unobserve，
+      // 与首渲染泄漏同类。探针渲染不留下任何订阅（render 结束即 unobserve），
+      // reveal 的 cDM 重放再由 _onDidMount 消费其快照。
+      // 冻结实例上写字段会抛 —— 降级尽力而为。
+      try {
+        this._committed = false;
+      } catch {
+        /* frozen instance */
+      }
       if (this._reactiveRender) {
         unobserve(this._reactiveRender);
         // 冻结实例上写字段会抛 —— unobserve 已完成清理目的，置空尽力而为
