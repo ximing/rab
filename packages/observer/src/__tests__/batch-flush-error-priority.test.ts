@@ -258,4 +258,31 @@ describe('batch 错误边界（review 回归）', () => {
 
     expect(caught).toBe(frozen);
   });
+
+  it('回调和 reaction 抛同一 Error 实例：不误报 was dropped（错误本身就是要重抛的异常）', () => {
+    const state = observable({ a: 1 });
+    const shared = new Error('shared');
+    observe(() => {
+      if (state.a === 2) {
+        throw shared;
+      }
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw shared;
+      });
+    } catch (e) {
+      caught = e;
+    } finally {
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    }
+
+    expect(caught).toBe(shared);
+    expect((shared as Error & { cause?: unknown }).cause).toBeUndefined();
+  });
 });

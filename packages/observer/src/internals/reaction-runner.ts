@@ -41,7 +41,14 @@ export function hasOperationOldValueConsumer(operation: Operation): boolean {
   }
   const reactions = getReactionsForOperation(operation);
   for (const reaction of reactions) {
-    if (reaction.debugger) {
+    // debugger 可显式声明 wantsOldValue === false（如 @rabjs/service 的
+    // @Memo 同步失效钩子只看 operation.type）—— 不消费 oldValue 的
+    // debugger 不值得让 clear 付 O(n) 快照成本。未声明时保持兼容：
+    // 视为可能消费。
+    if (
+      reaction.debugger &&
+      (reaction.debugger as { wantsOldValue?: boolean }).wantsOldValue !== false
+    ) {
       return true;
     }
   }
@@ -209,17 +216,20 @@ export function batch<T>(fn: () => T): T {
         // Error.cause 需要 es2022 lib，这里用窄化断言访问以兼容现有 target
         const fnErrorWithCause = fnError as Error & { cause?: unknown };
         let attached = false;
-        if (
+        // 回调和 reaction 抛的是同一个值/同一个 Error 实例：flush 错误
+        // 就是要重抛的回调异常本身 —— 没有错误被丢弃，既不需要附加
+        // cause 也不允许走到下方 warn 的误报路径（严格 console 环境会
+        // 因此误 fail）。
+        if (flushError === fnError) {
+          attached = true;
+        } else if (
           fnError instanceof Error &&
           flushError instanceof Error &&
           fnErrorWithCause.cause === undefined
         ) {
           try {
-            // 同一 Error 实例被回调和 reaction 同时抛出时禁止自引用 cause
-            if (flushError !== fnError) {
-              fnErrorWithCause.cause = flushError;
-              attached = true;
-            }
+            fnErrorWithCause.cause = flushError;
+            attached = true;
           } catch {
             // 回调的错误对象被冻结/不可扩展时，strict mode 下赋值 cause
             // 自身会抛 TypeError —— 绝不允许它替换回调的在途异常，
