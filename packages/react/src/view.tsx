@@ -49,15 +49,52 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      */
     private _reactiveRender: Reaction | null = null;
 
+    /** 组件是否已 commit。commit 前的 render 不做依赖追踪（见 render 注释） */
+    private _committed = false;
+
     constructor(props: P, context: any) {
       super(props, context);
 
-      // SSR：不建 reaction。renderToString 不会 unmount，否则会泄漏订阅。
-      if (isUsingStaticRendering()) {
-        return;
-      }
+      // 注意：这里刻意不创建 reaction。构造函数/首渲染里创建并执行的
+      // reaction 会立即向 store 注册依赖，而「渲染后被丢弃且永不 commit」
+      // 的并发 pass 没有 componentWillUnmount，也没有 FinalizationRegistry
+      // 兜底（store→reaction→实例构成自持引用环，registry 对任何环内目标
+      // 都永不触发）——reaction 会永久泄漏并对死实例 forceUpdate。
+      // 首次依赖追踪推迟到 componentDidMount 之后（见 render/_onDidMount）；
+      // SSR 安全由时机保证：renderToString 不执行 componentDidMount，
+      // render() 内的 isUsingStaticRendering 检查兜住静态渲染期间的直读。
+      //
+      // 字段重绑定与 static rendering 标志无关，必须无条件执行：构造期
+      // 早退会让「构造时 flag 开启 + 箭头字段 cDM」的组件永久失去响应式
+      // （#254）。重绑定不创建 reaction，SSR 安全。
+      this._rebindShadowedLifecycleFields();
+    }
 
-      this._reactiveRender = this._createReactiveRender();
+    /**
+     * 用户以箭头函数字段声明生命周期（componentDidMount = () => {...}）时，
+     * 该字段是实例自身属性，遮蔽本类原型上的同名方法——React 只调用实例
+     * 字段，包装器的 reaction 复活/清理逻辑会被完全跳过（super.* 转发根本
+     * 不会执行）。super() 返回时用户类字段已完成初始化（useDefineForClassFields
+     * 两种编译模式下都是实例自身属性），这里把被遮蔽的字段原地替换为
+     * 「先执行用户字段、再执行包装器逻辑」的组合。
+     * 以原型方法声明的用户没有实例自身字段，本方法不做任何事。
+     */
+    private _rebindShadowedLifecycleFields(): void {
+      const self = this as unknown as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(this, 'componentDidMount')) {
+        const userDidMount = self.componentDidMount as (this: unknown) => void;
+        self.componentDidMount = () => {
+          userDidMount.call(this);
+          this._onDidMount();
+        };
+      }
+      if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
+        const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
+        self.componentWillUnmount = () => {
+          userWillUnmount.call(this);
+          this._releaseReaction();
+        };
+      }
     }
 
     /**
@@ -92,6 +129,14 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       if (isUsingStaticRendering()) {
         return super.render();
       }
+      // 组件尚未 commit（首渲染，或将被丢弃的并发/挂起 pass）：裸执行原始
+      // render，不做依赖追踪。追踪即向 store 注册；被丢弃且永不 commit 的
+      // pass 没有 cWU 可清理，reaction 会永久泄漏。commit 后的首次依赖收集
+      // 由 componentDidMount 建 reaction 并 forceUpdate 的那次 render 完成
+      // （在浏览器绘制前同步发生，UI 无感知）。
+      if (!this._committed) {
+        return super.render();
+      }
       // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
       // 模拟卸载 / Suspense 隐藏→显示都会走 cWU 而不销毁实例——实例存活、
       // reaction 已死，不重建则降级路径（裸执行 render）不再建立依赖，
@@ -113,10 +158,19 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         super.componentDidMount();
       }
 
-      // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
-      // 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU 而不销毁实例，
-      // 且该路径只重放 cDM、不再触发 render——必须在这里重建 reaction
-      // 并强制重跑一次渲染以重新收集依赖，否则组件静默失去响应式。
+      this._onDidMount();
+    }
+
+    /**
+     * commit 落点：开启依赖追踪。
+     * 首渲染是裸执行的（见 render），这里创建 reaction 并强制重跑一次
+     * 渲染，让 render 在 reaction 中执行以完成首次依赖收集；
+     * componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
+     * 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU 而不销毁实例，
+     * 且该路径只重放 cDM、不再触发 render——同样由本方法负责复活。
+     */
+    private _onDidMount(): void {
+      this._committed = true;
       if (!this._reactiveRender || this._reactiveRender.unobserved) {
         this._reactiveRender = this._createReactiveRender();
         this.forceUpdate();
@@ -167,7 +221,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         super.componentWillUnmount();
       }
 
-      // 清理 reaction，释放内存
+      this._releaseReaction();
+    }
+
+    /**
+     * 清理 reaction，释放内存
+     */
+    private _releaseReaction(): void {
       if (this._reactiveRender) {
         unobserve(this._reactiveRender);
         this._reactiveRender = null;

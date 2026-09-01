@@ -103,4 +103,122 @@ describe('@Debounce / @Throttle 每实例状态（#220）', () => {
       expect(s4.hits).toEqual([]);
     });
   });
+
+  describe('分离调用（this 为空）不抛 WeakMap TypeError（#250）', () => {
+    // 每个用例各自定义类：哨兵状态按装饰方法共享，跨用例复用同一个
+    // 装饰过的类会让 fake timer 的时钟与 lastInvokeTime 互相污染
+
+    it('@Debounce：this 为 undefined 时不抛错，trailing 调用照常执行', () => {
+      const log: string[] = [];
+
+      class SaveService extends Service {
+        @Debounce(50)
+        save(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!.value;
+
+      expect(() => detached.call(undefined, 'a')).not.toThrow();
+
+      jest.advanceTimersByTime(100);
+
+      expect(log).toEqual(['a']);
+    });
+
+    it('@Debounce：分离调用之间共享防抖状态（与 WeakMap 重构前的闭包行为一致）', () => {
+      const log: string[] = [];
+
+      class SaveService extends Service {
+        @Debounce(50)
+        save(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!.value;
+
+      detached.call(undefined, 'one');
+      detached.call(undefined, 'two');
+      detached.call(null, 'three');
+
+      jest.advanceTimersByTime(100);
+
+      // 只执行最后一次
+      expect(log).toEqual(['three']);
+    });
+
+    it('@Debounce：分离调用与正常实例调用互不干扰', () => {
+      const log: string[] = [];
+
+      class SaveService extends Service {
+        @Debounce(50)
+        save(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!.value;
+      const s = new SaveService();
+
+      detached.call(undefined, 'detached');
+      s.save('instance');
+
+      jest.advanceTimersByTime(100);
+
+      // 两处调用各自保留，互不吞掉
+      expect(log).toEqual(['detached', 'instance']);
+    });
+
+    it('@Throttle：this 为 undefined 时不抛错，leading 调用立即执行', () => {
+      const log: string[] = [];
+
+      class ScrollService extends Service {
+        @Throttle(50)
+        handleScroll(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(
+        ScrollService.prototype,
+        'handleScroll'
+      )!.value;
+
+      expect(() => detached.call(undefined, 'one')).not.toThrow();
+
+      expect(log).toEqual(['one']);
+    });
+
+    it('@Throttle：分离调用在节流窗口内被抑制，窗口外再次执行', () => {
+      const log: string[] = [];
+
+      class ScrollService extends Service {
+        @Throttle(50)
+        handleScroll(tag: string) {
+          log.push(tag);
+        }
+      }
+
+      const detached = Object.getOwnPropertyDescriptor(
+        ScrollService.prototype,
+        'handleScroll'
+      )!.value;
+
+      detached.call(undefined, 'one');
+      detached.call(null, 'two');
+
+      // leading 立即执行 'one'；'two' 在窗口内被抑制，转为 trailing
+      expect(log).toEqual(['one']);
+
+      jest.advanceTimersByTime(100);
+
+      // trailing 定时器补发 'two'
+      expect(log).toEqual(['one', 'two']);
+
+      detached.call(undefined, 'three');
+      expect(log).toEqual(['one', 'two', 'three']);
+    });
+  });
 });

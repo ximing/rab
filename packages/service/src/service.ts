@@ -490,7 +490,8 @@ export class Service {
     // 清理 @Throttle 装饰器的定时器
     cleanupAllThrottles(this);
 
-    // 清理 @Memo 装饰器的缓存和响应式追踪
-    cleanupAllMemos(this);
+    // 清理 @Memo 装饰器的缓存和响应式追踪。
+    // notify:false —— 销毁路径保持静默，不唤醒（可能已卸载的）外层 UI (#255)。
+    cleanupAllMemos(this, { notify: false });
   }
 }

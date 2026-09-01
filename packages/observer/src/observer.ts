@@ -48,8 +48,14 @@ export function observe<T extends Function>(fn: T, options: ObserveOptions = {})
 
   // save the scheduler and debugger on the reaction
   // 如果没有指定 scheduler,使用全局默认的 scheduler
-  reaction.scheduler = options.scheduler ?? getGlobalConfig().scheduler;
-  reaction.debugger = options.debugger;
+  // 复活(reuse)路径：未显式传入时保留 reaction 原配置——observe(r) 裸复活
+  // 不应把自定义 scheduler 静默换回全局默认、把 debugger 置空
+  if (options.scheduler !== undefined || !reaction.scheduler) {
+    reaction.scheduler = options.scheduler ?? getGlobalConfig().scheduler;
+  }
+  if ('debugger' in options) {
+    reaction.debugger = options.debugger;
+  }
 
   // save the fact that this is a reaction
   (reaction as ReactionFunction)[IS_REACTION] = true;

@@ -67,13 +67,19 @@ const universalFinalizationRegistry = new UniversalFinalizationRegistry((adm: AD
 
 /**
  * 旧 RN JSC/Hermes 没有 queueMicrotask（与包内 FinalizationRegistry/WeakRef
- * 降级针对的是同一批环境），调用点做运行时探测并降级到 Promise。
+ * 降级针对的是同一批环境），调用点做运行时探测并逐级降级。
+ * 注意：若想严格保证 destroy 不会插进同任务内 render 与 commit 之间，
+ * 只有真微任务可靠——setImmediate 式 Promise polyfill 环境下调度语义
+ * 退化为宏任务，timing 保证随之弱化。
  */
 function deferToMicrotask(fn: () => void): void {
   if (typeof queueMicrotask === 'function') {
     queueMicrotask(fn);
-  } else {
+  } else if (typeof Promise === 'function') {
     Promise.resolve().then(fn);
+  } else {
+    // 连 Promise 都没有的极端老环境：宏任务兜底，至少保证销毁最终发生
+    setTimeout(fn, 0);
   }
 }
 export function bindServices<P extends Record<string, any> = any, TRef = any>(
@@ -93,18 +99,21 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
   const compName = options?.name ?? Comp.displayName ?? Comp.name ?? 'comp';
 
   // 默认父节点是全局
-  function createADM(parrent: Container = getGlobalContainer()) {
+  function createContainer(parent: Container): Container {
     const container = new Container({
       name: `${compName}_${++containerId}`,
     });
-    container.setParent(parrent);
+    container.setParent(parent);
     for (const params of servicesList) {
       Array.isArray(params)
         ? container.register.apply(container, params)
         : container.register.call(container, params);
     }
+    return container;
+  }
+  function createADM(parrent: Container = getGlobalContainer()): ADM {
     return {
-      container,
+      container: createContainer(parrent),
       committed: false,
     };
   }
@@ -133,7 +142,7 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       // render 时原地重建，让 reveal 后的子树拿到可用容器
       // （代价：隐藏期间丢失 service 状态，换 reveal 后可用）。
       // 注意原地替换 adm.container 而非整个 ADM：effect 闭包持有 adm。
-      adm.container = createADM(domainContext?.container).container;
+      adm.container = createContainer(domainContext?.container ?? getGlobalContainer());
       // 重建发生在 render 阶段，重新挂上 GC 兜底——原注册在首次 effect
       // setup 时已 unregister；若本次 render 被并发丢弃或树在隐藏态被
       // 移除（不再跑 cleanup），由 finalizer 负责销毁这个容器。

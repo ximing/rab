@@ -205,3 +205,57 @@ describe('batch 错误优先级（#212）', () => {
     expect((caught as Error).message).toBe('inner-original');
   });
 });
+
+describe('batch 错误边界（review 回归）', () => {
+  it('回调与 reaction 抛出同一 Error 实例：不产生自引用 cause', () => {
+    const state = observable({ a: 1 });
+    const shared = new Error('shared');
+    observe(() => {
+      if (state.a === 2) {
+        throw shared;
+      }
+    });
+
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw shared;
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBe(shared);
+    // 自引用 cause (E.cause = E) 会让 cause 链遍历死循环，必须不发生
+    expect((shared as Error & { cause?: unknown }).cause).toBeUndefined();
+  });
+
+  it('console.warn 自身抛错时也不替换回调的在途异常', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        throw new Error('reaction-error');
+      }
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {
+      throw new Error('warn-exploded');
+    });
+    // 冻结的错误对象走 cause-as-error 失败 -> warn 路径
+    const frozen = Object.freeze(new Error('original-frozen'));
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        throw frozen;
+      });
+    } catch (e) {
+      caught = e;
+    } finally {
+      warnSpy.mockRestore();
+    }
+
+    expect(caught).toBe(frozen);
+  });
+});

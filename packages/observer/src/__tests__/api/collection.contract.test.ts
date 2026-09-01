@@ -506,6 +506,54 @@ describe('契约: key/value 的 proxy 解包与双向身份一致（G5）', () =
   });
 });
 
+describe('契约: deep Set 的 keys()/entries() 键是 proxy（#192/#256，钉当前行为）', () => {
+  // #192 为恢复原生 Set 的 keys === values 身份，deep 模式 Set.keys()/
+  // entries() 的键侧返回与 values 相同的 observable 包装。代价是与原始
+  // 集合互操作时 proxy 键不能直接用（rawSet.has(proxyKey) === false）。
+  // 决议（#256 option 1）是钉住当前行为而非改回 raw 键；逃生舱是
+  // raw() 解包。若未来改回 raw 键，本组用例失败是预期的——
+  // 改断言 + changeset 注明。
+  test('Set.keys() 返回 proxy 键，与 values() 身份一致（#192）', () => {
+    const keyObj = { id: 1 };
+    const s = observable(new Set([keyObj]));
+    const keys = [...s.keys()];
+    const values = [...s.values()];
+    expect(isObservable(keys[0])).toBe(true);
+    expect(keys[0]).toBe(values[0]);
+    expect(keys[0]).not.toBe(keyObj);
+  });
+
+  test('Set.entries() 两侧是同一 proxy（k === v）', () => {
+    const keyObj = { id: 1 };
+    const s = observable(new Set([keyObj]));
+    const [entry] = [...s.entries()];
+    expect(isObservable(entry[0])).toBe(true);
+    expect(entry[0]).toBe(entry[1]);
+  });
+
+  test('逃生舱：raw() 可解包迭代返回的 proxy 键（raw(key) === 原始成员）', () => {
+    const keyObj = { id: 1 };
+    const s = observable(new Set([keyObj]));
+    expect(raw([...s.keys()][0] as object)).toBe(keyObj);
+    const [entry] = [...s.entries()];
+    expect(raw(entry[0] as object)).toBe(keyObj);
+    expect(raw(entry[1] as object)).toBe(keyObj);
+  });
+
+  test('proxy 键不能直接与原始集合互操作：raw(set).has(proxyKey) 为 false（已知互操作限制）', () => {
+    const keyObj = { id: 1 };
+    const s = observable(new Set([keyObj]));
+    const proxyKey = [...s.keys()][0];
+    // 原始集合内部按 raw 身份存储，proxy 是另一个对象身份。
+    // 需要互操作时先 raw() 解包（见上条），或用代理自身的 has
+    // （trap 入口自动解包入参）。
+    const rawSet = raw(s) as Set<unknown>;
+    expect(rawSet.has(proxyKey)).toBe(false);
+    expect(rawSet.has(raw(proxyKey as object))).toBe(true);
+    expect(s.has(proxyKey)).toBe(true);
+  });
+});
+
 describe('契约: forEach 回调 thisArg 与第三参是 proxy（#191）', () => {
   test('Map.forEach 把 thisArg 作为 callback 的 this，第三参是 observable proxy', () => {
     const m = observable(new Map([['a', 1]]));
