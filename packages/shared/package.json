@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/shared",
-  "version": "9.3.5",
+  "version": "9.4.0",
   "description": "RABjs 共享工具库（断言、路径解析等）",
   "main": "lib/main.cjs",
   "module": "lib/main.js",

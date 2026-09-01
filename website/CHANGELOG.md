@@ -1,5 +1,38 @@
 # @rabjs/website
 
+## 9.0.6
+
+### Patch Changes
+
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+- Updated dependencies [6c0aa33]
+- Updated dependencies [946f148]
+- Updated dependencies [cd8ec15]
+- Updated dependencies [946f148]
+- Updated dependencies [cf93d8d]
+- Updated dependencies [946f148]
+- Updated dependencies [358f357]
+- Updated dependencies [3c2fee7]
+- Updated dependencies [a150846]
+- Updated dependencies [5095f54]
+- Updated dependencies [46f2e01]
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+- Updated dependencies [cf0c308]
+- Updated dependencies [dd17bbd]
+- Updated dependencies [1978dba]
+- Updated dependencies [05d2d2a]
+- Updated dependencies [8bd3a16]
+- Updated dependencies [641b090]
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+  - @rabjs/observer@9.4.0
+  - @rabjs/react@9.4.0
+  - @rabjs/service@9.4.0
+  - @rabjs/devtools@9.4.0
+  - @rabjs/web-mcp@9.4.0
+
 ## 9.0.5
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # reactive-state
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [946f148]
+- Updated dependencies [cd8ec15]
+- Updated dependencies [3c2fee7]
+- Updated dependencies [a150846]
+- Updated dependencies [8bd3a16]
+- Updated dependencies [641b090]
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+  - @rabjs/react@9.4.0
+
 ## 0.0.5
 
 ### Patch Changes

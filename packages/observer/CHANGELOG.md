@@ -1,5 +1,20 @@
 # @rabjs/observer
 
+## 9.4.0
+
+### Minor Changes
+
+- 46f2e01: Map value overwrites (`map.set(k, v)` for an existing key) now notify value-side iteration dependencies (`forEach` / `values` / `entries` / `for...of` / `size`), which previously never re-ran and kept reading stale data. `Map.keys()` iterations moved to a separate key-side bucket (Vue's `MAP_KEY_ITERATE_KEY` design) so they are still only triggered by add/delete/clear, not by value overwrites (#211). Forged `[object Map]` plain objects still use the object set path and do not re-run `ownKeys` observers.
+
+### Patch Changes
+
+- 946f148: Fix a `TypeError: 'get' on proxy` when reading a frozen (non-configurable + non-writable) own array mutator property on an observable array. The batch-wrapping introduced for array mutators (#93) ran before the Proxy get invariant check and returned a different function object; the invariant check now runs first in both base and shadow get traps (#251).
+- 946f148: `batch()` flush-error handling hardening: attaching the flush error as `cause` is skipped when the callback and a reaction threw the identical `Error` instance (a self-referential `cause` loops naive cause-chain walkers), and the `console.warn` fallback for unattached flush errors is itself isolated so throwing console shims cannot replace the in-flight exception. Also, reviving an unobserved reaction via `observe(r)` no longer overwrites its custom `scheduler`/`debugger` with global defaults.
+- 6c0aa33: `batch(fn)` no longer lets a flush-time reaction error replace the callback's own in-flight exception. Previously `try { batch(mutate) } catch` caught the reaction's error while the callback's original error was silently dropped; the flush error is now attached as `cause` on the original error when possible (#212).
+- dd17bbd: `notify(target, key)` now unwraps a proxy-form key the same way collection traps do. Passing an observable object as a Map/Set key to `notify` previously looked up a fresh WeakRef that never matched the registered (raw-identity) dependencies, silently notifying no one (#214).
+- 1978dba: `observe(r)` on a previously unobserved reaction now resets the `unobserved` flag, restoring it as a live reaction that collects dependencies and reacts to changes. Previously the reuse path returned a reaction that executed once (appearing revived) but never tracked dependencies again, silently ignoring all subsequent changes (#215).
+- 05d2d2a: Failed reaction re-runs restore the last successful dependency set. Previously `runAsReaction` released all connections up front and a throw left only keys read before the throw point, so later keys went silent until the next successful run (#213).
+
 ## 9.3.5
 
 ## 9.3.4

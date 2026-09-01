@@ -1,5 +1,41 @@
 # @rabjs/react
 
+## 9.4.0
+
+### Minor Changes
+
+- 641b090: `useReaction` gains a two-function (MobX `reaction`-style) overload `useReaction(dataFn, effect, { fireImmediately })`: the data function collects dependencies on mount without running the effect, and the effect runs with `(current, previous)` only after dependencies change. This provides the "don't run on mount" semantics that the single-function form's `immediate: false` cannot express, since the effect and dependency collection share one function there (#200). The single-function form's `immediate` JSDoc now documents this honestly.
+
+### Patch Changes
+
+- 946f148: `bindServices` container teardown scheduling now falls back `queueMicrotask` → `Promise` → `setTimeout`, so cleanup still happens in legacy JS engines without `queueMicrotask` (old React Native JSC/Hermes). Also extracts an internal `createContainer` factory used by both creation and the hidden-tree rebuild path.
+- cd8ec15: `bindServices` now destroys its container on unmount instead of waiting for the FinalizationRegistry/GC fallback. Service cleanup (event listeners, debounce/throttle timers) previously stayed pending for an unbounded window. Destroy is scheduled on a microtask so React StrictMode's fake unmount/remount does not tear down a live container; the GC fallback is kept for concurrent renders that never commit (#218).
+
+  **Behavior change**: the container is private to the bound subtree by design. Service instances held outside the subtree (stored in refs, injected into parent/global containers, kept in external caches) become destroyed objects after unmount — do not let subtree services escape; if an instance's lifetime must outlive the component, register it in a parent container instead (#252).
+
+- 3c2fee7: `useDomainContext` now syncs its internal ref on every render, so consumers (`useService` / `useContainer` / `useContainerEvents`) follow `DomainContext.Provider` value changes instead of permanently resolving against the first-render container (#217).
+- a150846: The domain README now documents the real API (`bindServices` with tuple-style service registrations, `RSRoot`/`RSStrict`) instead of the non-existent `createDomain`/`Provider`/`createNestedDomain` functions and the object-form `{ identifier, factory }` registrations that throw at runtime. The dead `ProviderOptions`/`ProviderResult`/`DomainComponent` types and the broken `types/window.d.ts` are removed (#223).
+- 8bd3a16: `useAsObservableSource` now wraps a shallow copy of the input instead of the original object, so passing React component props no longer throws `TypeError: 'set' on proxy: trap returned falsish` in dev mode (React freezes props) (#216). The caller's original object is never mutated.
+- 946f148: `useReaction(dataFn, effectFn)`: reads inside the effect are no longer collected as dependencies — the effect now runs untracked (MobX `reaction` semantics), so mutating observables only touched by the effect no longer spuriously re-fires it (#249). Also, passing the ignored `lazy` option to the single-function form now emits a development-mode warning instead of being silently dropped (#253).
+- 946f148: Class components wrapped by `view()` now start dependency tracking only after the first commit (`componentDidMount` creates the reaction and forces one re-render to collect deps; pre-commit renders run raw). A discarded render pass can no longer leak a live reaction that keeps calling `forceUpdate` on a dead instance — class components cannot use the `useObserver` FinalizationRegistry backstop because the leaked subgraph is self-sustaining. This also moves the static-rendering check from constructor-time to render-time, matching the function-component path (#254). Additionally, lifecycle methods declared as arrow-function class fields (`componentDidMount = () => {...}`) no longer shadow the wrapper's revival/cleanup logic: they are rebound in the constructor to run both the user's field and the wrapper logic.
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+- Updated dependencies [6c0aa33]
+- Updated dependencies [946f148]
+- Updated dependencies [cf93d8d]
+- Updated dependencies [946f148]
+- Updated dependencies [358f357]
+- Updated dependencies [5095f54]
+- Updated dependencies [46f2e01]
+- Updated dependencies [946f148]
+- Updated dependencies [946f148]
+- Updated dependencies [cf0c308]
+- Updated dependencies [dd17bbd]
+- Updated dependencies [1978dba]
+- Updated dependencies [05d2d2a]
+  - @rabjs/observer@9.4.0
+  - @rabjs/service@9.4.0
+
 ## 9.3.5
 
 ### Patch Changes
