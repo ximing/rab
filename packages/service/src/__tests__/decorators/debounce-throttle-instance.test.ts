@@ -6,7 +6,7 @@
  * 吞掉，一个实例 destroy 会取消其他实例的 pending 调用（#220）。
  */
 import { Service } from '../../service';
-import { Debounce, Throttle } from '../../decorators';
+import { Debounce, Throttle, cancelDebounce, cancelThrottle } from '../../decorators';
 
 describe('@Debounce / @Throttle 每实例状态（#220）', () => {
   beforeEach(() => {
@@ -338,5 +338,87 @@ describe('@Debounce / @Throttle 每实例状态（#220）', () => {
       // 撞名时第二个键的清理注册不上，k2 的定时器残留触发
       expect(log).toEqual([]);
     });
+  });
+});
+
+describe('cancelDebounce / cancelThrottle 不连带取消分离调用', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('cancelDebounce(instance, key) 只取消该实例自己的 pending 调用', () => {
+    const hits: string[] = [];
+
+    class SaveService extends Service {
+      @Debounce(50)
+      save(payload: string) {
+        // 方法体不触碰 this，支持分离调用形态（#250）
+        hits.push(payload);
+      }
+    }
+
+    const instance = new SaveService();
+    const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!
+      .value as Function;
+
+    // 分离调用挂起（如 emitter.on('save', service.save) 形态）
+    detached.call(undefined, 'detached-payload');
+    // 只意图取消实例自己的 pending 调用
+    instance.save('instance-payload');
+    cancelDebounce(instance, 'save');
+
+    jest.advanceTimersByTime(100);
+
+    // 实例自己的被取消；与本实例无关的分离调用不受影响
+    expect(hits).toEqual(['detached-payload']);
+  });
+
+  it('cancelThrottle(instance, key) 只取消该实例自己的 pending 调用', () => {
+    const hits: string[] = [];
+
+    class ScrollService extends Service {
+      @Throttle(50, { leading: false, trailing: true })
+      onScroll(payload: string) {
+        hits.push(payload);
+      }
+    }
+
+    const instance = new ScrollService();
+    const detached = Object.getOwnPropertyDescriptor(ScrollService.prototype, 'onScroll')!
+      .value as Function;
+
+    detached.call(undefined, 'detached-payload');
+    instance.onScroll('instance-payload');
+    cancelThrottle(instance, 'onScroll');
+
+    jest.advanceTimersByTime(100);
+
+    expect(hits).toEqual(['detached-payload']);
+  });
+
+  it('destroy 仍连带清理分离调用状态（有意的兜底语义）', () => {
+    const hits: string[] = [];
+
+    class SaveService extends Service {
+      @Debounce(50)
+      save(payload: string) {
+        hits.push(payload);
+      }
+    }
+
+    const instance = new SaveService();
+    const detached = Object.getOwnPropertyDescriptor(SaveService.prototype, 'save')!
+      .value as Function;
+
+    detached.call(undefined, 'detached-payload');
+    instance.destroy();
+
+    jest.advanceTimersByTime(100);
+
+    expect(hits).toEqual([]);
   });
 });

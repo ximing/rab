@@ -7,7 +7,7 @@ export { observe, unobserve } from './observer';
 export type { ObserveOptions } from './observer';
 
 // Batch API - Coalesce notifications from a synchronous mutation block
-export { batch, notify, getRunningReaction } from './internals/reaction-runner';
+export { batch, notify, getRunningReaction, untracked } from './internals/reaction-runner';
 
 // Configuration API - Configure global defaults
 export { configure, resetGlobalConfig } from './configure';

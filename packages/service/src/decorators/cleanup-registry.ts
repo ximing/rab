@@ -17,6 +17,100 @@ export type CleanupFn = (this: any) => void;
 export type CleanupRegistry = Map<string | symbol, CleanupFn>;
 
 /**
+ * 装饰器的「按实例状态 + detached 哨兵」存储（@Debounce/@Throttle 共用）。
+ *
+ * 状态必须按实例隔离：装饰器闭包在类定义时只执行一次，闭包变量是类级
+ * 共享的（#220）。分离调用（this 为 null/undefined 或原始值，如
+ * arr.map(service.save)、解构出来的方法、装饰在普通类上）不能作为
+ * WeakMap 键 —— 否则会抛 TypeError: Invalid value used as weak map key，
+ * 退回到共享的哨兵键：所有分离调用共用一份状态，与 WeakMap 重构前的
+ * 类级闭包共享一份状态的行为一致（#250）。
+ */
+export interface InstanceStateStore<T> {
+  /** 取实例对应的状态，没有则创建；分离调用落到共享哨兵状态 */
+  get(instance: any): T;
+  /** 只查不建（清理路径用，避免为从未调用过的实例白建状态） */
+  lookup(instance: any): T | undefined;
+  /** 共享哨兵状态（undefined 说明从未发生分离调用） */
+  detached(): T | undefined;
+}
+
+export function createInstanceStateStore<T>(createState: () => T): InstanceStateStore<T> {
+  const instanceStates = new WeakMap<object, T>();
+  const detachedStateKey = {};
+  const stateKey = (instance: any): object =>
+    instance !== null && (typeof instance === 'object' || typeof instance === 'function')
+      ? instance
+      : detachedStateKey;
+  return {
+    get(instance: any): T {
+      const key = stateKey(instance);
+      let state = instanceStates.get(key);
+      if (!state) {
+        state = createState();
+        instanceStates.set(key, state);
+      }
+      return state;
+    },
+    lookup(instance: any): T | undefined {
+      return instanceStates.get(stateKey(instance));
+    },
+    detached(): T | undefined {
+      return instanceStates.get(detachedStateKey);
+    },
+  };
+}
+
+/**
+ * 把「实例状态清理 + detached 哨兵清理」注册进两张表：
+ * - 实例表（instanceRegistryKey）：cancel*(instance, key) 单实例 API 只查它；
+ * - detached 表（detachedRegistryKey）：哨兵状态是类级共享的，单实例 cancel
+ *   不得连带取消与本实例无关的 pending 分离调用；只有 cleanupAll*
+ *   （destroy 路径）经 runAllCleanupsWithDetached 连带清理 —— 否则实例
+ *   destroy 后 pending 定时器仍会以 this=undefined 触发。代价与 #220 前的
+ *   类级共享状态一致：任一实例销毁会取消该方法尚未到达的分离调用。
+ */
+export function registerInstanceStateCleanups<T>(
+  target: any,
+  instanceRegistryKey: symbol,
+  detachedRegistryKey: symbol,
+  propertyKey: string | symbol,
+  store: InstanceStateStore<T>,
+  cleanup: (state: T) => void
+): void {
+  const registry = getOrCreateCleanupRegistry(target, instanceRegistryKey);
+  if (!registry.has(propertyKey)) {
+    registry.set(propertyKey, function (this: any) {
+      const state = store.lookup(this);
+      if (state) {
+        cleanup(state);
+      }
+    });
+  }
+  const detachedRegistry = getOrCreateCleanupRegistry(target, detachedRegistryKey);
+  if (!detachedRegistry.has(propertyKey)) {
+    detachedRegistry.set(propertyKey, function () {
+      const state = store.detached();
+      if (state) {
+        cleanup(state);
+      }
+    });
+  }
+}
+
+/**
+ * destroy 路径：先清全部实例状态，再连带清 detached 哨兵状态。
+ */
+export function runAllCleanupsWithDetached(
+  instance: any,
+  instanceRegistryKey: symbol,
+  detachedRegistryKey: symbol
+): void {
+  runAllCleanups(instance, instanceRegistryKey);
+  runAllCleanups(instance, detachedRegistryKey);
+}
+
+/**
  * 读取 target 自己（而非原型链上继承而来）的注册表，没有则创建。
  * 必须在当前原型上建独立注册表：直接写继承来的表会把子类装饰的
  * 成员注册进基类。

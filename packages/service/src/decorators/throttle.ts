@@ -1,13 +1,25 @@
 /**
  * Throttle 装饰器配置选项
  */
-import { getOrCreateCleanupRegistry, findCleanup, runAllCleanups } from './cleanup-registry';
+import {
+  createInstanceStateStore,
+  findCleanup,
+  registerInstanceStateCleanups,
+  runAllCleanupsWithDetached,
+} from './cleanup-registry';
 
 /**
  * throttle 清理注册表的 prototype 键（实现见 cleanup-registry.ts —
  * 以真实 propertyKey 为键，避免字符串化方法名的 symbol 撞名/漏扫）
  */
 const THROTTLE_CLEANUPS = Symbol('__rabjs_throttle_cleanups__');
+
+/**
+ * 分离调用（detached）共享状态的清理注册表，与按实例清理分表：
+ * cancelThrottle(instance, key) 是单实例语义，只查 THROTTLE_CLEANUPS；
+ * detached 兜底清理由 cleanupAllThrottles（destroy 路径）额外跑本表。
+ */
+const THROTTLE_DETACHED_CLEANUPS = Symbol('__rabjs_throttle_detached_cleanups__');
 
 export interface ThrottleOptions {
   /**
@@ -70,9 +82,8 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
     const leading = options?.leading ?? true;
     const trailing = options?.trailing ?? true;
 
-    // 状态必须按实例隔离：装饰器闭包在类定义时只执行一次，
-    // 闭包变量是类级共享的——一个实例的调用会被另一个实例覆盖，
-    // 一个实例 destroy 会取消所有实例的 pending 调用（#220）
+    // 状态必须按实例隔离（#220）；分离调用落到共享哨兵状态（#250）。
+    // 存储与清理注册的共用实现见 cleanup-registry.ts
     interface ThrottleState {
       lastInvokeTime: number;
       timerId: ReturnType<typeof setTimeout> | null;
@@ -80,32 +91,13 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       lastThis: any;
       result: any;
     }
-    const instanceStates = new WeakMap<object, ThrottleState>();
-    // 分离调用（this 为 null/undefined 或原始值，如 arr.map(service.save)、
-    // 解构出来的方法、装饰在普通类上）不能作为 WeakMap 键——否则会抛
-    // TypeError: Invalid value used as weak map key。退回到共享的哨兵键：
-    // 所有分离调用共用一份状态，与 WeakMap 重构（#220）前类级闭包共享
-    // 一份状态的行为一致（#250）
-    const detachedStateKey = {};
-    const stateKey = (instance: any): object =>
-      instance !== null && (typeof instance === 'object' || typeof instance === 'function')
-        ? instance
-        : detachedStateKey;
-    const getState = (instance: any): ThrottleState => {
-      const key = stateKey(instance);
-      let state = instanceStates.get(key);
-      if (!state) {
-        state = {
-          lastInvokeTime: 0,
-          timerId: null,
-          lastArgs: [],
-          lastThis: undefined,
-          result: undefined,
-        };
-        instanceStates.set(key, state);
-      }
-      return state;
-    };
+    const states = createInstanceStateStore<ThrottleState>(() => ({
+      lastInvokeTime: 0,
+      timerId: null,
+      lastArgs: [],
+      lastThis: undefined,
+      result: undefined,
+    }));
 
     // 清理函数
     const cleanup = (state: ThrottleState) => {
@@ -122,7 +114,15 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
     // 执行函数
     const invokeFunc = (state: ThrottleState) => {
       state.lastInvokeTime = Date.now();
-      state.result = originalMethod.apply(state.lastThis, state.lastArgs);
+      try {
+        state.result = originalMethod.apply(state.lastThis, state.lastArgs);
+      } finally {
+        // 触发后即释放对参数/this 的引用：detached 哨兵状态由装饰器闭包
+        // 强引用、进程级驻留，不清理会把用户 payload 保留到进程结束。
+        // result 保留 —— 窗口内的后续调用按节流语义返回最近一次的结果。
+        state.lastArgs = [];
+        state.lastThis = undefined;
+      }
       return state.result;
     };
 
@@ -148,7 +148,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
     };
 
     descriptor.value = function (this: any, ...args: any[]) {
-      const state = getState(this);
+      const state = states.get(this);
       const now = Date.now();
       const timeSinceLastInvoke = now - state.lastInvokeTime;
       const isFirstCall = state.lastInvokeTime === 0;
@@ -179,25 +179,18 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       return state.result;
     };
 
-    // 将清理函数注册到原型注册表（按实例清理自己的状态）。
-    // 连同清理哨兵键下的分离调用状态：该条目不属于任何实例，
-    // 否则实例 destroy 后 pending 定时器仍会以 this=undefined 触发，
-    // lastArgs 也被保留到进程结束（#250 引入的兜底键，清理由此兜底）。
+    // 清理函数注册：实例状态进实例表（cancelThrottle 单实例语义），
+    // detached 哨兵状态进 detached 表（仅 destroy 路径连带清理）。
     // 以真实 propertyKey 为键：字符串化方法名会让同 description 的
     // symbol 方法撞名，且 cleanupAll 的字符串扫描漏掉 symbol 键。
-    const registry = getOrCreateCleanupRegistry(target, THROTTLE_CLEANUPS);
-    if (!registry.has(propertyKey)) {
-      registry.set(propertyKey, function (this: any) {
-        const state = instanceStates.get(stateKey(this));
-        if (state) {
-          cleanup(state);
-        }
-        const detachedState = instanceStates.get(detachedStateKey);
-        if (detachedState) {
-          cleanup(detachedState);
-        }
-      });
-    }
+    registerInstanceStateCleanups(
+      target,
+      THROTTLE_CLEANUPS,
+      THROTTLE_DETACHED_CLEANUPS,
+      propertyKey,
+      states,
+      cleanup
+    );
 
     return descriptor;
   };
@@ -259,6 +252,7 @@ export function cancelThrottle(instance: any, propertyKey: string | symbol): voi
 export function cleanupAllThrottles(instance: any): void {
   // 沿原型链上溯：装饰器成员可能定义在任意基类上，只扫直接原型
   // 会漏掉继承的清理函数（#221）；注册表以真实 propertyKey 为键，
-  // symbol 键不再漏扫
-  runAllCleanups(instance, THROTTLE_CLEANUPS);
+  // symbol 键不再漏扫。destroy 语义连带清理分离调用的共享状态；
+  // 单实例的 cancelThrottle 不查 detached 表
+  runAllCleanupsWithDetached(instance, THROTTLE_CLEANUPS, THROTTLE_DETACHED_CLEANUPS);
 }

@@ -13,6 +13,101 @@ import { notifyReactStore } from './utils/notify-react-store';
 import { IS_REACTIVE_COMPONENT, isClassComponent } from './utils/react-helper';
 
 /**
+ * 组合生命周期函数的品牌标记：构造期/render 期重绑过的字段带此标记，
+ * 避免重复包装；子类 extends view(Base) 时其字段初始化在 super() 之后
+ * 执行，会覆盖掉包装器构造期组合好的函数字段（无品牌）——render 阶段
+ * 据此识别并重新组合。
+ */
+const COMPOSED_BY_VIEW = Symbol('__rabjs_view_composed_lifecycle__');
+
+/**
+ * 挂载快照的一条记录：首渲染（commit 前，不做依赖追踪）读到的一个
+ * observable 位置及当时读到的值。
+ */
+interface MountSnapshotEntry {
+  target: object;
+  key: PropertyKey;
+  type: string;
+  /** 读取当时的快照值；UNREADABLE 表示无法安全重读（按已变化处理） */
+  value: unknown;
+}
+
+/** 快照值无法安全捕获/重读时的哨兵 —— 对比时按「已变化」处理（宁可多更一次） */
+const UNREADABLE = Symbol('__rabjs_view_snapshot_unreadable__');
+
+/**
+ * 读取一个被追踪位置的当前值（快照捕获与挂载时对比共用）。
+ * 只读 raw target，不经过 proxy trap，不产生依赖注册；
+ * 集合类型用原生方法读取，不触发任何用户代码。
+ */
+function readSnapshotValue(target: object, key: PropertyKey, type: string): unknown {
+  try {
+    if (type === 'iterate') {
+      // Map/Set 迭代依赖关心内容本身（值覆盖也算变化），做全量快照；
+      // 普通对象/数组的迭代依赖只关心键集合（元素值由各自的 get 记录覆盖）
+      if (target instanceof Map) {
+        return [...target.entries()];
+      }
+      if (target instanceof Set) {
+        return [...target.values()];
+      }
+      return Reflect.ownKeys(target);
+    }
+    if (type === 'has') {
+      if (target instanceof Map || target instanceof Set) {
+        return target.has(key as never);
+      }
+      return Reflect.has(target, key);
+    }
+    // get
+    if (target instanceof Map) {
+      return target.get(key as never);
+    }
+    return Reflect.get(target, key);
+  } catch {
+    return UNREADABLE;
+  }
+}
+
+/** 对比快照值与当前值；iterate 快照是数组（Map 为 [k,v] 对），逐元素比较 */
+function snapshotValueEquals(entry: MountSnapshotEntry, current: unknown): boolean {
+  if (entry.value === UNREADABLE || current === UNREADABLE) {
+    return false;
+  }
+  if (entry.type === 'iterate') {
+    const prev = entry.value as unknown[];
+    const next = current as unknown[];
+    if (prev.length !== next.length) {
+      return false;
+    }
+    const isMap = entry.target instanceof Map;
+    for (let i = 0; i < prev.length; i++) {
+      if (isMap) {
+        const [pk, pv] = prev[i] as [unknown, unknown];
+        const [nk, nv] = next[i] as [unknown, unknown];
+        if (!Object.is(pk, nk) || !Object.is(pv, nv)) {
+          return false;
+        }
+      } else if (!Object.is(prev[i], next[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return Object.is(entry.value, current);
+}
+
+/** 挂载快照是否在「首渲染 → _onDidMount」的 commit 窗口内失效 */
+function isMountSnapshotStale(snapshot: MountSnapshotEntry[]): boolean {
+  for (const entry of snapshot) {
+    if (!snapshotValueEquals(entry, readSnapshotValue(entry.target, entry.key, entry.type))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * view HOC - 将组件转换为响应式组件
  *
  * @example
@@ -55,6 +150,12 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     /** 组件是否已 commit。commit 前的 render 不做依赖追踪（见 render 注释） */
     declare private _committed: boolean;
 
+    /**
+     * 首渲染的读取快照（commit 窗口的变更检测依据，见 _renderForMount）。
+     * _onDidMount 消费后清空。
+     */
+    declare private _mountSnapshot: MountSnapshotEntry[] | null;
+
     constructor(props: P, context: any) {
       super(props, context);
 
@@ -65,6 +166,7 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       try {
         this._reactiveRender = null;
         this._committed = false;
+        this._mountSnapshot = null;
       } catch {
         if (process.env.NODE_ENV !== 'production') {
           try {
@@ -102,6 +204,12 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 两种编译模式下都是实例自身属性），这里把被遮蔽的字段原地替换为
      * 「先执行用户字段、再执行包装器逻辑」的组合。
      * 以原型方法声明的用户没有实例自身字段，本方法不做任何事。
+     *
+     * 组合函数带 COMPOSED_BY_VIEW 品牌：class Sub extends view(Base) 时，
+     * 子类字段初始化在 super()（即本构造函数）之后才执行，会覆盖掉这里
+     * 组合好的字段 —— 首渲染（_renderForMount）会再次调用本方法，凭品牌
+     * 识别出被覆盖的字段并重新组合（被覆盖丢失的基类用户字段逻辑与
+     * 无 view 时的 JS 字段遮蔽语义一致，不额外补偿）。
      */
     private _rebindShadowedLifecycleFields(): void {
       const self = this as unknown as Record<string, unknown>;
@@ -110,16 +218,26 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       // 无法挂载，这里只是防御）。失败代价是退回「字段遮蔽」旧行为
       // （StrictMode/Suspense 路径上可能失去响应式）。
       try {
-        if (Object.prototype.hasOwnProperty.call(this, 'componentDidMount')) {
+        if (
+          Object.prototype.hasOwnProperty.call(this, 'componentDidMount') &&
+          typeof self.componentDidMount === 'function' &&
+          !(self.componentDidMount as any)[COMPOSED_BY_VIEW]
+        ) {
           const userDidMount = self.componentDidMount as (this: unknown) => void;
-          self.componentDidMount = () => {
+          const composed = () => {
             userDidMount.call(this);
             this._onDidMount();
           };
+          (composed as any)[COMPOSED_BY_VIEW] = true;
+          self.componentDidMount = composed;
         }
-        if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
+        if (
+          Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount') &&
+          typeof self.componentWillUnmount === 'function' &&
+          !(self.componentWillUnmount as any)[COMPOSED_BY_VIEW]
+        ) {
           const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
-          self.componentWillUnmount = () => {
+          const composed = () => {
             try {
               userWillUnmount.call(this);
             } finally {
@@ -128,6 +246,8 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
               this._releaseReaction();
             }
           };
+          (composed as any)[COMPOSED_BY_VIEW] = true;
+          self.componentWillUnmount = composed;
         }
       } catch {
         /* 构造器的字段初值守护已发警告，此处静默降级即可 */
@@ -169,10 +289,9 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       // 组件尚未 commit（首渲染，或将被丢弃的并发/挂起 pass）：裸执行原始
       // render，不做依赖追踪。追踪即向 store 注册；被丢弃且永不 commit 的
       // pass 没有 cWU 可清理，reaction 会永久泄漏。commit 后的首次依赖收集
-      // 由 componentDidMount 建 reaction 并同步执行一次完成（输出与本次
-      // commit 相同，直接丢弃，不触发额外 commit / componentDidUpdate）。
+      // 由 componentDidMount 建 reaction 完成（见 _onDidMount）。
       if (!this._committed) {
-        return super.render();
+        return this._renderForMount();
       }
       // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
       // 模拟卸载 / Suspense 隐藏→显示都会走 cWU 而不销毁实例——实例存活、
@@ -185,6 +304,54 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       // 在 reaction 中执行 render，建立依赖追踪
       // reaction 是一个函数，调用它会执行传入 observe 的函数
       return this._reactiveRender();
+    }
+
+    /**
+     * commit 前的 render：裸执行，但用一次性探针 reaction 记录读取快照。
+     *
+     * 探针在 render 结束的 finally 里立即 unobserve —— 注册生命周期不超出
+     * 本次 render 调用，被丢弃的并发 pass 不会泄漏任何订阅。快照（读了哪些
+     * observable 位置、当时读到的值）留给 _onDidMount 做 commit 窗口的
+     * 变更检测：窗口内（自身/子组件/兄弟组件的 cDM 等）对依赖的写入发生时
+     * 还没有 reaction 订阅，会被静默丢弃，没有快照对比就会让 DOM 永久停留
+     * 在首渲染的旧值上。
+     *
+     * 顺带重新组合被遮蔽的生命周期字段：class Sub extends view(Base) 时
+     * 子类字段初始化晚于包装器构造函数，构造期的组合会被覆盖，这里（字段
+     * 初始化必然已完成、React 尚未调用任何生命周期）是重新组合的最早时机。
+     */
+    private _renderForMount(): React.ReactNode {
+      this._rebindShadowedLifecycleFields();
+
+      const snapshot: MountSnapshotEntry[] = [];
+      const recordRead = (operation: { target: object; key: PropertyKey; type: string }) => {
+        snapshot.push({
+          target: operation.target,
+          key: operation.key,
+          type: operation.type,
+          value: readSnapshotValue(operation.target, operation.key, operation.type),
+        });
+      };
+      // 不消费 oldValue —— 避免 clear() 等操作为本探针付 O(n) 快照成本
+      recordRead.wantsOldValue = false;
+
+      const probe = observe(() => super.render(), {
+        lazy: true,
+        // render 期间的写入不会调度本探针（reaction 在运行栈上会被跳过），
+        // noop scheduler 只是保险，绝不允许默认的同步重跑语义
+        scheduler: () => {},
+        debugger: recordRead,
+      });
+      try {
+        return probe();
+      } finally {
+        unobserve(probe);
+        try {
+          this._mountSnapshot = snapshot;
+        } catch {
+          /* 密封实例：降级为无快照（_onDidMount 的 _committed 赋值同样会失败） */
+        }
+      }
     }
 
     /**
@@ -215,6 +382,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       } catch {
         return;
       }
+      // 取出首渲染的读取快照（一次性消费）
+      const snapshot = this._mountSnapshot;
+      try {
+        this._mountSnapshot = null;
+      } catch {
+        /* _committed 赋值已成功，此处不可达；防御而已 */
+      }
       if (!this._reactiveRender || this._reactiveRender.unobserved) {
         const reaction = this._createReactiveRender();
         try {
@@ -222,9 +396,18 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         } catch {
           return;
         }
-        // 不 forceUpdate：首次依赖收集直接同步执行一次 reaction 即可
-        // （render 在追踪中再跑一遍，输出与刚 commit 的首渲染必然相同，
-        // 直接丢弃）。forceUpdate 会把「挂载」变成一次 update commit ——
+        if (snapshot && isMountSnapshotStale(snapshot)) {
+          // commit 窗口内（自身/子组件 cDM 等）依赖已变化：同步收集渲染的输出
+          // 已不等于刚 commit 的首渲染，「丢弃输出」假设不成立 —— forceUpdate
+          // 让 render 阶段重跑（顺带完成依赖收集），DOM 反映新值。错误按
+          // render 语义抛出（错误边界行为与 master 一致），cDU 触发是正当的
+          // （数据确实在挂载过程中变了），不属于伪 update。
+          this.forceUpdate();
+          return;
+        }
+        // 不 forceUpdate：窗口内无变化时，首次依赖收集直接同步执行一次
+        // reaction 即可（render 在追踪中再跑一遍，输出与刚 commit 的首渲染
+        // 相同，直接丢弃）。forceUpdate 会把「挂载」变成一次 update commit ——
         // render 走完整双 commit，且 componentDidUpdate /
         // getSnapshotBeforeUpdate 会紧随 mount 被触发（prevProps ===
         // props），未做挂载防护的用户副作用被 spurious 执行。
@@ -271,12 +454,16 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 组件卸载时清理 reaction
      */
     componentWillUnmount(): void {
-      // 先调用用户定义的 componentWillUnmount
-      if (super.componentWillUnmount) {
-        super.componentWillUnmount();
+      // 先调用用户定义的 componentWillUnmount；用户方法抛错也必须释放
+      // reaction —— React 在 cWU 抛错后依然完成卸载，跳过清理就是确定性
+      // 的订阅泄漏（与箭头字段路径的 try/finally 组合一致）
+      try {
+        if (super.componentWillUnmount) {
+          super.componentWillUnmount();
+        }
+      } finally {
+        this._releaseReaction();
       }
-
-      this._releaseReaction();
     }
 
     /**

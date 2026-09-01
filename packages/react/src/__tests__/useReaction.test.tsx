@@ -536,3 +536,31 @@ describe('useReaction 单函数形式 lazy 选项（#253）', () => {
     }
   });
 });
+
+describe('useReaction lazy 警告的误报守卫', () => {
+  it('显式传 lazy: false 时不发出警告（用户并未依赖 lazy 语义）', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const state = observable({ count: 0 });
+
+      const Component = () => {
+        // 常见形态：展开一个共享 options 对象，其中 lazy 默认 false
+        useReaction(
+          () => {
+            void state.count;
+          },
+          { immediate: true, lazy: false }
+        );
+        return null;
+      };
+
+      render(<Component />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const lazyWarnings = warnSpy.mock.calls.filter(args => String(args[0]).includes('lazy'));
+      expect(lazyWarnings).toEqual([]);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+});

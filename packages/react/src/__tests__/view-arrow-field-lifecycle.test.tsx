@@ -15,6 +15,8 @@
 import React, { act, Suspense, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import { observable } from '@rabjs/observer';
+import { getConnectionsCount } from '../../../observer/src/internals/reaction-track';
+import { proxyToRaw } from '../../../observer/src/internals/proxy-raw-map';
 import { enableStaticRendering } from '../static-rendering';
 import { view } from '../view';
 
@@ -290,5 +292,63 @@ describe('view 类组件：密封实例的降级（review followup）', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe('view 类组件：子类 extends view(Base) 的箭头生命周期字段', () => {
+  it('子类箭头字段 cWU 覆盖组合函数时，reaction 仍在卸载时释放', () => {
+    const store = observable({ count: 0 });
+    const raw = (proxyToRaw.get(store) as object) ?? store;
+    const cwuCalls: string[] = [];
+
+    class Base extends React.Component {
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveBase = view(Base);
+
+    // 子类字段初始化在 super() 之后执行，会覆盖包装器构造期重绑的
+    // 组合函数 —— 包装器逻辑必须在 render/cDM 阶段重新组合回来
+    class Sub extends ReactiveBase {
+      componentWillUnmount = () => {
+        cwuCalls.push('sub-cwu');
+      };
+    }
+
+    const { unmount } = render(<Sub />);
+    expect(getConnectionsCount(raw)).toBe(1);
+
+    unmount();
+    // 用户的子类字段逻辑执行，且包装器的 reaction 清理不被跳过
+    expect(cwuCalls).toEqual(['sub-cwu']);
+    expect(getConnectionsCount(raw)).toBe(0);
+  });
+
+  it('子类箭头字段 cDM 覆盖组合函数时，组件仍建立/恢复响应式', () => {
+    const store = observable({ count: 0 });
+    const cdmCalls: string[] = [];
+
+    class Base extends React.Component {
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveBase = view(Base);
+
+    class Sub extends ReactiveBase {
+      componentDidMount = () => {
+        cdmCalls.push('sub-cdm');
+      };
+    }
+
+    const { getByTestId } = render(<Sub />);
+    expect(cdmCalls).toEqual(['sub-cdm']);
+    expect(getByTestId('count').textContent).toBe('0');
+
+    act(() => {
+      store.count = 7;
+    });
+    expect(getByTestId('count').textContent).toBe('7');
   });
 });

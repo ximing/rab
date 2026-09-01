@@ -5,7 +5,7 @@
  * 这是 useEffect + observe + unobserve 的语法糖，用于简化在组件中创建副作用的过程
  */
 
-import { observe, unobserve, type Reaction, type ObserveOptions } from '@rabjs/observer';
+import { observe, unobserve, untracked, type Reaction, type ObserveOptions } from '@rabjs/observer';
 import { useEffect, useRef } from 'react';
 
 /**
@@ -198,7 +198,10 @@ function createSingleReaction(
   const { immediate, lazy: _ignoredLazy, ...observeOptions } = options || {};
   // #253：lazy 与 immediate 语义冲突且一直被静默丢弃 —— 至少警告用户，
   // 不在本轮改动运行时语义（immediate 优先）。
-  if (process.env.NODE_ENV !== 'production' && _ignoredLazy !== undefined) {
+  // 只在 lazy: true 时警告：显式传 lazy: false 的用户并未依赖 lazy 语义
+  // （常见于展开共享 options 对象），误报会让 jest-fail-on-console 等严格
+  // console 环境无端失败。
+  if (process.env.NODE_ENV !== 'production' && _ignoredLazy) {
     console.warn(
       '[@rabjs/react] useReaction: `lazy` 选项会被忽略（与 `immediate` 语义冲突，`immediate` 优先）。' +
         '请改用 `immediate`，或使用双函数形式 useReaction(dataFn, effectFn)。'
@@ -222,37 +225,8 @@ function createSingleReaction(
 
 // #249：双函数形式的 effect 必须以 untracked 方式执行（MobX reaction 语义）——
 // effect 里读取的 observable 不得注册为依赖，只有 data() 的读取构成依赖。
-// observer 未导出 untracked()，这里用一个已 unobserve 的 reaction 作「屏蔽层」：
-// runAsReaction 对 unobserved reaction 仍会把它压入运行栈（effect 的读取归属
-// 栈顶的它，而非外层正在收集依赖的 reaction），而注册逻辑对 unobserved
-// reaction 直接跳过 —— 读取因此不落在任何存活 reaction 上。
-let untrackedShield: Reaction | null = null;
-let pendingUntrackedEffect: (() => void) | null = null;
-
-function getUntrackedShield(): Reaction {
-  if (!untrackedShield) {
-    untrackedShield = observe(
-      () => {
-        pendingUntrackedEffect?.();
-      },
-      { lazy: true }
-    );
-    unobserve(untrackedShield);
-  }
-  return untrackedShield;
-}
-
-function runUntracked(fn: () => void): void {
-  const shield = getUntrackedShield();
-  // effect 内可能同步触发另一个 untracked 段（嵌套 reaction），保存/恢复外层回调
-  const prev = pendingUntrackedEffect;
-  pendingUntrackedEffect = fn;
-  try {
-    shield();
-  } finally {
-    pendingUntrackedEffect = prev;
-  }
-}
+// 使用 @rabjs/observer 的一等 untracked() 原语（此前的「已 unobserve 的
+// reaction 作屏蔽层」实现依赖未文档化的内部行为，已被核心原语取代）。
 
 function createPairReaction<T>(
   data: () => T,
@@ -273,14 +247,14 @@ function createPairReaction<T>(
         previous = current;
         if (fireImmediately) {
           // effect 必须 untracked：其读取不属于依赖集合 (#249)
-          runUntracked(() => effect(current, undefined));
+          untracked(() => effect(current, undefined));
         }
         return current;
       }
       const prev = previous;
       previous = current;
       // effect 必须 untracked：其读取不属于依赖集合 (#249)
-      runUntracked(() => effect(current, prev));
+      untracked(() => effect(current, prev));
       return current;
     },
     { lazy: true }

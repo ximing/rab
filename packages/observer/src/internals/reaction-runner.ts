@@ -18,6 +18,27 @@ import { toRawIfProxy } from './utils';
 const reactionStack = new Stack<Reaction>();
 
 /*
+ * untracked() 的嵌套深度。>0 时所有读取不注册依赖、不进入任何
+ * reaction 的 debugger（MobX untracked 语义）。深度计数而非屏蔽
+ * reaction：不需要伪造 reaction 压栈，热路径只多一次整数比较。
+ * */
+let untrackedDepth = 0;
+
+/**
+ * 以不追踪方式执行回调：回调内对 observable 的读取不注册为任何
+ * reaction 的依赖（包括当前正在运行的外层 reaction），返回回调返回值。
+ * 仅覆盖同步执行窗口 —— 回调内异步续段的读取不在保护范围内。
+ */
+export function untracked<T>(fn: () => T): T {
+  untrackedDepth++;
+  try {
+    return fn();
+  } finally {
+    untrackedDepth--;
+  }
+}
+
+/*
  * 防止调试器本身触发无限递归
  * 确保调试代码不会被重复执行
  * */
@@ -145,6 +166,11 @@ export function getRunningReaction(): Reaction | null {
  * 在 Proxy 的 get trap 中被调用
  * */
 export function registerRunningReactionForOperation(operation: Operation): void {
+  // untracked() 窗口内的读取对响应式系统完全不可见：
+  // 不注册依赖，也不投递给任何 reaction 的 debugger
+  if (untrackedDepth > 0) {
+    return;
+  }
   // 从 reactionStack 栈顶获取当前正在执行的 reaction
   // 如果栈为空(没有 reaction 在运行),则不做任何事
   const runningReaction = reactionStack.peek();

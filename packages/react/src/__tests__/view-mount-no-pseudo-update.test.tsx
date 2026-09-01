@@ -69,6 +69,43 @@ describe('view 类组件：挂载不产生伪 update commit', () => {
     expect(getByTestId('count').textContent).toBe('42');
   });
 
+  it('原型方法 cWU 抛错时 reaction 仍被释放（订阅不泄漏）', () => {
+    const store = observable({ count: 0 });
+    const raw = (proxyToRaw.get(store) as object) ?? store;
+
+    class ClassComp extends React.Component {
+      // 原型方法（非箭头字段）：走包装器原型上的 componentWillUnmount
+      // —— super.componentWillUnmount() 抛错不得跳过 _releaseReaction
+      componentWillUnmount() {
+        throw new Error('user-cwu-exploded');
+      }
+
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    const { unmount } = render(<ReactiveClass />);
+    expect(getConnectionsCount(raw)).toBe(1);
+
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      unmount();
+    } catch {
+      // React 可能把 cWU 的错误重抛给调用方，也可能只报告 —— 两种形态都接受
+    } finally {
+      errSpy.mockRestore();
+    }
+
+    expect(getConnectionsCount(raw)).toBe(0);
+
+    act(() => {
+      store.count = 1;
+    });
+    expect(getConnectionsCount(raw)).toBe(0);
+  });
+
   it('箭头字段 cWU 抛错时 reaction 仍被释放（订阅不泄漏）', () => {
     const store = observable({ count: 0 });
     const raw = (proxyToRaw.get(store) as object) ?? store;
