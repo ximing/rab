@@ -78,8 +78,19 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       result: any;
     }
     const instanceStates = new WeakMap<object, DebounceState>();
-    const getState = (instance: object): DebounceState => {
-      let state = instanceStates.get(instance);
+    // 分离调用（this 为 null/undefined 或原始值，如 arr.map(service.save)、
+    // 解构出来的方法、装饰在普通类上）不能作为 WeakMap 键——否则会抛
+    // TypeError: Invalid value used as weak map key。退回到共享的哨兵键：
+    // 所有分离调用共用一份状态，与 WeakMap 重构（#220）前类级闭包共享
+    // 一份状态的行为一致（#250）
+    const detachedStateKey = {};
+    const stateKey = (instance: any): object =>
+      instance !== null && (typeof instance === 'object' || typeof instance === 'function')
+        ? instance
+        : detachedStateKey;
+    const getState = (instance: any): DebounceState => {
+      const key = stateKey(instance);
+      let state = instanceStates.get(key);
       if (!state) {
         state = {
           timerId: null,
@@ -89,7 +100,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
           lastThis: undefined,
           result: undefined,
         };
-        instanceStates.set(instance, state);
+        instanceStates.set(key, state);
       }
       return state;
     };
@@ -174,7 +185,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
     const cleanupMethodName = `__cleanup_debounce_${String(propertyKey)}`;
     Object.defineProperty(target, cleanupMethodName, {
       value: function (this: any) {
-        const state = instanceStates.get(this);
+        const state = instanceStates.get(stateKey(this));
         if (state) {
           cleanup(state);
         }
