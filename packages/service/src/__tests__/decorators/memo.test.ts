@@ -2,7 +2,7 @@
  * Memo 装饰器测试
  */
 
-import { observe, unobserve, batch } from '@rabjs/observer';
+import { observe, unobserve, batch, untracked } from '@rabjs/observer';
 import { Service } from '../../service';
 import { Memo, invalidateMemo, cleanupAllMemos } from '../../decorators/memo';
 
@@ -1146,6 +1146,97 @@ describe('@Memo 装饰器', () => {
 
       expect(service.a).toBe(101);
       expect(aComputes).toBe(1);
+    });
+  });
+
+  describe('untracked 内的链式读取不记账', () => {
+    it('untracked(() => this.memoB) 不构成 A→B 链式边（untracked 语义覆盖 memo 链）', () => {
+      let aComputes = 0;
+      let bComputes = 0;
+
+      class TestService extends Service {
+        x = 1;
+        y = 1;
+
+        @Memo()
+        get b() {
+          bComputes++;
+          return this.x * 10;
+        }
+
+        @Memo()
+        get a() {
+          aComputes++;
+          // 用户显式放弃对 b 的依赖：proxy get trap 已不注册依赖，
+          // 链式边记账（recordMemoDep）也必须遵守同一边界
+          const bv = untracked(() => this.b);
+          return bv + this.y;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(11);
+      expect(aComputes).toBe(1);
+      expect(bComputes).toBe(1);
+
+      // b 的上游变化：a 已 opted out，链校验不得判负强制 a 重算
+      service.x = 2;
+      expect(service.b).toBe(20);
+      expect(bComputes).toBe(2);
+
+      expect(service.a).toBe(11); // 旧缓存——正是 untracked 的语义
+      expect(aComputes).toBe(1);
+
+      // 真正被追踪的依赖 y 变化仍让 a 重算
+      service.y = 5;
+      expect(service.a).toBe(25);
+      expect(aComputes).toBe(2);
+    });
+  });
+
+  describe('链式边的内存持有', () => {
+    // WeakRef 回收断言依赖显式 GC：以 node --expose-gc 运行 jest 才生效，
+    // 常规跑法下跳过（无 gc 时无法确定性触发回收）
+    const gcFn = (globalThis as { gc?: () => void }).gc;
+    const itGc = typeof gcFn === 'function' ? it : it.skip;
+
+    itGc('下游 memo 的链式边不强持有上游实例（上游可被 GC）', async () => {
+      class Upstream extends Service {
+        x = 1;
+
+        @Memo()
+        get b() {
+          return this.x * 10;
+        }
+      }
+
+      class Downstream extends Service {
+        upstream?: Upstream;
+
+        @Memo()
+        get a() {
+          return (this.upstream ? this.upstream.b : 0) + 1;
+        }
+      }
+
+      // 长寿命下游（如 singleton ListService）存活整个测试
+      const downstream = new Downstream();
+      const upstreamRef = (() => {
+        const up = new Upstream();
+        downstream.upstream = up;
+        expect(downstream.a).toBe(11); // 建立 a→b 链式边
+        return new WeakRef(up as unknown as object);
+      })();
+      // 释放用户侧的最后一个强引用；不读 downstream.a，避免重算重置 memoDeps
+      downstream.upstream = undefined;
+
+      gcFn!();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      gcFn!();
+
+      // memoDeps 强引用上游 CacheState（其 owner/reaction 闭包反持实例）时，
+      // 上游实例会被保留到下游重算或销毁为止 —— 此处必须已被回收
+      expect(upstreamRef.deref()).toBeUndefined();
     });
   });
 

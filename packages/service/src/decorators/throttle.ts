@@ -90,6 +90,13 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       lastArgs: any[];
       lastThis: any;
       result: any;
+      /**
+       * 上次 invoke 之后是否有新调用到来。invokeFunc 在 finally 中清空
+       * lastArgs/lastThis（释放 payload 引用），trailing 定时器据此判断
+       * 该不该补一刀 —— 否则 leading/窗口过期的立即执行后，定时器会以
+       * undefined this、空参数幽灵重放用户方法。
+       */
+      hasPendingCall: boolean;
     }
     const states = createInstanceStateStore<ThrottleState>(() => ({
       lastInvokeTime: 0,
@@ -97,6 +104,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       lastArgs: [],
       lastThis: undefined,
       result: undefined,
+      hasPendingCall: false,
     }));
 
     // 清理函数
@@ -109,6 +117,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       state.lastArgs = [];
       state.lastThis = undefined;
       state.result = undefined;
+      state.hasPendingCall = false;
     };
 
     // 执行函数
@@ -122,6 +131,8 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
         // result 保留 —— 窗口内的后续调用按节流语义返回最近一次的结果。
         state.lastArgs = [];
         state.lastThis = undefined;
+        // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
+        state.hasPendingCall = false;
       }
       return state.result;
     };
@@ -140,7 +151,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       if (trailing) {
         state.timerId = setTimeout(() => {
           state.timerId = null;
-          if (Date.now() - state.lastInvokeTime >= wait) {
+          if (state.hasPendingCall && Date.now() - state.lastInvokeTime >= wait) {
             invokeFunc(state);
           }
         }, wait);
@@ -155,6 +166,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
 
       state.lastArgs = args;
       state.lastThis = this;
+      state.hasPendingCall = true;
 
       // 首次调用
       if (isFirstCall) {

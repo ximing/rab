@@ -95,6 +95,14 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       lastArgs: any[];
       lastThis: any;
       result: any;
+      /**
+       * 上次 invoke 之后是否有新调用到来。invokeFunc 在 finally 中清空
+       * lastArgs/lastThis（释放 payload 引用），lastArgs.length 无法再区分
+       * 「无参调用」与「已消费」，trailing 定时器据此判断该不该补一刀 ——
+       * 否则 leading/maxWait 立即执行后，定时器会以 undefined this、空参数
+       * 幽灵重放用户方法。
+       */
+      hasPendingCall: boolean;
     }
     const states = createInstanceStateStore<DebounceState>(() => ({
       timerId: null,
@@ -103,6 +111,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       lastArgs: [],
       lastThis: undefined,
       result: undefined,
+      hasPendingCall: false,
     }));
 
     // 清理函数
@@ -116,6 +125,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       state.lastArgs = [];
       state.lastThis = undefined;
       state.result = undefined;
+      state.hasPendingCall = false;
     };
 
     // 取消定时器
@@ -137,6 +147,8 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
         // result 保留 —— 窗口内的后续调用按防抖语义返回最近一次的结果。
         state.lastArgs = [];
         state.lastThis = undefined;
+        // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
+        state.hasPendingCall = false;
       }
       return state.result;
     };
@@ -146,7 +158,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       cancelTimer(state);
       state.timerId = setTimeout(() => {
         state.timerId = null;
-        if (trailing) {
+        if (trailing && state.hasPendingCall) {
           invokeFunc(state);
         }
       }, wait);
@@ -161,6 +173,7 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
       state.lastCallTime = now;
       state.lastArgs = args;
       state.lastThis = this;
+      state.hasPendingCall = true;
 
       // 判断是否应该立即执行
       const shouldInvoke =

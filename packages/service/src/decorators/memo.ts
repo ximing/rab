@@ -1,4 +1,12 @@
-import { observe, unobserve, notify, batch, raw, getRunningReaction } from '@rabjs/observer';
+import {
+  observe,
+  unobserve,
+  notify,
+  batch,
+  raw,
+  getRunningReaction,
+  isUntracked,
+} from '@rabjs/observer';
 import type { Reaction, Operation } from '@rabjs/observer';
 
 import { getOrCreateCleanupRegistry, findCleanup, runAllCleanups } from './cleanup-registry';
@@ -42,8 +50,14 @@ interface CacheState {
    * 版本快照的作用：链上 B 在 A 上次计算之后被重算过（version 前进），
    * 说明 A 的缓存采纳的是 B 的旧值，链校验必须判负 —— 仅靠
    * dep.computed 会把「B 重算过但 A 没有」误判为有效（陈旧缓存）。
+   *
+   * 弱持有的作用：CacheState 经 owner 字段与 reaction 闭包反持所属
+   * 实例，强引用上游 CacheState 会让长寿命 memo（singleton service）
+   * 把读过的 transient 上游实例保留到自己重算/销毁为止，架空
+   * globalMemoCache 的 WeakMap 回收。支持 WeakRef 的环境弱持有，
+   * 旧 RN JSC 等环境退化为强持有（与 observer reaction-track 同一取舍）。
    */
-  memoDeps?: Map<CacheState, number>;
+  memoDeps?: Map<MemoDepRef, number>;
   /** 链校验重入保护（环状 memo 引用本就属于未定义行为，校验不得自旋） */
   validating?: boolean;
   /**
@@ -86,6 +100,23 @@ const MEMO_CLEANUPS = Symbol('__rabjs_memo_cleanups__');
  */
 let collectingMemo: CacheState | null = null;
 
+/*
+ * 链式依赖边的弱持有（见 CacheState.memoDeps 注释）：支持 WeakRef 的
+ * 环境以 WeakRef 包装上游 CacheState；无 WeakRef 的旧环境（RN JSC）
+ * 退化为强引用。死引用在链校验时按「上游已失效」处理（保守重算）。
+ */
+const supportsWeakRef = typeof WeakRef === 'function';
+
+type MemoDepRef = CacheState | WeakRef<CacheState>;
+
+function wrapMemoDep(state: CacheState): MemoDepRef {
+  return supportsWeakRef ? new WeakRef(state) : state;
+}
+
+function derefMemoDep(ref: MemoDepRef): CacheState | undefined {
+  return supportsWeakRef ? (ref as WeakRef<CacheState>).deref() : (ref as CacheState);
+}
+
 /**
  * 把「读取方 collectingMemo 依赖了被读 memo state」这条边记下来，
  * 并快照被读 memo 当前的版本号（读取方采纳的就是这一版缓存）。
@@ -100,9 +131,13 @@ function recordMemoDep(state: CacheState): void {
   if (
     collectingMemo &&
     collectingMemo !== state &&
+    // untracked() 窗口内的读取对响应式系统完全不可见（proxy get trap
+    // 不注册依赖）——链式边记账必须遵守同一边界，否则用户显式放弃的
+    // 依赖仍会让上游重算时链校验判负、强制本 memo 重算
+    !isUntracked() &&
     getRunningReaction() === collectingMemo.reaction
   ) {
-    (collectingMemo.memoDeps ??= new Map()).set(state, state.version ?? 0);
+    (collectingMemo.memoDeps ??= new Map()).set(wrapMemoDep(state), state.version ?? 0);
   }
 }
 
@@ -120,8 +155,9 @@ function isChainNotifyOp(state: CacheState, operation: Operation): boolean {
   if (!deps || deps.size === 0) {
     return false;
   }
-  for (const dep of deps.keys()) {
-    if (dep.owner === operation.target && dep.key === operation.key) {
+  for (const depRef of deps.keys()) {
+    const dep = derefMemoDep(depRef);
+    if (dep && dep.owner === operation.target && dep.key === operation.key) {
       return true;
     }
   }
@@ -145,8 +181,11 @@ function isChainValid(state: CacheState): boolean {
   }
   state.validating = true;
   try {
-    for (const [dep, adoptedVersion] of deps) {
-      if (!dep.computed || (dep.version ?? 0) !== adoptedVersion || !isChainValid(dep)) {
+    for (const [depRef, adoptedVersion] of deps) {
+      const dep = derefMemoDep(depRef);
+      // dep 已被 GC（WeakRef 环境）：上游实例不复存在，缓存无从信任，
+      // 保守判负触发重算 —— 重算会读取当前可达的上游并重建边
+      if (!dep || !dep.computed || (dep.version ?? 0) !== adoptedVersion || !isChainValid(dep)) {
         return false;
       }
     }

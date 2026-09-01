@@ -422,3 +422,132 @@ describe('cancelDebounce / cancelThrottle 不连带取消分离调用', () => {
     expect(hits).toEqual([]);
   });
 });
+
+/**
+ * 幽灵尾调用回归：invokeFunc 在 finally 中清空 lastArgs/lastThis 后，
+ * leading/maxWait 路径紧接着 startTimer 武装的 trailing 定时器到点仍会
+ * 无条件 invokeFunc —— 以 this=undefined、空参数重放用户方法（轻则
+ * TypeError 甩进定时器回调，重则方法被多执行一次）。trailing 只应在
+ * 「上次 invoke 之后又有新调用」时触发（lodash 语义）。
+ */
+describe('@Debounce / @Throttle 无幽灵尾调用', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('@Debounce leading：单次调用后定时器不再重放', () => {
+    const calls: Array<{ self: unknown; args: unknown[] }> = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true })
+      save(...args: unknown[]) {
+        calls.push({ self: this, args });
+      }
+    }
+
+    const s = new SaveService();
+    s.save('f1');
+    expect(calls).toEqual([{ self: s, args: ['f1'] }]);
+
+    jest.advanceTimersByTime(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('@Debounce maxWait：单次调用强制触发后不再重放', () => {
+    const calls: Array<{ self: unknown; args: unknown[] }> = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { maxWait: 200 })
+      save(...args: unknown[]) {
+        calls.push({ self: this, args });
+      }
+    }
+
+    const s = new SaveService();
+    s.save('f1');
+    expect(calls).toHaveLength(1);
+
+    jest.advanceTimersByTime(300);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('@Debounce leading：窗口内的后续调用仍触发 trailing（正向对照）', () => {
+    const calls: unknown[][] = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true })
+      save(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new SaveService();
+    s.save('f1'); // leading 立即执行
+    jest.advanceTimersByTime(20);
+    s.save('f2'); // 窗口内的新调用 → trailing 应以最新参数执行
+
+    jest.advanceTimersByTime(100);
+    expect(calls).toEqual([['f1'], ['f2']]);
+  });
+
+  it('@Throttle（默认 leading）：单次调用后定时器不再重放', () => {
+    const calls: Array<{ self: unknown; args: unknown[] }> = [];
+
+    class ScrollService extends Service {
+      @Throttle(50)
+      onScroll(...args: unknown[]) {
+        calls.push({ self: this, args });
+      }
+    }
+
+    const s = new ScrollService();
+    s.onScroll('y1');
+    expect(calls).toEqual([{ self: s, args: ['y1'] }]);
+
+    jest.advanceTimersByTime(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('@Throttle：窗口过期后的立即执行不再被定时器重放', () => {
+    const calls: unknown[][] = [];
+
+    class ScrollService extends Service {
+      @Throttle(50)
+      onScroll(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new ScrollService();
+    s.onScroll('y1');
+    jest.advanceTimersByTime(100); // 窗口过期（顺带验证无幽灵调用）
+    s.onScroll('y2'); // 立即执行路径
+    expect(calls).toEqual([['y1'], ['y2']]);
+
+    jest.advanceTimersByTime(200);
+    expect(calls).toEqual([['y1'], ['y2']]);
+  });
+
+  it('@Throttle：窗口内的后续调用仍触发 trailing（正向对照）', () => {
+    const calls: unknown[][] = [];
+
+    class ScrollService extends Service {
+      @Throttle(50)
+      onScroll(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new ScrollService();
+    s.onScroll('y1'); // leading 立即执行
+    jest.advanceTimersByTime(20);
+    s.onScroll('y2'); // 窗口内 → trailing 以最新参数执行
+
+    jest.advanceTimersByTime(100);
+    expect(calls).toEqual([['y1'], ['y2']]);
+  });
+});
