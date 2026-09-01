@@ -55,17 +55,18 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     constructor(props: P, context: any) {
       super(props, context);
 
-      // SSR：不建 reaction。renderToString 不会 unmount，否则会泄漏订阅。
-      if (isUsingStaticRendering()) {
-        return;
-      }
-
       // 注意：这里刻意不创建 reaction。构造函数/首渲染里创建并执行的
       // reaction 会立即向 store 注册依赖，而「渲染后被丢弃且永不 commit」
       // 的并发 pass 没有 componentWillUnmount，也没有 FinalizationRegistry
       // 兜底（store→reaction→实例构成自持引用环，registry 对任何环内目标
       // 都永不触发）——reaction 会永久泄漏并对死实例 forceUpdate。
-      // 首次依赖追踪推迟到 componentDidMount 之后（见 render/_onDidMount）。
+      // 首次依赖追踪推迟到 componentDidMount 之后（见 render/_onDidMount）；
+      // SSR 安全由时机保证：renderToString 不执行 componentDidMount，
+      // render() 内的 isUsingStaticRendering 检查兜住静态渲染期间的直读。
+      //
+      // 字段重绑定与 static rendering 标志无关，必须无条件执行：构造期
+      // 早退会让「构造时 flag 开启 + 箭头字段 cDM」的组件永久失去响应式
+      // （#254）。重绑定不创建 reaction，SSR 安全。
       this._rebindShadowedLifecycleFields();
     }
 

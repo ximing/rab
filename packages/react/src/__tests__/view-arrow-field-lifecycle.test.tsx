@@ -15,6 +15,7 @@
 import React, { act, Suspense, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import { observable } from '@rabjs/observer';
+import { enableStaticRendering } from '../static-rendering';
 import { view } from '../view';
 
 const NEVER = new Promise<void>(() => {});
@@ -213,5 +214,46 @@ describe('view 类组件：箭头函数生命周期字段不得遮蔽包装器�
     unmount();
     expect(calls).toContain('user-will-unmount');
     expect(instance._reactiveRender).toBeNull();
+  });
+
+  it('构造期 static rendering 开启 + 箭头字段 cDM：flag 关闭后仍恢复响应（#254）', () => {
+    const store = observable({ count: 0 });
+    let instance: any = null;
+
+    class ClassComp extends React.Component {
+      componentDidMount = () => {};
+
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveClass = view(ClassComp);
+
+    // 构造+挂载期间 flag 开启（如同进程内 SSR 后未关、或测试环境遗留）：
+    // 构造期的早退若跳过字段重绑定，箭头字段 cDM 会永久遮蔽 _onDidMount，
+    // _committed 永远为 false，组件从此失去响应式。
+    enableStaticRendering(true);
+    try {
+      render(
+        <ReactiveClass
+          ref={(r: any) => {
+            if (r) instance = r;
+          }}
+        />
+      );
+    } finally {
+      enableStaticRendering(false);
+    }
+
+    // flag 关闭时尚未建立任何依赖（flag 开启期间 render 是裸执行的），
+    // 需一次渲染开启追踪 —— 与函数组件 observer 路径行为对齐。
+    // 注意不能用 rerender 同 props：SCU 浅比较会 bail out，render 不会执行。
+    act(() => {
+      instance.forceUpdate();
+    });
+    act(() => {
+      store.count = 1;
+    });
+    expect(screen.getByTestId('count')).toHaveTextContent('1');
   });
 });
