@@ -176,3 +176,33 @@ describe('observe 复用已 unobserve 的 reaction（#215）', () => {
     expect(runs).toBe(3);
   });
 });
+
+describe('observe 复活保留原配置（review 回归）', () => {
+  it('裸 observe(r) 复活不覆盖自定义 scheduler / debugger', () => {
+    const state = observable({ a: 1 });
+    const scheduled: Array<() => void> = [];
+    const debuggerOps: unknown[] = [];
+
+    const r = observe(
+      () => {
+        void state.a;
+      },
+      {
+        scheduler: (reaction: () => void) => scheduled.push(reaction as () => void),
+        debugger: (op: unknown) => debuggerOps.push(op),
+      }
+    );
+
+    unobserve(r);
+    scheduled.length = 0;
+
+    // 不带 options 复活：scheduler / debugger 必须保留，而不是被全局默认覆盖
+    observe(r);
+
+    state.a = 2;
+    expect(scheduled.length).toBe(1);
+    expect(debuggerOps.length).toBeGreaterThan(0);
+
+    scheduled.forEach(run => run());
+  });
+});

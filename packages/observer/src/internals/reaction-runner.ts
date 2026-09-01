@@ -83,8 +83,9 @@ export function runAsReaction<T extends Function, R>(
     // 点之前读到的部分依赖 (#213)。
     // releaseReaction 不原地修改旧数组（forEach 删除后直接重新赋值为新
     // 数组），因此持有引用即为合法快照，无需 slice 拷贝——否则每次重跑
-    // 都在热路径上白付一次 O(deps) 分配。
-    const prevCleaners = firstRun ? null : (reaction.cleaners ?? []);
+    // 都在热路径上白付一次 O(deps) 分配。firstRun 时它是空数组（observe
+    // 创建时已初始化 cleaners），且失败走 firstRun 自动脱管分支，到不了 restore。
+    const prevCleaners = reaction.cleaners ?? [];
     // 每次执行前,清除该 reaction 之前建立的所有依赖关系 (obj -> key -> reactions)
     // 因为这次执行可能访问不同的属性,需要重新建立依赖
     releaseReaction(reaction);
@@ -108,7 +109,7 @@ export function runAsReaction<T extends Function, R>(
         // 并把依赖回滚到上次成功运行的集合。
         reaction.unobserved = true;
         releaseReaction(reaction);
-      } else if (!reaction.unobserved && prevCleaners) {
+      } else if (!reaction.unobserved) {
         restoreReaction(reaction, prevCleaners);
       }
       // 其余情况（!firstRun 且已 unobserved）：unobserve() 已原子完成
@@ -214,8 +215,11 @@ export function batch<T>(fn: () => T): T {
           fnErrorWithCause.cause === undefined
         ) {
           try {
-            fnErrorWithCause.cause = flushError;
-            attached = true;
+            // 同一 Error 实例被回调和 reaction 同时抛出时禁止自引用 cause
+            if (flushError !== fnError) {
+              fnErrorWithCause.cause = flushError;
+              attached = true;
+            }
           } catch {
             // 回调的错误对象被冻结/不可扩展时，strict mode 下赋值 cause
             // 自身会抛 TypeError —— 绝不允许它替换回调的在途异常，
@@ -226,11 +230,17 @@ export function batch<T>(fn: () => T): T {
           // flush 错误无法附加到回调异常（回调抛非 Error / 已有 cause /
           // 错误对象被冻结）。不静默吞掉 reaction 的失败堆栈——它是定位
           // 「状态变了但副作用失败」的唯一线索。
-
-          console.warn(
-            '[rabjs/observer] batch: a reaction error during flush could not be attached to the in-flight callback error and was dropped:',
-            flushError
-          );
+          // console.warn 自身必须被隔离：jest-fail-on-console 等严格 console
+          // 环境会让 warn 抛错，若在 finally 的 catch 里炸掉会替换在途的
+          // 回调异常——正是本函数要避免的 #212 掩蔽。
+          try {
+            console.warn(
+              '[rabjs/observer] batch: a reaction error during flush could not be attached to the in-flight callback error and was dropped:',
+              flushError
+            );
+          } catch {
+            // 日志失败也不能影响在途异常
+          }
         }
         throw fnError;
       }
