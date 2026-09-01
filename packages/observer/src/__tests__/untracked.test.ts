@@ -134,4 +134,27 @@ describe('untracked', () => {
     expect(runs).toBe(2);
     unobserve(reaction);
   });
+
+  it('untracked 窗口内被写入触发的 reaction 重跑仍正常重建依赖（MobX 语义）', () => {
+    // untracked 只屏蔽「调用时刻的当前派生」；窗口内同步重跑的其他
+    // reaction 是独立派生，若同样被深度计数器抑制，runAsReaction 会在
+    // releaseReaction 之后读不到任何注册，依赖集被清空、reaction 永久失效。
+    const state = observable({ a: 0 });
+    let runs = 0;
+    const reaction = observe(() => {
+      runs++;
+      void state.a;
+    });
+    expect(runs).toBe(1);
+
+    untracked(() => {
+      state.a = 1; // 同步触发 reaction 在 untracked 窗口内重跑
+    });
+    expect(runs).toBe(2);
+
+    // 重跑之后依赖必须仍然健在：后续写入应继续触发
+    state.a = 2;
+    expect(runs).toBe(3);
+    unobserve(reaction);
+  });
 });

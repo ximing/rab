@@ -38,6 +38,31 @@ export function untracked<T>(fn: () => T): T {
   }
 }
 
+/**
+ * 当前是否处于 untracked() 窗口内。供上层（如 @rabjs/service 的 @Memo
+ * 链依赖记录）遵守同一「不追踪」边界。
+ */
+export function isUntracked(): boolean {
+  return untrackedDepth > 0;
+}
+
+/*
+ * untracked() 只屏蔽「调用时刻的当前派生」(MobX untracked 语义):
+ * 在 untracked 窗口内被写入同步触发而重跑的 reaction 是独立派生,
+ * 必须正常建立依赖 —— 否则 runAsReaction 在 releaseReaction 之后,
+ * 所有读取都被深度计数器抑制, reaction 以零依赖收场、永久失效。
+ * 因此在 reaction 运行边界将深度清零, 退出时恢复。
+ * */
+function runWithTrackingReset<T>(fn: () => T): T {
+  const savedDepth = untrackedDepth;
+  untrackedDepth = 0;
+  try {
+    return fn();
+  } finally {
+    untrackedDepth = savedDepth;
+  }
+}
+
 /*
  * 防止调试器本身触发无限递归
  * 确保调试代码不会被重复执行
@@ -94,7 +119,7 @@ export function runAsReaction<T extends Function, R>(
   if (reaction.unobserved) {
     try {
       reactionStack.push(reaction);
-      return Reflect.apply(fn, context, args) as R;
+      return runWithTrackingReset(() => Reflect.apply(fn, context, args) as R);
     } finally {
       reactionStack.pop();
     }
@@ -123,7 +148,7 @@ export function runAsReaction<T extends Function, R>(
       // 执行原始函数 fn
       // 在执行期间,任何对 observable 属性的访问都会被追踪到这个 reaction  (observable.prop -> reaction)
       reactionStack.push(reaction);
-      const result = Reflect.apply(fn, context, args) as R;
+      const result = runWithTrackingReset(() => Reflect.apply(fn, context, args) as R);
       reaction.everRan = true;
       return result;
     } catch (error) {

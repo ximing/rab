@@ -66,8 +66,28 @@ const connectionStore = new WeakMap<object, ConnectionMap>();
  * 引用), 空集时需要借此找到并删除所属 Map entry, 否则空 Set 和 entry
  * 永久残留 (实测 5 万动态 key 约 10MB, ~200B/key)。
  * WeakMap 弱持有 Set, 不影响其 GC。
+ *
+ * map 字段必须弱持有 (WeakRef): WeakMap 的 value 在 key (Set) 存活期间
+ * 被强引用, 而 Set 又被存活 reaction 的 cleaners 强持有 —— 若 value 直接
+ * 强持 ConnectionMap, 任何一个存活 reaction 都会钉住该 target 的整张
+ * ConnectionMap, 进而钉住同 target 其他 key 上的所有 reaction 及其闭包
+ * 引用的实例 (如 @Memo 的 reaction 闭包持有 service 实例)。这会架空
+ * connectionStore 根 WeakMap 的回收语义: target 已不可达时, 它的
+ * reaction 群仍整体驻留。ConnectionMap 是 connectionStore 的 value,
+ * target 存活时它必然存活, 因此弱引用不损失任何有效清理场景:
+ * map 已回收 ⇒ target 已回收 ⇒ 清理本就无意义。
  * */
-const setToOwner = new WeakMap<Set<Reaction>, { map: ConnectionMap; key: StoredKey }>();
+type ConnectionMapRef = ConnectionMap | WeakRef<ConnectionMap>;
+
+const setToOwner = new WeakMap<Set<Reaction>, { map: ConnectionMapRef; key: StoredKey }>();
+
+function wrapConnectionMap(map: ConnectionMap): ConnectionMapRef {
+  return supportsWeakRef ? new WeakRef(map) : map;
+}
+
+function derefConnectionMap(ref: ConnectionMapRef): ConnectionMap | undefined {
+  return supportsWeakRef ? (ref as WeakRef<ConnectionMap>).deref() : (ref as ConnectionMap);
+}
 
 /*
  * 作用: 用于标记"迭代操作"(如 for...of, forEach),用 Symbol 避免与真实的属性名冲突
@@ -192,7 +212,7 @@ export function registerReactionForOperation(
     reactionsForObj.set(wrapKey(actualKey), reactionsForKey);
     // #12: 记录该 Set 的归属, 供空集时清除 entry 使用
     setToOwner.set(reactionsForKey, {
-      map: reactionsForObj,
+      map: wrapConnectionMap(reactionsForObj),
       key: wrapKey(actualKey),
     });
   }
@@ -349,9 +369,15 @@ export function restoreReaction(reaction: Reaction, snapshot: Set<Reaction>[]): 
     if (!owner) {
       continue;
     }
-    let liveSet = owner.map.get(owner.key);
+    const ownerMap = derefConnectionMap(owner.map);
+    if (!ownerMap) {
+      // target 已被回收 (map 随 connectionStore 的弱 key 消亡),
+      // 不可能再有写入打在它上面, 恢复无意义
+      continue;
+    }
+    let liveSet = ownerMap.get(owner.key);
     if (!liveSet) {
-      owner.map.set(owner.key, oldSet);
+      ownerMap.set(owner.key, oldSet);
       liveSet = oldSet;
     }
     if (!liveSet.has(reaction)) {
@@ -375,8 +401,9 @@ function releaseReactionKeyConnection(this: Reaction, reactionsForKey: Set<React
   // - 下面的恒等防御检查确保 (理论上的) 脱落旧 Set 不会误删后来新注册的 entry。
   if (reactionsForKey.size === 0) {
     const owner = setToOwner.get(reactionsForKey);
-    if (owner && owner.map.get(owner.key) === reactionsForKey) {
-      owner.map.delete(owner.key);
+    const ownerMap = owner ? derefConnectionMap(owner.map) : undefined;
+    if (ownerMap && ownerMap.get(owner!.key) === reactionsForKey) {
+      ownerMap.delete(owner!.key);
     }
   }
 }
