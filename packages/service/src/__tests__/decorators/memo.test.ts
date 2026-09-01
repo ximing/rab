@@ -2,7 +2,7 @@
  * Memo 装饰器测试
  */
 
-import { observe, unobserve } from '@rabjs/observer';
+import { observe, unobserve, batch } from '@rabjs/observer';
 import { Service } from '../../service';
 import { Memo, invalidateMemo, cleanupAllMemos } from '../../decorators/memo';
 
@@ -508,6 +508,210 @@ describe('@Memo 装饰器', () => {
       const service = new TestService();
       expect(() => invalidateMemo(service, 'label')).not.toThrow();
       expect(service.label).toBe('label:1');
+    });
+  });
+
+  describe('@Memo getter 抛错后的外层 observe 恢复（#247）', () => {
+    it('getter 抛错一次后，外层 observe 在依赖恢复时必须重新触发', () => {
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get bad() {
+          if (this.n === 2) {
+            throw new Error('transient');
+          }
+          return this.n;
+        }
+      }
+
+      const service = new TestService();
+      const seen: any[] = [];
+      const reaction = observe(() => {
+        try {
+          seen.push(service.bad);
+        } catch {
+          seen.push('ERR');
+        }
+      });
+      expect(seen).toEqual([1]);
+
+      // 进入抛错状态：外层重跑并读到错误
+      service.n = 2;
+      expect(seen).toEqual([1, 'ERR']);
+
+      // 依赖恢复：外层必须被唤醒并读到新值
+      service.n = 3;
+      expect(seen).toEqual([1, 'ERR', 3]);
+      expect(service.bad).toBe(3);
+
+      unobserve(reaction);
+    });
+
+    it('首次读取即抛错时，外层 observe 也能在依赖恢复后重新触发', () => {
+      class TestService extends Service {
+        n = 2;
+
+        @Memo()
+        get bad() {
+          if (this.n === 2) {
+            throw new Error('transient');
+          }
+          return this.n;
+        }
+      }
+
+      const service = new TestService();
+      const seen: any[] = [];
+      const reaction = observe(() => {
+        try {
+          seen.push(service.bad);
+        } catch {
+          seen.push('ERR');
+        }
+      });
+      expect(seen).toEqual(['ERR']);
+
+      service.n = 3;
+      expect(seen).toEqual(['ERR', 3]);
+
+      unobserve(reaction);
+    });
+  });
+
+  describe('batch 内读取 @Memo getter（#248）', () => {
+    it('batch 内读取必须返回最新值，而不是过期缓存', () => {
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          return this.items.reduce((a, b) => a + b, 0);
+        }
+      }
+
+      const service = new TestService();
+      expect(service.total).toBe(0); // warm cache
+
+      let midBatch = -1;
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.total;
+      });
+
+      expect(midBatch).toBe(5);
+      expect(service.total).toBe(5);
+    });
+
+    it('batch 内多次修改与读取都保持一致', () => {
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          return this.items.reduce((a, b) => a + b, 0);
+        }
+      }
+
+      const service = new TestService();
+      expect(service.total).toBe(0);
+
+      const reads: number[] = [];
+      batch(() => {
+        service.items.push(5);
+        reads.push(service.total);
+        service.items.push(3);
+        reads.push(service.total);
+      });
+
+      expect(reads).toEqual([5, 8]);
+      expect(service.total).toBe(8);
+    });
+
+    it('batch 中途的读取不得丢失对外层 observe 的通知', () => {
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          return this.items.reduce((a, b) => a + b, 0);
+        }
+      }
+
+      const service = new TestService();
+      const seen: number[] = [];
+      const reaction = observe(() => {
+        seen.push(service.total);
+      });
+      expect(seen).toEqual([0]);
+
+      batch(() => {
+        service.items.push(5);
+        // 中途读取会触发重算；flush 时外层仍必须收到唤醒
+        expect(service.total).toBe(5);
+      });
+
+      expect(seen).toEqual([0, 5]);
+      unobserve(reaction);
+    });
+  });
+
+  describe('cleanupAllMemos 通知（#255）', () => {
+    it('cleanupAllMemos 默认通知外层 observe，观察者能读到重置后的新值', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get a() {
+          return `a:${external}`;
+        }
+
+        @Memo()
+        get b() {
+          return `b:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(`${service.a}|${service.b}`);
+      });
+      expect(seen).toEqual(['a:1|b:1']);
+
+      external = 2;
+      cleanupAllMemos(service);
+
+      // 一次 cleanupAllMemos 只唤醒外层一次（batch 合并），读到重置后的新值
+      expect(seen).toEqual(['a:1|b:1', 'a:2|b:2']);
+
+      unobserve(reaction);
+    });
+
+    it('Service.destroy 保持静默：destroy 不唤醒外层 observe', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get label() {
+          return `label:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(service.label);
+      });
+      expect(seen).toEqual(['label:1']);
+
+      external = 2;
+      service.destroy();
+
+      // destroy 是销毁路径：不唤醒（可能已卸载的）外层 UI
+      expect(seen).toEqual(['label:1']);
+
+      unobserve(reaction);
     });
   });
 
