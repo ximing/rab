@@ -32,6 +32,9 @@ export { observable, shadowObservable } from '@rabjs/observer';
 export { observe, unobserve, batch, notify } from '@rabjs/observer';
 export type { ObserveOptions } from '@rabjs/observer';
 
+// Untracked API - 同步窗口内的读取不注册依赖（@Memo 链等上层共用此边界）
+export { untracked, isUntracked, getRunningReaction } from '@rabjs/observer';
+
 // Configuration API - Configure global defaults
 export { configure, resetGlobalConfig } from '@rabjs/observer';
 export type { ConfigureOptions } from '@rabjs/observer';

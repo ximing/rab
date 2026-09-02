@@ -79,23 +79,41 @@ export function registerInstanceStateCleanups<T>(
   cleanup: (state: T) => void
 ): void {
   const registry = getOrCreateCleanupRegistry(target, instanceRegistryKey);
-  if (!registry.has(propertyKey)) {
-    registry.set(propertyKey, function (this: any) {
-      const state = store.lookup(this);
-      if (state) {
-        cleanup(state);
-      }
-    });
-  }
+  chainCleanup(registry, propertyKey, function (this: any) {
+    const state = store.lookup(this);
+    if (state) {
+      cleanup(state);
+    }
+  });
   const detachedRegistry = getOrCreateCleanupRegistry(target, detachedRegistryKey);
-  if (!detachedRegistry.has(propertyKey)) {
-    detachedRegistry.set(propertyKey, function () {
-      const state = store.detached();
-      if (state) {
-        cleanup(state);
-      }
-    });
+  chainCleanup(detachedRegistry, propertyKey, function () {
+    const state = store.detached();
+    if (state) {
+      cleanup(state);
+    }
+  });
+}
+
+/**
+ * 注册一个 propertyKey 的清理函数；同 key 已有清理时组合而非跳过 ——
+ * 同一方法被同类型装饰器重复装饰（@Debounce(50) @Debounce(100)）时
+ * 每层装饰器持有独立的实例状态 store 与定时器，只保留第一层的清理
+ * 会让其余层的 pending 定时器在 destroy 后残留并幽灵触发。
+ */
+function chainCleanup(
+  registry: CleanupRegistry,
+  propertyKey: string | symbol,
+  cleanup: CleanupFn
+): void {
+  const existing = registry.get(propertyKey);
+  if (!existing) {
+    registry.set(propertyKey, cleanup);
+    return;
   }
+  registry.set(propertyKey, function (this: any) {
+    existing.call(this);
+    cleanup.call(this);
+  });
 }
 
 /**

@@ -135,6 +135,30 @@ describe('untracked', () => {
     unobserve(reaction);
   });
 
+  it('untracked 窗口内手动执行的 unobserved reaction，其 debugger 同样不投递', () => {
+    // 契约（registerRunningReactionForOperation 注释）：untracked 窗口内的
+    // 读取「不注册依赖，也不投递给任何 reaction 的 debugger」。reaction 运行
+    // 边界的 untracked 深度重置是为「被写入触发而重跑的 tracked reaction
+    // 重建依赖」服务的；unobserved reaction 本就不注册依赖（unobserved 守卫），
+    // 若同样在边界重置深度，窗口内手动调用它会把读取暴露给它自己的
+    // debugger —— untracked 不再是可靠的屏蔽边界。
+    const state = observable({ a: 0 });
+    const seen: string[] = [];
+    const reaction = observe(
+      () => {
+        void state.a;
+      },
+      { debugger: (op: { key: PropertyKey }) => seen.push(String(op.key)) }
+    );
+    unobserve(reaction);
+    seen.length = 0;
+
+    untracked(() => {
+      (reaction as unknown as () => void)();
+    });
+    expect(seen).toEqual([]);
+  });
+
   it('untracked 窗口内被写入触发的 reaction 重跑仍正常重建依赖（MobX 语义）', () => {
     // untracked 只屏蔽「调用时刻的当前派生」；窗口内同步重跑的其他
     // reaction 是独立派生，若同样被深度计数器抑制，runAsReaction 会在

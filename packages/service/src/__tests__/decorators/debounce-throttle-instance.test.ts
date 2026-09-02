@@ -64,6 +64,29 @@ describe('@Debounce / @Throttle 每实例状态（#220）', () => {
 
       expect(s5.hits).toEqual([]);
     });
+
+    it('同一方法重复装饰时 destroy 清理全部装饰层的 pending 定时器', () => {
+      // @Debounce(50) @Debounce(100) 各自持有独立的实例状态 store 与
+      // 定时器；清理注册若按 propertyKey 去重，后装饰的那层 store 的
+      // 定时器在 destroy 后残留，到点重放进而经内层再次调度 —— 幽灵调用
+      class DoubleDecorated extends Service {
+        calls: string[] = [];
+
+        @Debounce(50)
+        @Debounce(100)
+        save(value: string) {
+          this.calls.push(value);
+        }
+      }
+      const s = new DoubleDecorated();
+
+      s.save('x');
+      s.destroy();
+
+      jest.advanceTimersByTime(1000);
+
+      expect(s.calls).toEqual([]);
+    });
   });
 
   describe('@Throttle', () => {

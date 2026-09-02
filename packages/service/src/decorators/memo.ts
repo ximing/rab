@@ -409,10 +409,9 @@ export function Memo(options: MemoOptions = {}): MethodDecorator {
         return state.value;
       }
 
-      // 计算可能抛错：proxy get trap 在 Reflect.get 返回之后才注册依赖，
-      // getter 抛出时本次注册被跳过，外层 reaction 会以零依赖结束运行，
-      // 之后任何变更都不再唤醒它 (#247)。先经 has trap 预注册
-      // (instance, propertyKey) 依赖 —— has trap 的注册不依赖 getter 成功。
+      // 双保险：proxy get trap 已在 Reflect.get 之前注册 (target, key) 的
+      // get 依赖（#247 根因修复），getter 抛错也不再丢注册；这里再经 has
+      // trap 预注册一份 has 桶依赖，防未来 trap 顺序变动回退。
       // this 不是 proxy (如 raw 读取) 时无 trap，自然退化为空操作。
       Reflect.has(this, propertyKey);
 

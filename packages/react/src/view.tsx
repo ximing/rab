@@ -4,7 +4,15 @@
  * 函数组件：使用 observer 实现（基于 Hooks + useSyncExternalStore）
  * 类组件：使用 observe + forceUpdate 实现
  */
-import { observe, unobserve, type Reaction } from '@rabjs/observer';
+import {
+  observe,
+  unobserve,
+  isRewritableMap,
+  isRewritableSet,
+  isWeakMapTarget,
+  isWeakSetTarget,
+  type Reaction,
+} from '@rabjs/observer';
 import { ComponentType, ComponentClass } from 'react';
 
 import { observer } from './observer';
@@ -61,14 +69,18 @@ function readDataPropertyValue(target: object, key: PropertyKey): unknown {
  * 集合类型用原生方法读取，不触发任何用户代码。
  */
 function readSnapshotValue(target: object, key: PropertyKey, type: string): unknown {
+  // 集合判定必须用 observer 的跨 realm 判定（tag + duck-check，issue #92
+  // 场景）而非裸 instanceof —— 裸 instanceof 对 vm/iframe 里的 Map/Set
+  // 为 false，而 collection-handler 的 G7 路由会把它们送进 instrumented
+  // trap，两边判定不一致会让快照对比对跨 realm 集合静默失效。
   try {
     if (type === 'iterate') {
       // Map/Set 迭代依赖关心内容本身（值覆盖也算变化），做全量快照；
       // 普通对象/数组的迭代依赖只关心键集合（元素值由各自的 get 记录覆盖）
-      if (target instanceof Map) {
+      if (isRewritableMap(target)) {
         return [...target.entries()];
       }
-      if (target instanceof Set) {
+      if (isRewritableSet(target)) {
         return [...target.values()];
       }
       return Reflect.ownKeys(target);
@@ -77,20 +89,29 @@ function readSnapshotValue(target: object, key: PropertyKey, type: string): unkn
       // Map.keys() 的 key 侧迭代依赖（#211 与值侧 iterate 分桶）：
       // 关心 key 集合本身，快照 key 列表 —— 落入下方 get 分支会对
       // key='' 读出 undefined≡undefined，key 增删永远判不出差异
-      if (target instanceof Map) {
+      if (isRewritableMap(target)) {
         return [...target.keys()];
       }
       // key-iterate 只会注册在 Map 上（Set 的 key 迭代走 iterate 桶）
       return UNREADABLE;
     }
     if (type === 'has') {
-      if (target instanceof Map || target instanceof Set) {
+      // Weak 集合同样走原生方法：collection-handler 对 WeakMap.has /
+      // WeakSet.has 也注册 'has' 依赖，用 Reflect.has 读 WeakSet 恒得
+      // false，捕获与对比两端恒等会让窗口内 add 静默丢失
+      if (
+        isRewritableMap(target) ||
+        isRewritableSet(target) ||
+        isWeakMapTarget(target) ||
+        isWeakSetTarget(target)
+      ) {
         return target.has(key as never);
       }
       return Reflect.has(target, key);
     }
-    // get
-    if (target instanceof Map) {
+    // get（WeakMap.get 同理注册 'get' 依赖，不能落入 readDataPropertyValue
+    // 恒读 undefined）
+    if (isRewritableMap(target) || isWeakMapTarget(target)) {
       return target.get(key as never);
     }
     return readDataPropertyValue(target, key);
@@ -112,7 +133,7 @@ function snapshotValueEquals(entry: MountSnapshotEntry, current: unknown): boole
     }
     // 逐对比较仅适用于 Map 的值侧 iterate（[k,v] 元组）；
     // key-iterate 快照是纯 key 列表，与 Set/对象一样逐元素比较
-    const isPairwise = entry.type === 'iterate' && entry.target instanceof Map;
+    const isPairwise = entry.type === 'iterate' && isRewritableMap(entry.target);
     for (let i = 0; i < prev.length; i++) {
       if (isPairwise) {
         const [pk, pv] = prev[i] as [unknown, unknown];
@@ -356,16 +377,26 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       this._rebindShadowedLifecycleFields();
 
       const snapshot: MountSnapshotEntry[] = [];
-      const recordRead = (operation: { target: object; key: PropertyKey; type: string }) => {
-        snapshot.push({
-          target: operation.target,
-          key: operation.key,
-          type: operation.type,
-          value: readSnapshotValue(operation.target, operation.key, operation.type),
-        });
-      };
-      // 不消费 oldValue —— 避免 clear() 等操作为本探针付 O(n) 快照成本
-      recordRead.wantsOldValue = false;
+      const recordRead = Object.assign(
+        (operation: { target: object; key: PropertyKey; type: string }) => {
+          snapshot.push({
+            target: operation.target,
+            key: operation.key,
+            type: operation.type,
+            value: readSnapshotValue(operation.target, operation.key, operation.type),
+          });
+        },
+        {
+          // 不消费 oldValue —— 避免 clear() 等操作为本探针付 O(n) 快照成本
+          wantsOldValue: false,
+          // 只读 raw target + push 数组，绝不写 observable —— 声明
+          // reentrantSafe 后，在 isDebugging 重入窗口（某个 reaction 的
+          // debugger 执行期间同步完成的首挂载）内读取记录仍然送达；
+          // 否则窗口内挂载的组件快照为空，commit 窗口的变更检测被架空
+          // （与 @Memo 同步失效钩子的 reentrantSafe 同一先例）。
+          reentrantSafe: true,
+        }
+      );
 
       const probe = observe(() => super.render(), {
         lazy: true,

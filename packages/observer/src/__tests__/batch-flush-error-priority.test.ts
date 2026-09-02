@@ -285,4 +285,33 @@ describe('batch 错误边界（review 回归）', () => {
     expect(caught).toBe(shared);
     expect((shared as Error & { cause?: unknown }).cause).toBeUndefined();
   });
+
+  it('回调与 reaction 抛相同的原始值：是两次独立失败，reaction 错误不得按「同一错误」静默吞掉', () => {
+    const state = observable({ a: 1 });
+    observe(() => {
+      if (state.a === 2) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'abort';
+      }
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let caught: unknown;
+    try {
+      batch(() => {
+        state.a = 2;
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'abort';
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    // 回调的原始值原样抛出
+    expect(caught).toBe('abort');
+    // 原始值的 === 是值比较而非身份比较：reaction 抛出的 'abort' 是另一次
+    // 独立失败，无法附加到原始值上，必须 warn 留线索而不是静默丢弃
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('batch'), 'abort');
+    warnSpy.mockRestore();
+  });
 });

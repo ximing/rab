@@ -18,7 +18,8 @@
     "clean": "rm -rf lib build dist coverage",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:release": "jest"
   },
   "keywords": [
     "react",

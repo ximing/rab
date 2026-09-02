@@ -53,11 +53,17 @@ export function isUntracked(): boolean {
  * 所有读取都被深度计数器抑制, reaction 以零依赖收场、永久失效。
  * 因此在 reaction 运行边界将深度清零, 退出时恢复。
  * */
-function runWithTrackingReset<T>(fn: () => T): T {
+function runWithTrackingReset<T extends Function, R>(
+  fn: T,
+  context: unknown,
+  args: ArrayLike<unknown>
+): R {
   const savedDepth = untrackedDepth;
   untrackedDepth = 0;
   try {
-    return fn();
+    // 直接接收 (fn, context, args) 而非 () => fn(...) 闭包：
+    // reaction 每次重跑都经过这里，避免每跑一次多分配一个箭头闭包
+    return Reflect.apply(fn, context, args) as R;
   } finally {
     untrackedDepth = savedDepth;
   }
@@ -118,8 +124,14 @@ export function runAsReaction<T extends Function, R>(
   // (见下方 registerRunningReactionForOperation), 顶层与嵌套行为一致。
   if (reaction.unobserved) {
     try {
+      // 注意：unobserved 分支不做 untracked 深度重置。重置是为 tracked
+      // reaction 在 untracked 窗口内重跑时重建依赖服务的；本分支的读取
+      // 本就不注册依赖（registerRunningReactionForOperation 的 unobserved
+      // 守卫），若重置深度，untracked(() => unobservedReaction()) 会把
+      // 读取投递给它自己的 debugger，破坏「untracked 窗口内的读取对
+      // 响应式系统完全不可见」的契约。
       reactionStack.push(reaction);
-      return runWithTrackingReset(() => Reflect.apply(fn, context, args) as R);
+      return Reflect.apply(fn, context, args) as R;
     } finally {
       reactionStack.pop();
     }
@@ -148,7 +160,7 @@ export function runAsReaction<T extends Function, R>(
       // 执行原始函数 fn
       // 在执行期间,任何对 observable 属性的访问都会被追踪到这个 reaction  (observable.prop -> reaction)
       reactionStack.push(reaction);
-      const result = runWithTrackingReset(() => Reflect.apply(fn, context, args) as R);
+      const result = runWithTrackingReset<T, R>(fn, context, args);
       reaction.everRan = true;
       return result;
     } catch (error) {
@@ -276,11 +288,17 @@ export function batch<T>(fn: () => T): T {
         // Error.cause 需要 es2022 lib，这里用窄化断言访问以兼容现有 target
         const fnErrorWithCause = fnError as Error & { cause?: unknown };
         let attached = false;
-        // 回调和 reaction 抛的是同一个值/同一个 Error 实例：flush 错误
+        // 回调和 reaction 抛的是同一个 Error 实例（引用身份）：flush 错误
         // 就是要重抛的回调异常本身 —— 没有错误被丢弃，既不需要附加
         // cause 也不允许走到下方 warn 的误报路径（严格 console 环境会
-        // 因此误 fail）。
-        if (flushError === fnError) {
+        // 因此误 fail）。原始值的 === 是值比较而非身份比较：回调与
+        // reaction 各自独立 throw 'abort' 之类的相同原始值是两次独立
+        // 失败，不得按「同一错误」静默吞掉 reaction 的失败。
+        if (
+          flushError === fnError &&
+          fnError !== null &&
+          (typeof fnError === 'object' || typeof fnError === 'function')
+        ) {
           attached = true;
         } else if (
           fnError instanceof Error &&

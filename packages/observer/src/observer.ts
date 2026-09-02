@@ -5,6 +5,15 @@ import type { Reaction, ReactionScheduler, Operation } from './internals/types';
 
 const IS_REACTION = Symbol('is reaction');
 
+/**
+ * 经 observe(fn, { scheduler }) 显式指定过 scheduler 的 reaction。
+ * 裸复活 observe(r) 时只有它们才保留 reaction.scheduler；其余 reaction
+ * 上的 scheduler 只是创建时捕获的全局默认快照，复活必须重读
+ * getGlobalConfig() —— 否则 configure({scheduler}) 变更后复活的
+ * reaction 仍按过期默认调度（master 每次 observe 都重读全局默认）。
+ */
+const explicitSchedulerReactions = new WeakSet<Reaction>();
+
 // Options for observe function
 export interface ObserveOptions {
   scheduler?: ReactionScheduler | Function;
@@ -48,10 +57,14 @@ export function observe<T extends Function>(fn: T, options: ObserveOptions = {})
 
   // save the scheduler and debugger on the reaction
   // 如果没有指定 scheduler,使用全局默认的 scheduler
-  // 复活(reuse)路径：未显式传入时保留 reaction 原配置——observe(r) 裸复活
-  // 不应把自定义 scheduler 静默换回全局默认、把 debugger 置空
-  if (options.scheduler !== undefined || !reaction.scheduler) {
-    reaction.scheduler = options.scheduler ?? getGlobalConfig().scheduler;
+  // 复活(reuse)路径：显式配置过 scheduler 的 reaction 保留原配置——
+  // observe(r) 裸复活不应把自定义 scheduler 静默换回全局默认；
+  // 但只是「捕获过旧全局默认」的 reaction 必须重读当前全局默认（见上）。
+  if (options.scheduler !== undefined) {
+    reaction.scheduler = options.scheduler;
+    explicitSchedulerReactions.add(reaction);
+  } else if (!explicitSchedulerReactions.has(reaction)) {
+    reaction.scheduler = getGlobalConfig().scheduler;
   }
   if ('debugger' in options) {
     reaction.debugger = options.debugger;

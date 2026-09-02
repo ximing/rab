@@ -112,6 +112,58 @@ describe('view 类组件：commit 阶段的 store 变更', () => {
     expect(getByTestId('keys').textContent).toBe('a,b');
   });
 
+  it('窗口内 WeakMap.get 依赖的变更被检测', () => {
+    // collection-handler 对 WeakMap.get 注册的是 'get' 依赖（守卫含
+    // isWeakMapTarget）；快照若只识别 Map/Set，对 WeakMap 恒读 undefined，
+    // 捕获与对比两端恒等 → commit 窗口内的 set 被静默丢失
+    const key = {};
+    const wm = new WeakMap<object, number>();
+    wm.set(key, 1);
+    const store = observable({ wm });
+
+    class ClassComp extends React.Component {
+      componentDidMount() {
+        store.wm.set(key, 2);
+      }
+
+      render() {
+        return <span data-testid="v">{String(store.wm.get(key))}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    const { getByTestId } = render(<ReactiveClass />);
+
+    expect(getByTestId('v').textContent).toBe('2');
+  });
+
+  it('窗口内 WeakMap.has / WeakSet.has 依赖的变更被检测', () => {
+    // 同上：WeakMap.has / WeakSet.has 注册 'has' 依赖，快照若用 Reflect.has
+    // 读 WeakSet 恒得 false，add 在窗口内静默丢失
+    const key = {};
+    const store = observable({ wm: new WeakMap<object, number>(), ws: new WeakSet<object>() });
+
+    class ClassComp extends React.Component {
+      componentDidMount() {
+        store.wm.set(key, 1);
+        store.ws.add(key);
+      }
+
+      render() {
+        return (
+          <span data-testid="v">
+            {String(store.wm.has(key))}/{String(store.ws.has(key))}
+          </span>
+        );
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    const { getByTestId } = render(<ReactiveClass />);
+
+    expect(getByTestId('v').textContent).toBe('true/true');
+  });
+
   it('回归控制：Map.keys() 无窗口变更时不产生伪 update', () => {
     const store = observable({ m: new Map<string, number>([['a', 1]]) });
     const calls: string[] = [];
