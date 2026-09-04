@@ -516,7 +516,10 @@ export interface CleanupAllMemosOptions {
  *   get data2() { return this.compute2(); }
  *
  *   destroy() {
- *     cleanupAllMemos(this);
+ *     // 销毁路径必须传 notify:false（与 Service.destroy 的默认调用一致）：
+ *     // 默认 notify:true 是「重置全部缓存」语义，会唤醒仍挂载的观察者
+ *     // 重读 getter —— 在已拆除的 service 上重算并产生错误的最终渲染
+ *     cleanupAllMemos(this, { notify: false });
  *   }
  * }
  * ```

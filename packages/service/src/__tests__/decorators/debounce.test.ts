@@ -219,10 +219,12 @@ describe('Debounce 装饰器', () => {
       const result2 = service.getValue();
       expect(result2).toBe(1);
 
-      // 延迟结束后执行并返回新结果
+      // 静默期（>= wait）后的调用是新一轮 burst 的 leading 边沿：立即执行
+      // 并返回新结果（lodash 语义；旧实现只在实例生命周期的第一次调用走
+      // leading，此后退化为 trailing-only，trailing:false 时会被静默丢弃）
       jest.advanceTimersByTime(1000);
       const result3 = service.getValue();
-      expect(result3).toBe(2);
+      expect(result3).toBe(3);
     });
   });
 });

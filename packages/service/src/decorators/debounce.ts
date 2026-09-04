@@ -3,7 +3,7 @@
  */
 import {
   createInstanceStateStore,
-  findCleanup,
+  findAllCleanups,
   registerInstanceStateCleanups,
   runAllCleanupsWithDetached,
 } from './cleanup-registry';
@@ -139,16 +139,24 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
     // 执行函数
     const invokeFunc = (state: DebounceState) => {
       state.lastInvokeTime = Date.now();
+      // 快照本次 invoke 消费的 pending 身份：finally 的引用释放只在
+      // 「invoke 期间没有更新的调用写入」时才安全 —— 用户方法体内重入
+      // 调用会写入新的 lastArgs/lastThis 并武装自己的定时器，无差别
+      // 清理会让那笔重入调用被静默丢弃（定时器空转）。
+      const invokedArgs = state.lastArgs;
+      const invokedThis = state.lastThis;
       try {
         state.result = originalMethod.apply(state.lastThis, state.lastArgs);
       } finally {
         // 触发后即释放对参数/this 的引用：detached 哨兵状态由装饰器闭包
         // 强引用、进程级驻留，不清理会把用户 payload 保留到进程结束。
         // result 保留 —— 窗口内的后续调用按防抖语义返回最近一次的结果。
-        state.lastArgs = [];
-        state.lastThis = undefined;
-        // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
-        state.hasPendingCall = false;
+        if (state.lastArgs === invokedArgs && state.lastThis === invokedThis) {
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
+          state.hasPendingCall = false;
+        }
       }
       return state.result;
     };
@@ -160,6 +168,13 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
         state.timerId = null;
         if (trailing && state.hasPendingCall) {
           invokeFunc(state);
+        } else {
+          // trailing 关闭（或无 pending）：这笔被抑制的调用按语义永远不会
+          // 执行 —— 必须释放 payload 引用，否则实例状态把它钉到下一次
+          // invoke，detached 哨兵状态更是驻留到进程结束
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          state.hasPendingCall = false;
         }
       }, wait);
     };
@@ -181,8 +196,10 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
         timeSinceLastCall >= wait || // 距离上次调用超过 wait 时间
         (maxWait !== undefined && timeSinceLastInvoke >= maxWait); // 超过最大等待时间
 
-      // 首次调用且 leading 为 true
-      if (shouldInvoke && leading && state.lastInvokeTime === 0) {
+      // leading 边沿：每轮 burst 的首次调用（含实例生命周期的第一次）都
+      // 立即执行 —— 门条件若只看 lastInvokeTime === 0，静默期后的新一轮
+      // burst 只剩 trailing 兜底，trailing:false 时该调用被永久丢弃
+      if (shouldInvoke && leading) {
         state.lastInvokeTime = now;
         state.result = invokeFunc(state);
         startTimer(state);
@@ -241,8 +258,9 @@ export function Debounce(wait: number, options?: Omit<DebounceOptions, 'wait'>):
  * ```
  */
 export function cancelDebounce(instance: any, propertyKey: string | symbol): void {
-  const cleanup = findCleanup(instance, DEBOUNCE_CLEANUPS, propertyKey);
-  if (cleanup) {
+  // 全部装饰层都取消：子类重装饰同名方法时各层持有独立的 pending 定时器
+  // （可能经 super 调用武装），只取消最近一层会让基类层到点幽灵触发
+  for (const cleanup of findAllCleanups(instance, DEBOUNCE_CLEANUPS, propertyKey)) {
     cleanup.call(instance);
   }
 }

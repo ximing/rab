@@ -146,3 +146,46 @@ describe('view 类组件：挂载不产生伪 update commit', () => {
     expect(getConnectionsCount(raw)).toBe(0);
   });
 });
+
+describe('view 类组件：getter 读取的挂载快照（保守策略的边界刻画）', () => {
+  it('render 读 accessor（getter）时挂载后允许多一次 update commit —— 保守换正确', () => {
+    // 快照无法安全重读 accessor：raw 身份执行 @Memo getter 会留下永不失效的
+    // 孤儿缓存（见 view.tsx readDataPropertyValue 注释），而 @Memo 的依赖读取
+    // 注册在其内部 reaction 上、不进探针快照 —— 跳过 accessor 条目会让 commit
+    // 窗口内对 memo 依赖的写入静默丢失（DOM 永久停留在首渲染旧值）。因此
+    // accessor 一律按「已变化」处理：宁可多更一次。本测试刻画该行为边界：
+    // cDU 恰好触发一次、DOM 值正确；若未来引入精确失效检测，应收紧为 0 次。
+    const store = observable({ first: 'Ada', last: 'Lovelace' });
+    Object.defineProperty(store, 'fullName', {
+      get(this: any) {
+        return `${this.first} ${this.last}`;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+
+    const calls: string[] = [];
+
+    class ClassComp extends React.Component {
+      componentDidUpdate() {
+        calls.push('cDU');
+      }
+
+      render() {
+        return <span data-testid="name">{(store as any).fullName}</span>;
+      }
+    }
+
+    const ReactiveClass = view(ClassComp);
+    const { getByTestId } = render(<ReactiveClass />);
+
+    expect(getByTestId('name').textContent).toBe('Ada Lovelace');
+    expect(calls).toEqual(['cDU']); // 保守策略：恰好一次，不多不少
+
+    // 挂载后的正常响应式更新不受影响
+    act(() => {
+      store.first = 'Grace';
+    });
+    expect(getByTestId('name').textContent).toBe('Grace Lovelace');
+  });
+});

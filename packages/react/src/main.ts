@@ -85,6 +85,7 @@ export type {
   DebounceOptions,
   ThrottleOptions,
   MemoOptions,
+  CleanupAllMemosOptions,
   OnOptions,
   OnceOptions,
 } from '@rabjs/service';

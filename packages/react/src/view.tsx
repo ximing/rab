@@ -278,7 +278,15 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
         ) {
           const userDidMount = self.componentDidMount as (this: unknown) => void;
           const composed = () => {
-            userDidMount.call(this);
+            try {
+              userDidMount.call(this);
+            } catch (error) {
+              // 用户字段抛错也必须开启依赖追踪 —— 实例若幸存（error
+              // boundary 重试等），跳过 _onDidMount 就是永久静默失去
+              // 响应式（与下方 cWU 的 finally 释放同一原则，方向相反）。
+              // 但落点的次生错误不得替换在途的用户错误（见该方法的注释）
+              this._onDidMountPreservingError(error);
+            }
             this._onDidMount();
           };
           (composed as any)[COMPOSED_BY_VIEW] = true;
@@ -372,6 +380,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 顺带重新组合被遮蔽的生命周期字段：class Sub extends view(Base) 时
      * 子类字段初始化晚于包装器构造函数，构造期的组合会被覆盖，这里（字段
      * 初始化必然已完成、React 尚未调用任何生命周期）是重新组合的最早时机。
+     *
+     * 已知限制：快照只记录投递给探针 reaction（运行栈顶）的读取 —— render
+     * 期间同步执行的另一个 reaction（嵌套的共享派生）所读的位置不在快照
+     * 内，commit 窗口对它们的变更检测不到（该内层 reaction 自身仍按自己的
+     * scheduler 重跑；@Memo 的嵌套读取被 accessor 一律 UNREADABLE 的保守
+     * 处理顺带覆盖）。render 里直接驱动其他 reaction 本就属于反模式，
+     * 此处只为如实记录边界。
      */
     private _renderForMount(): React.ReactNode {
       this._rebindShadowedLifecycleFields();
@@ -421,11 +436,44 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 组件挂载 / StrictMode 模拟重挂载 / Suspense 隐藏→显示 时恢复 reaction
      */
     componentDidMount(): void {
-      if (super.componentDidMount) {
-        super.componentDidMount();
+      // 先调用用户定义的 componentDidMount；用户方法抛错也必须开启依赖
+      // 追踪 —— 实例若幸存（error boundary 重试等），跳过 _onDidMount
+      // 就是永久静默失去响应式（与 cWU 的 finally 释放同一原则）
+      try {
+        if (super.componentDidMount) {
+          super.componentDidMount();
+        }
+      } catch (error) {
+        // 用户错误在途：落点仍要执行，但其次生错误不得替换在途的用户错误
+        this._onDidMountPreservingError(error);
       }
-
       this._onDidMount();
+    }
+
+    /**
+     * 用户 cDM 抛错后的挂载落点：_onDidMount 仍执行（响应式不静默丢失），
+     * 但它自身的次生错误（如 reaction 首跑重新执行 render 时抛错）不得经
+     * finally 语义替换在途的用户错误 —— 错误边界必须看到根因（与 batch 的
+     * 「绝不替换在途异常」#212 同一原则）。次生错误降级为 dev 警告。
+     */
+    private _onDidMountPreservingError(userError: unknown): never {
+      try {
+        this._onDidMount();
+      } catch (secondary) {
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 用户 componentDidMount 抛错后，挂载落点' +
+                '（render 依赖收集重跑）也抛出次生错误 —— 已吞没以保留用户的' +
+                '原始错误。次生错误：',
+              secondary
+            );
+          } catch {
+            // 日志失败同样不得影响错误传播
+          }
+        }
+      }
+      throw userError;
     }
 
     /**
@@ -438,11 +486,23 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 负责复活。
      */
     private _onDidMount(): void {
-      // 冻结实例上写字段会抛 TypeError —— 降级跳过响应式恢复
-      // （构造器重绑失败时已发 dev 警告）
+      // 冻结实例上写字段会抛 TypeError —— 降级跳过响应式恢复。
+      // 构造期密封的实例在构造函数里已发 dev 警告；但「构造期可写、用户在
+      // cDM 里 Object.freeze(this)」的场景走到这里 —— 静默降级会让组件
+      // 永久失去响应式且毫无征兆，必须同样可观测
       try {
         this._committed = true;
       } catch {
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 组件实例在 componentDidMount 中被 freeze，' +
+                '响应式追踪无法开启 —— 该组件将退化为普通组件（不追踪 observable 变化）。'
+            );
+          } catch {
+            // 日志失败同样不得影响挂载
+          }
+        }
         return;
       }
       // 取出首渲染的读取快照（一次性消费）

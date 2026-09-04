@@ -574,3 +574,333 @@ describe('@Debounce / @Throttle 无幽灵尾调用', () => {
     expect(calls).toEqual([['y1'], ['y2']]);
   });
 });
+
+/**
+ * 重入调用回归:invokeFunc 的 finally 曾无差别清空 lastArgs/lastThis/
+ * hasPendingCall —— 用户方法体内重入调用(如保存后触发又一次保存)刚写入
+ * 的 pending 状态被外层 invoke 的清理抹掉,重入调用武装的定时器空转,
+ * 该次调用被静默丢弃。
+ */
+describe('@Debounce / @Throttle 方法体内重入调用不被吞掉', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('@Debounce：trailing 执行期间的重入调用应再次调度执行', () => {
+    class ReentrantDebounceService extends Service {
+      hits: string[] = [];
+      private reentered = false;
+
+      @Debounce(50)
+      save(value: string) {
+        this.hits.push(value);
+        if (!this.reentered) {
+          this.reentered = true;
+          this.save('reentrant'); // 方法体内重入调用
+        }
+      }
+    }
+
+    const s = new ReentrantDebounceService();
+    s.save('initial');
+    jest.advanceTimersByTime(50); // trailing 触发 'initial'，执行期间重入 save('reentrant')
+    expect(s.hits).toEqual(['initial']);
+
+    jest.advanceTimersByTime(60); // 重入调用武装的定时器到点
+    expect(s.hits).toEqual(['initial', 'reentrant']);
+  });
+
+  it('@Throttle：leading 执行期间的重入调用应触发 trailing 补刀', () => {
+    class ReentrantThrottleService extends Service {
+      hits: string[] = [];
+      private reentered = false;
+
+      @Throttle(50)
+      save(value: string) {
+        this.hits.push(value);
+        if (!this.reentered) {
+          this.reentered = true;
+          this.save('reentrant'); // leading 执行期内重入
+        }
+      }
+    }
+
+    const s = new ReentrantThrottleService();
+    s.save('initial'); // leading 立即执行，执行期内重入
+    expect(s.hits).toEqual(['initial']);
+
+    jest.advanceTimersByTime(60); // trailing 定时器到点
+    expect(s.hits).toEqual(['initial', 'reentrant']);
+  });
+
+  it('@Debounce：无重入时引用释放语义不变（反向对照）', () => {
+    class PlainService extends Service {
+      hits: string[] = [];
+
+      @Debounce(50)
+      save(value: string) {
+        this.hits.push(value);
+      }
+    }
+
+    const s = new PlainService();
+    s.save('only');
+    jest.advanceTimersByTime(100);
+    expect(s.hits).toEqual(['only']);
+    // 无幽灵重放
+    jest.advanceTimersByTime(200);
+    expect(s.hits).toEqual(['only']);
+  });
+});
+
+/**
+ * 继承 + 同名重装饰回归:runAllCleanups 曾按 propertyKey 跨原型链就近
+ * 去重 —— 子类重装饰同名方法时,基类装饰层(独立 state store,经
+ * super.save() 武装的 pending 定时器)的清理被跳过,destroy 后幽灵触发。
+ */
+describe('@Debounce / @Throttle 子类重装饰同名方法的清理', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  class BaseDebounceService extends Service {
+    hits: string[] = [];
+
+    @Debounce(50)
+    save(value: string) {
+      this.hits.push(`base:${value}`);
+    }
+  }
+
+  class SubDebounceService extends BaseDebounceService {
+    @Debounce(50)
+    override save(value: string) {
+      this.hits.push(`sub:${value}`);
+      super.save(value);
+    }
+  }
+
+  it('destroy 清理全部装饰层的 pending 定时器(含 super 调用武装的基类层)', () => {
+    const s = new SubDebounceService();
+    s.save('x');
+    // 子类层 trailing 触发 → 用户方法经 super.save 武装基类层的 pending 定时器
+    jest.advanceTimersByTime(50);
+    expect(s.hits).toEqual(['sub:x']);
+    s.destroy();
+
+    jest.advanceTimersByTime(100);
+    // 基类层的 pending 定时器不得幽灵触发
+    expect(s.hits).toEqual(['sub:x']);
+  });
+
+  it('cancelDebounce 取消全部装饰层的 pending 定时器', () => {
+    const s = new SubDebounceService();
+    s.save('x');
+    jest.advanceTimersByTime(50); // 武装基类层
+    expect(s.hits).toEqual(['sub:x']);
+    cancelDebounce(s, 'save');
+
+    jest.advanceTimersByTime(100);
+    expect(s.hits).toEqual(['sub:x']);
+  });
+
+  it('正向对照:未 destroy 时两层各自正常触发', () => {
+    const s = new SubDebounceService();
+    s.save('x');
+
+    jest.advanceTimersByTime(100);
+    expect(s.hits).toEqual(['sub:x', 'base:x']);
+  });
+
+  class BaseThrottleService extends Service {
+    hits: string[] = [];
+
+    @Throttle(50, { leading: false })
+    save(value: string) {
+      this.hits.push(`base:${value}`);
+    }
+  }
+
+  class SubThrottleService extends BaseThrottleService {
+    @Throttle(50, { leading: false })
+    override save(value: string) {
+      this.hits.push(`sub:${value}`);
+      super.save(value);
+    }
+  }
+
+  it('@Throttle:destroy 清理全部装饰层的 trailing 定时器', () => {
+    const s = new SubThrottleService();
+    s.save('x'); // leading:false → 子类层 trailing pending
+    jest.advanceTimersByTime(50); // 子类层 trailing 触发 → super.save 武装基类层
+    expect(s.hits).toEqual(['sub:x']);
+    s.destroy();
+
+    jest.advanceTimersByTime(100);
+    expect(s.hits).toEqual(['sub:x']);
+  });
+});
+
+/**
+ * leading 边沿语义：leading:true 应该在每一轮 burst 的边沿触发（lodash 语义），
+ * 而不是整个实例生命周期只第一次。旧实现的门条件是 lastInvokeTime === 0，
+ * 静默期后的新一轮 burst 只剩 trailing —— trailing:false 时该调用被永久丢弃。
+ */
+describe('@Debounce leading 边沿按 burst 触发', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('leading:true trailing:false：静默期后的新调用应立即执行，不得被丢弃', () => {
+    const calls: unknown[][] = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true, trailing: false })
+      save(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new SaveService();
+    s.save('a'); // 首轮 leading 边沿
+    expect(calls).toEqual([['a']]);
+
+    jest.advanceTimersByTime(100); // 静默期（>= wait）
+    s.save('b'); // 新一轮 burst 的 leading 边沿 —— 不得被静默丢弃
+    expect(calls).toEqual([['a'], ['b']]);
+
+    jest.advanceTimersByTime(200);
+    expect(calls).toEqual([['a'], ['b']]); // 无幽灵重放
+  });
+
+  it('leading:true（默认 trailing）：静默期后 leading 立即执行，且不再 trailing 重放', () => {
+    const calls: unknown[][] = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true })
+      save(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new SaveService();
+    s.save('a');
+    jest.advanceTimersByTime(100);
+
+    s.save('b'); // 新 burst：应立即 leading 执行，而不是等 50ms trailing
+    expect(calls).toEqual([['a'], ['b']]);
+
+    jest.advanceTimersByTime(200);
+    expect(calls).toEqual([['a'], ['b']]);
+  });
+
+  it('leading:true：burst 内的连续调用仍由 trailing 收尾（防抖语义不变）', () => {
+    const calls: unknown[][] = [];
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true })
+      save(...args: unknown[]) {
+        calls.push(args);
+      }
+    }
+
+    const s = new SaveService();
+    s.save('a'); // leading
+    jest.advanceTimersByTime(20);
+    s.save('b'); // burst 内：不 leading，等 trailing
+    jest.advanceTimersByTime(20);
+    s.save('c');
+    expect(calls).toEqual([['a']]);
+
+    jest.advanceTimersByTime(100); // trailing 以最新参数收尾一次
+    expect(calls).toEqual([['a'], ['c']]);
+  });
+});
+
+/**
+ * payload 释放：trailing:false 时被抑制的尾调用永远不会执行，其参数/this
+ * 不能驻留在装饰器状态里（实例状态把 payload 钉到下一次 invoke，detached
+ * 哨兵状态更是进程级驻留）。定时器到点（debounce）/入窗即死（throttle）
+ * 时必须释放引用。需要 --expose-gc（test:release）才做 WeakRef 断言。
+ */
+describe('@Debounce / @Throttle trailing:false 被抑制调用的 payload 释放', () => {
+  const gc = (global as { gc?: () => void }).gc;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('@Debounce trailing:false：被抑制的尾调用 payload 在定时器到点后释放', async () => {
+    if (!gc) {
+      return; // 普通 test 运行无 --expose-gc，跳过（test:release 覆盖）
+    }
+
+    class SaveService extends Service {
+      @Debounce(50, { leading: true, trailing: false })
+      save(_payload: object) {
+        /* noop */
+      }
+    }
+
+    const s = new SaveService();
+    s.save({ first: true }); // leading 执行并释放
+    // 独立函数作用域创建 payload，避免 V8 保守栈扫描在当前帧里留下残留引用
+    const makeRef = () => {
+      const payload = { suppressed: true };
+      s.save(payload); // 窗口内被抑制（trailing:false 永不执行）
+      return new WeakRef(payload);
+    };
+    const ref = makeRef();
+
+    jest.advanceTimersByTime(100); // 定时器到点：调用按语义丢弃，payload 必须释放
+    jest.useRealTimers();
+    await new Promise(resolve => setTimeout(resolve, 0)); // 清栈，让保守栈扫描不再误判存活
+    gc!();
+    gc!();
+    expect(ref.deref()).toBeUndefined();
+  });
+
+  it('@Throttle trailing:false：窗口内被抑制的调用 payload 立即释放', async () => {
+    if (!gc) {
+      return;
+    }
+
+    class ScrollService extends Service {
+      @Throttle(50, { trailing: false })
+      onScroll(_payload: object) {
+        /* noop */
+      }
+    }
+
+    const s = new ScrollService();
+    s.onScroll({ first: true }); // leading 执行并释放
+    const makeRef = () => {
+      const payload = { suppressed: true };
+      s.onScroll(payload); // 窗口内 + trailing:false → 永远不会执行
+      return new WeakRef(payload);
+    };
+    const ref = makeRef();
+
+    jest.useRealTimers();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    gc!();
+    gc!();
+    expect(ref.deref()).toBeUndefined();
+  });
+});

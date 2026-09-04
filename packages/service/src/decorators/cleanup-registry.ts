@@ -171,11 +171,41 @@ export function findCleanup(
 }
 
 /**
+ * 沿原型链收集指定 key 的全部清理函数（每层装饰器一个）。
+ * 子类重装饰同名方法时，各层持有独立的实例状态 store（每层都可能
+ * 经 super 调用武装自己的 pending 定时器），只清最近一层会让基类层
+ * 的定时器残留。memo 的各层清理共享同一 CacheState（按 propertyKey
+ * 存于 globalMemoCache），重复执行天然幂等，同样安全。
+ */
+export function findAllCleanups(
+  instance: any,
+  registryKey: symbol,
+  propertyKey: string | symbol
+): CleanupFn[] {
+  const fns: CleanupFn[] = [];
+  let current = Object.getPrototypeOf(instance);
+  while (current && current !== Object.prototype) {
+    if (Object.prototype.hasOwnProperty.call(current, registryKey)) {
+      const fn = (current[registryKey] as CleanupRegistry).get(propertyKey);
+      if (fn) {
+        fns.push(fn);
+      }
+    }
+    current = Object.getPrototypeOf(current);
+  }
+  return fns;
+}
+
+/**
  * 沿原型链收集并执行该 registryKey 下的全部清理函数。
- * 装饰器成员可能定义在任意基类上，只扫直接原型会漏掉继承的清理（#221）；
- * 同名 key 就近去重（子类遮蔽基类）。
+ * 装饰器成员可能定义在任意基类上，只扫直接原型会漏掉继承的清理（#221）。
+ * 同名 key 的各层清理全部执行（不得就近去重）：子类重装饰同名方法时
+ * 各层有独立状态（如 @Debounce 的 per-layer store 与定时器），跳过基类
+ * 层会让 super 调用武装的 pending 定时器在 destroy 后幽灵触发；清理函数
+ * 均按幂等设计（timerId 置空 / 缓存条目删除后再清是 no-op），重复执行
+ * 无害。
  *
- * @returns 被清理的 propertyKey 列表（按收集顺序），供调用方做后续通知
+ * @returns 被清理的 propertyKey 列表（去重后，按收集顺序），供调用方做后续通知
  */
 export function runAllCleanups(instance: any, registryKey: symbol): (string | symbol)[] {
   const seen = new Set<string | symbol>();
@@ -185,12 +215,12 @@ export function runAllCleanups(instance: any, registryKey: symbol): (string | sy
   while (current && current !== Object.prototype) {
     if (Object.prototype.hasOwnProperty.call(current, registryKey)) {
       for (const [propertyKey, cleanup] of current[registryKey] as CleanupRegistry) {
-        if (seen.has(propertyKey)) {
-          continue;
+        // 执行不去重（见上）；通知键去重，同一 key 不重复 notify
+        if (!seen.has(propertyKey)) {
+          seen.add(propertyKey);
+          cleanedKeys.push(propertyKey);
         }
-        seen.add(propertyKey);
         cleanups.push(cleanup);
-        cleanedKeys.push(propertyKey);
       }
     }
     current = Object.getPrototypeOf(current);

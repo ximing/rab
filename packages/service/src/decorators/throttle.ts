@@ -3,7 +3,7 @@
  */
 import {
   createInstanceStateStore,
-  findCleanup,
+  findAllCleanups,
   registerInstanceStateCleanups,
   runAllCleanupsWithDetached,
 } from './cleanup-registry';
@@ -123,16 +123,31 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
     // 执行函数
     const invokeFunc = (state: ThrottleState) => {
       state.lastInvokeTime = Date.now();
+      // 快照本次 invoke 消费的 pending 身份：finally 的引用释放只在
+      // 「invoke 期间没有更新的调用写入」时才安全 —— 用户方法体内重入
+      // 调用会写入新的 lastArgs/lastThis 并武装自己的定时器，无差别
+      // 清理会让那笔重入调用被静默丢弃（定时器空转）。
+      const invokedArgs = state.lastArgs;
+      const invokedThis = state.lastThis;
       try {
         state.result = originalMethod.apply(state.lastThis, state.lastArgs);
       } finally {
         // 触发后即释放对参数/this 的引用：detached 哨兵状态由装饰器闭包
         // 强引用、进程级驻留，不清理会把用户 payload 保留到进程结束。
         // result 保留 —— 窗口内的后续调用按节流语义返回最近一次的结果。
-        state.lastArgs = [];
-        state.lastThis = undefined;
-        // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
-        state.hasPendingCall = false;
+        if (state.lastArgs === invokedArgs && state.lastThis === invokedThis) {
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
+          state.hasPendingCall = false;
+        } else if (!trailing && state.timerId === null) {
+          // 重入写入的新 pending 在 trailing:false 下永远不会执行
+          // （startTimer 不武装），没有定时器到点释放兜底 —— 立即释放，
+          // 别把 payload 钉到下一次 invoke
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          state.hasPendingCall = false;
+        }
       }
       return state.result;
     };
@@ -153,6 +168,12 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
           state.timerId = null;
           if (state.hasPendingCall && Date.now() - state.lastInvokeTime >= wait) {
             invokeFunc(state);
+          } else {
+            // 到点未触发（时钟未走过窗口：legacy fake timers / 系统时钟回拨）：
+            // 该 pending 按现有语义被丢弃（不重排），但必须释放 payload 引用
+            state.lastArgs = [];
+            state.lastThis = undefined;
+            state.hasPendingCall = false;
           }
         }, wait);
       }
@@ -174,6 +195,12 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
           state.result = invokeFunc(state);
         }
         startTimer(state);
+        if (!trailing && !leading) {
+          // leading/trailing 都关闭：该调用永远不会执行，立即释放 payload
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          state.hasPendingCall = false;
+        }
         return state.result;
       }
 
@@ -181,6 +208,13 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       if (timeSinceLastInvoke < wait) {
         // 更新 trailing 定时器
         startTimer(state);
+        if (!trailing) {
+          // trailing 关闭时窗口内调用永远不会执行 —— 立即释放 payload，
+          // 不把引用钉到下一次 invoke
+          state.lastArgs = [];
+          state.lastThis = undefined;
+          state.hasPendingCall = false;
+        }
         return state.result;
       }
 
@@ -230,8 +264,9 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
  * ```
  */
 export function cancelThrottle(instance: any, propertyKey: string | symbol): void {
-  const cleanup = findCleanup(instance, THROTTLE_CLEANUPS, propertyKey);
-  if (cleanup) {
+  // 全部装饰层都取消：子类重装饰同名方法时各层持有独立的 pending 定时器
+  // （可能经 super 调用武装），只取消最近一层会让基类层到点幽灵触发
+  for (const cleanup of findAllCleanups(instance, THROTTLE_CLEANUPS, propertyKey)) {
     cleanup.call(instance);
   }
 }

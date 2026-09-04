@@ -42,6 +42,7 @@ export type {
   DebounceOptions,
   ThrottleOptions,
   MemoOptions,
+  CleanupAllMemosOptions,
   OnOptions,
   OnceOptions,
 } from './decorators';
