@@ -306,8 +306,11 @@ export function batch<T>(fn: () => T): T {
           fnErrorWithCause.cause === undefined
         ) {
           try {
-            fnErrorWithCause.cause = flushError;
-            attached = true;
+            // 同一 Error 实例被回调和 reaction 同时抛出时禁止自引用 cause
+            if (flushError !== fnError) {
+              fnErrorWithCause.cause = flushError;
+              attached = true;
+            }
           } catch {
             // 回调的错误对象被冻结/不可扩展时，strict mode 下赋值 cause
             // 自身会抛 TypeError —— 绝不允许它替换回调的在途异常，
