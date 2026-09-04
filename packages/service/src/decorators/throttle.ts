@@ -184,11 +184,13 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       if (trailing) {
         state.timerId = setTimeout(() => {
           state.timerId = null;
-          if (state.hasPendingCall && Date.now() - state.lastInvokeTime >= wait) {
+          // wait 由 setTimeout 本身保证。不要再用 Date.now()-lastInvokeTime
+          // 复检：定时器略早触发、时钟回拨、或 Date.now 被冻结时，那次
+          // 比较会把窗口内最后一次调用静默丢掉。leading 立即执行后若无
+          // 新调用，hasPendingCall 已是 false，不会双触发。
+          if (state.hasPendingCall) {
             invokeFunc(state);
           } else {
-            // 到点未触发（时钟未走过窗口：legacy fake timers / 系统时钟回拨）：
-            // 该 pending 按现有语义被丢弃（不重排），但必须释放 payload 引用
             releasePayload(state);
           }
         }, wait);
@@ -241,11 +243,18 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
 
       // 超过时间窗口：leading 开启才允许同步执行（leading:false 的任何
       // 调用都不得同步执行 —— 由 trailing 定时器到点补刀）
-      cancelTimer(state);
       if (leading) {
+        cancelTimer(state);
         state.result = invokeFunc(state);
+        startTimer(state);
+      } else {
+        // 已有 trailing 定时器时不得 cancel 再重排：定时器以「武装时刻 + wait」
+        // 为截止，武装发生在 lastInvoke 之后，因此 lastInvoke+wait 到
+        // 武装+wait 之间的调用都会落入本分支；每次 cancel + 重排一个完整
+        // wait，持续调用流会把截止永远推到「下一次调用 + wait」，首次
+        // trailing 之后方法再也不执行。startTimer 在 timerId 非空时是空操作。
+        startTimer(state);
       }
-      startTimer(state);
       return state.result;
     };
 
