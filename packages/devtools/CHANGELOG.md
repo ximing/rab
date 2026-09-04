@@ -1,5 +1,29 @@
 # @rabjs/devtools
 
+## 9.4.0
+
+### Patch Changes
+
+- Updated dependencies [946f148]
+- Updated dependencies [cf93d8d]
+- Updated dependencies [946f148]
+- Updated dependencies [358f357]
+- Updated dependencies [5095f54]
+- Updated dependencies [946f148]
+- Updated dependencies [82e32e7]
+- Updated dependencies [82e32e7]
+- Updated dependencies [946f148]
+- Updated dependencies [cf0c308]
+- Updated dependencies [c492131]
+- Updated dependencies [c17140c]
+- Updated dependencies [2f20796]
+- Updated dependencies [54de8b5]
+- Updated dependencies [54de8b5]
+- Updated dependencies [c91a482]
+- Updated dependencies [882fd57]
+  - @rabjs/service@9.4.0
+  - @rabjs/shared@9.4.0
+
 ## 9.3.5
 
 ### Patch Changes
