@@ -4,13 +4,161 @@
  * 函数组件：使用 observer 实现（基于 Hooks + useSyncExternalStore）
  * 类组件：使用 observe + forceUpdate 实现
  */
-import { observe, unobserve, type Reaction } from '@rabjs/observer';
+import {
+  observe,
+  unobserve,
+  isRewritableMap,
+  isRewritableSet,
+  isWeakMapTarget,
+  isWeakSetTarget,
+  type Reaction,
+} from '@rabjs/observer';
 import { ComponentType, ComponentClass } from 'react';
 
 import { observer } from './observer';
 import { isUsingStaticRendering } from './static-rendering';
 import { notifyReactStore } from './utils/notify-react-store';
 import { IS_REACTIVE_COMPONENT, isClassComponent } from './utils/react-helper';
+
+/**
+ * 组合生命周期函数的品牌标记：构造期/render 期重绑过的字段带此标记，
+ * 避免重复包装；子类 extends view(Base) 时其字段初始化在 super() 之后
+ * 执行，会覆盖掉包装器构造期组合好的函数字段（无品牌）——render 阶段
+ * 据此识别并重新组合。
+ */
+const COMPOSED_BY_VIEW = Symbol('__rabjs_view_composed_lifecycle__');
+
+/**
+ * 挂载快照的一条记录：首渲染（commit 前，不做依赖追踪）读到的一个
+ * observable 位置及当时读到的值。
+ */
+interface MountSnapshotEntry {
+  target: object;
+  key: PropertyKey;
+  type: string;
+  /** 读取当时的快照值；UNREADABLE 表示无法安全重读（按已变化处理） */
+  value: unknown;
+}
+
+/** 快照值无法安全捕获/重读时的哨兵 —— 对比时按「已变化」处理（宁可多更一次） */
+const UNREADABLE = Symbol('__rabjs_view_snapshot_unreadable__');
+
+/**
+ * 沿原型链查找数据属性的值。accessor（getter）不执行 —— Reflect.get 会
+ * 真实调用用户 getter（@Memo 等），且 this 是 raw 实例：@Memo 会以 raw
+ * 身份另建一份注册不到任何依赖的 CacheState（raw 读取不过 proxy trap），
+ * 既让 getter 在挂载期多执行一次，又留下永不失效的陈旧缓存。accessor
+ * 一律返回 UNREADABLE（按「已变化」处理，宁可多更一次）。
+ */
+function readDataPropertyValue(target: object, key: PropertyKey): unknown {
+  let obj: object | null = target;
+  while (obj) {
+    const desc = Object.getOwnPropertyDescriptor(obj, key);
+    if (desc) {
+      return 'value' in desc ? desc.value : UNREADABLE;
+    }
+    obj = Object.getPrototypeOf(obj);
+  }
+  // 属性不存在：Reflect.get 也会安全地得到 undefined
+  return undefined;
+}
+
+/**
+ * 读取一个被追踪位置的当前值（快照捕获与挂载时对比共用）。
+ * 只读 raw target，不经过 proxy trap，不产生依赖注册；
+ * 集合类型用原生方法读取，不触发任何用户代码。
+ */
+function readSnapshotValue(target: object, key: PropertyKey, type: string): unknown {
+  // 集合判定必须用 observer 的跨 realm 判定（tag + duck-check，issue #92
+  // 场景）而非裸 instanceof —— 裸 instanceof 对 vm/iframe 里的 Map/Set
+  // 为 false，而 collection-handler 的 G7 路由会把它们送进 instrumented
+  // trap，两边判定不一致会让快照对比对跨 realm 集合静默失效。
+  try {
+    if (type === 'iterate') {
+      // Map/Set 迭代依赖关心内容本身（值覆盖也算变化），做全量快照；
+      // 普通对象/数组的迭代依赖只关心键集合（元素值由各自的 get 记录覆盖）
+      if (isRewritableMap(target)) {
+        return [...target.entries()];
+      }
+      if (isRewritableSet(target)) {
+        return [...target.values()];
+      }
+      return Reflect.ownKeys(target);
+    }
+    if (type === 'key-iterate') {
+      // Map.keys() 的 key 侧迭代依赖（#211 与值侧 iterate 分桶）：
+      // 关心 key 集合本身，快照 key 列表 —— 落入下方 get 分支会对
+      // key='' 读出 undefined≡undefined，key 增删永远判不出差异
+      if (isRewritableMap(target)) {
+        return [...target.keys()];
+      }
+      // key-iterate 只会注册在 Map 上（Set 的 key 迭代走 iterate 桶）
+      return UNREADABLE;
+    }
+    if (type === 'has') {
+      // Weak 集合同样走原生方法：collection-handler 对 WeakMap.has /
+      // WeakSet.has 也注册 'has' 依赖，用 Reflect.has 读 WeakSet 恒得
+      // false，捕获与对比两端恒等会让窗口内 add 静默丢失
+      if (
+        isRewritableMap(target) ||
+        isRewritableSet(target) ||
+        isWeakMapTarget(target) ||
+        isWeakSetTarget(target)
+      ) {
+        return target.has(key as never);
+      }
+      return Reflect.has(target, key);
+    }
+    // get（WeakMap.get 同理注册 'get' 依赖，不能落入 readDataPropertyValue
+    // 恒读 undefined）
+    if (isRewritableMap(target) || isWeakMapTarget(target)) {
+      return target.get(key as never);
+    }
+    return readDataPropertyValue(target, key);
+  } catch {
+    return UNREADABLE;
+  }
+}
+
+/** 对比快照值与当前值；iterate 快照是数组（Map 为 [k,v] 对），逐元素比较 */
+function snapshotValueEquals(entry: MountSnapshotEntry, current: unknown): boolean {
+  if (entry.value === UNREADABLE || current === UNREADABLE) {
+    return false;
+  }
+  if (entry.type === 'iterate' || entry.type === 'key-iterate') {
+    const prev = entry.value as unknown[];
+    const next = current as unknown[];
+    if (prev.length !== next.length) {
+      return false;
+    }
+    // 逐对比较仅适用于 Map 的值侧 iterate（[k,v] 元组）；
+    // key-iterate 快照是纯 key 列表，与 Set/对象一样逐元素比较
+    const isPairwise = entry.type === 'iterate' && isRewritableMap(entry.target);
+    for (let i = 0; i < prev.length; i++) {
+      if (isPairwise) {
+        const [pk, pv] = prev[i] as [unknown, unknown];
+        const [nk, nv] = next[i] as [unknown, unknown];
+        if (!Object.is(pk, nk) || !Object.is(pv, nv)) {
+          return false;
+        }
+      } else if (!Object.is(prev[i], next[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return Object.is(entry.value, current);
+}
+
+/** 挂载快照是否在「首渲染 → _onDidMount」的 commit 窗口内失效 */
+function isMountSnapshotStale(snapshot: MountSnapshotEntry[]): boolean {
+  for (const entry of snapshot) {
+    if (!snapshotValueEquals(entry, readSnapshotValue(entry.target, entry.key, entry.type))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * view HOC - 将组件转换为响应式组件
@@ -46,14 +194,45 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     /**
      * 响应式 render 函数
      * 会在 observable 数据变化时自动触发组件更新
+     * （declare + 构造器守护赋值，不能用类字段初始化 —— 用户构造函数
+     * 若以 Object.freeze(this) 收尾，类字段的 defineProperty 会在
+     * super() 返回后抛 TypeError，组件直接被构造期打崩）
      */
-    private _reactiveRender: Reaction | null = null;
+    declare private _reactiveRender: Reaction | null;
 
     /** 组件是否已 commit。commit 前的 render 不做依赖追踪（见 render 注释） */
-    private _committed = false;
+    declare private _committed: boolean;
+
+    /**
+     * 首渲染的读取快照（commit 窗口的变更检测依据，见 _renderForMount）。
+     * _onDidMount 消费后清空。
+     */
+    declare private _mountSnapshot: MountSnapshotEntry[] | null;
 
     constructor(props: P, context: any) {
       super(props, context);
+
+      // 不可扩展实例（Object.preventExtensions/freeze）上连字段初值都
+      // 写不进去 —— 降级为 undefined（与现有 null/false 判断兼容），
+      // 组件以不可响应式形态继续存活。（完全 freeze 的实例连 React 自己
+      // 的 updater 赋值都会失败，本就不属于可挂载场景。）
+      try {
+        this._reactiveRender = null;
+        this._committed = false;
+        this._mountSnapshot = null;
+      } catch {
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 组件实例被 preventExtensions/freeze 密封，' +
+                '响应式追踪所需的内部字段无法初始化 —— 该组件将退化为普通组件' +
+                '（不追踪 observable 变化）。'
+            );
+          } catch {
+            // 日志失败同样不得影响挂载
+          }
+        }
+      }
 
       // 注意：这里刻意不创建 reaction。构造函数/首渲染里创建并执行的
       // reaction 会立即向 store 注册依赖，而「渲染后被丢弃且永不 commit」
@@ -78,22 +257,61 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 两种编译模式下都是实例自身属性），这里把被遮蔽的字段原地替换为
      * 「先执行用户字段、再执行包装器逻辑」的组合。
      * 以原型方法声明的用户没有实例自身字段，本方法不做任何事。
+     *
+     * 组合函数带 COMPOSED_BY_VIEW 品牌：class Sub extends view(Base) 时，
+     * 子类字段初始化在 super()（即本构造函数）之后才执行，会覆盖掉这里
+     * 组合好的字段 —— 首渲染（_renderForMount）会再次调用本方法，凭品牌
+     * 识别出被覆盖的字段并重新组合（被覆盖丢失的基类用户字段逻辑与
+     * 无 view 时的 JS 字段遮蔽语义一致，不额外补偿）。
      */
     private _rebindShadowedLifecycleFields(): void {
       const self = this as unknown as Record<string, unknown>;
-      if (Object.prototype.hasOwnProperty.call(this, 'componentDidMount')) {
-        const userDidMount = self.componentDidMount as (this: unknown) => void;
-        self.componentDidMount = () => {
-          userDidMount.call(this);
-          this._onDidMount();
-        };
-      }
-      if (Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount')) {
-        const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
-        self.componentWillUnmount = () => {
-          userWillUnmount.call(this);
-          this._releaseReaction();
-        };
+      // 实例被完全 freeze 时下面的字段赋值会在 strict mode 抛 TypeError
+      // —— 不得让包装器成为额外的崩溃点（React 自身对 freeze 实例本就
+      // 无法挂载，这里只是防御）。失败代价是退回「字段遮蔽」旧行为
+      // （StrictMode/Suspense 路径上可能失去响应式）。
+      try {
+        if (
+          Object.prototype.hasOwnProperty.call(this, 'componentDidMount') &&
+          typeof self.componentDidMount === 'function' &&
+          !(self.componentDidMount as any)[COMPOSED_BY_VIEW]
+        ) {
+          const userDidMount = self.componentDidMount as (this: unknown) => void;
+          const composed = () => {
+            try {
+              userDidMount.call(this);
+            } catch (error) {
+              // 用户字段抛错也必须开启依赖追踪 —— 实例若幸存（error
+              // boundary 重试等），跳过 _onDidMount 就是永久静默失去
+              // 响应式（与下方 cWU 的 finally 释放同一原则，方向相反）。
+              // 但落点的次生错误不得替换在途的用户错误（见该方法的注释）
+              this._onDidMountPreservingError(error);
+            }
+            this._onDidMount();
+          };
+          (composed as any)[COMPOSED_BY_VIEW] = true;
+          self.componentDidMount = composed;
+        }
+        if (
+          Object.prototype.hasOwnProperty.call(this, 'componentWillUnmount') &&
+          typeof self.componentWillUnmount === 'function' &&
+          !(self.componentWillUnmount as any)[COMPOSED_BY_VIEW]
+        ) {
+          const userWillUnmount = self.componentWillUnmount as (this: unknown) => void;
+          const composed = () => {
+            try {
+              userWillUnmount.call(this);
+            } finally {
+              // 用户字段抛错也必须释放 reaction —— React 在 cWU 抛错后
+              // 依然完成卸载，跳过清理就是确定性的订阅泄漏
+              this._releaseReaction();
+            }
+          };
+          (composed as any)[COMPOSED_BY_VIEW] = true;
+          self.componentWillUnmount = composed;
+        }
+      } catch {
+        /* 构造器的字段初值守护已发警告，此处静默降级即可 */
       }
     }
 
@@ -132,10 +350,9 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       // 组件尚未 commit（首渲染，或将被丢弃的并发/挂起 pass）：裸执行原始
       // render，不做依赖追踪。追踪即向 store 注册；被丢弃且永不 commit 的
       // pass 没有 cWU 可清理，reaction 会永久泄漏。commit 后的首次依赖收集
-      // 由 componentDidMount 建 reaction 并 forceUpdate 的那次 render 完成
-      // （在浏览器绘制前同步发生，UI 无感知）。
+      // 由 componentDidMount 建 reaction 完成（见 _onDidMount）。
       if (!this._committed) {
-        return super.render();
+        return this._renderForMount();
       }
       // componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
       // 模拟卸载 / Suspense 隐藏→显示都会走 cWU 而不销毁实例——实例存活、
@@ -151,29 +368,189 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
     }
 
     /**
+     * commit 前的 render：裸执行，但用一次性探针 reaction 记录读取快照。
+     *
+     * 探针在 render 结束的 finally 里立即 unobserve —— 注册生命周期不超出
+     * 本次 render 调用，被丢弃的并发 pass 不会泄漏任何订阅。快照（读了哪些
+     * observable 位置、当时读到的值）留给 _onDidMount 做 commit 窗口的
+     * 变更检测：窗口内（自身/子组件/兄弟组件的 cDM 等）对依赖的写入发生时
+     * 还没有 reaction 订阅，会被静默丢弃，没有快照对比就会让 DOM 永久停留
+     * 在首渲染的旧值上。
+     *
+     * 顺带重新组合被遮蔽的生命周期字段：class Sub extends view(Base) 时
+     * 子类字段初始化晚于包装器构造函数，构造期的组合会被覆盖，这里（字段
+     * 初始化必然已完成、React 尚未调用任何生命周期）是重新组合的最早时机。
+     *
+     * 已知限制：快照只记录投递给探针 reaction（运行栈顶）的读取 —— render
+     * 期间同步执行的另一个 reaction（嵌套的共享派生）所读的位置不在快照
+     * 内，commit 窗口对它们的变更检测不到（该内层 reaction 自身仍按自己的
+     * scheduler 重跑；@Memo 的嵌套读取被 accessor 一律 UNREADABLE 的保守
+     * 处理顺带覆盖）。render 里直接驱动其他 reaction 本就属于反模式，
+     * 此处只为如实记录边界。
+     */
+    private _renderForMount(): React.ReactNode {
+      this._rebindShadowedLifecycleFields();
+
+      const snapshot: MountSnapshotEntry[] = [];
+      const recordRead = Object.assign(
+        (operation: { target: object; key: PropertyKey; type: string }) => {
+          snapshot.push({
+            target: operation.target,
+            key: operation.key,
+            type: operation.type,
+            value: readSnapshotValue(operation.target, operation.key, operation.type),
+          });
+        },
+        {
+          // 不消费 oldValue —— 避免 clear() 等操作为本探针付 O(n) 快照成本
+          wantsOldValue: false,
+          // 只读 raw target + push 数组，绝不写 observable —— 声明
+          // reentrantSafe 后，在 isDebugging 重入窗口（某个 reaction 的
+          // debugger 执行期间同步完成的首挂载）内读取记录仍然送达；
+          // 否则窗口内挂载的组件快照为空，commit 窗口的变更检测被架空
+          // （与 @Memo 同步失效钩子的 reentrantSafe 同一先例）。
+          reentrantSafe: true,
+        }
+      );
+
+      const probe = observe(() => super.render(), {
+        lazy: true,
+        // render 期间的写入不会调度本探针（reaction 在运行栈上会被跳过），
+        // noop scheduler 只是保险，绝不允许默认的同步重跑语义
+        scheduler: () => {},
+        debugger: recordRead,
+      });
+      try {
+        return probe();
+      } finally {
+        unobserve(probe);
+        try {
+          this._mountSnapshot = snapshot;
+        } catch {
+          /* 密封实例：降级为无快照（_onDidMount 的 _committed 赋值同样会失败） */
+        }
+      }
+    }
+
+    /**
      * 组件挂载 / StrictMode 模拟重挂载 / Suspense 隐藏→显示 时恢复 reaction
      */
     componentDidMount(): void {
-      if (super.componentDidMount) {
-        super.componentDidMount();
+      // 先调用用户定义的 componentDidMount；用户方法抛错也必须开启依赖
+      // 追踪 —— 实例若幸存（error boundary 重试等），跳过 _onDidMount
+      // 就是永久静默失去响应式（与 cWU 的 finally 释放同一原则）
+      try {
+        if (super.componentDidMount) {
+          super.componentDidMount();
+        }
+      } catch (error) {
+        // 用户错误在途：落点仍要执行，但其次生错误不得替换在途的用户错误
+        this._onDidMountPreservingError(error);
       }
-
       this._onDidMount();
     }
 
     /**
+     * 用户 cDM 抛错后的挂载落点：_onDidMount 仍执行（响应式不静默丢失），
+     * 但它自身的次生错误（如 reaction 首跑重新执行 render 时抛错）不得经
+     * finally 语义替换在途的用户错误 —— 错误边界必须看到根因（与 batch 的
+     * 「绝不替换在途异常」#212 同一原则）。次生错误降级为 dev 警告。
+     */
+    private _onDidMountPreservingError(userError: unknown): never {
+      try {
+        this._onDidMount();
+      } catch (secondary) {
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 用户 componentDidMount 抛错后，挂载落点' +
+                '（render 依赖收集重跑）也抛出次生错误 —— 已吞没以保留用户的' +
+                '原始错误。次生错误：',
+              secondary
+            );
+          } catch {
+            // 日志失败同样不得影响错误传播
+          }
+        }
+      }
+      throw userError;
+    }
+
+    /**
      * commit 落点：开启依赖追踪。
-     * 首渲染是裸执行的（见 render），这里创建 reaction 并强制重跑一次
-     * 渲染，让 render 在 reaction 中执行以完成首次依赖收集；
-     * componentWillUnmount 会 unobserve 并置空 reaction，但 StrictMode
-     * 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU 而不销毁实例，
-     * 且该路径只重放 cDM、不再触发 render——同样由本方法负责复活。
+     * 首渲染是裸执行的（见 render），这里创建 reaction 并同步执行一次，
+     * 让 render 在 reaction 中运行以完成首次依赖收集（输出丢弃，不产生
+     * 额外 commit）；componentWillUnmount 会 unobserve 并置空 reaction，
+     * 但 StrictMode 模拟卸载、Suspense/Offscreen 隐藏→显示都会走 cWU
+     * 而不销毁实例，且该路径只重放 cDM、不再触发 render——同样由本方法
+     * 负责复活。
      */
     private _onDidMount(): void {
-      this._committed = true;
+      // 冻结实例上写字段会抛 TypeError —— 降级跳过响应式恢复。
+      // 构造期密封的实例在构造函数里已发 dev 警告；但「构造期可写、用户在
+      // cDM 里 Object.freeze(this)」的场景走到这里 —— 静默降级会让组件
+      // 永久失去响应式且毫无征兆，必须同样可观测
+      try {
+        this._committed = true;
+      } catch {
+        // 冻结实例：字段写不进去，但快照数组本身未被冻结 —— 就地清空，
+        // 否则首渲染读到的每个 observable target/value 被实例字段钉住，
+        // 直到实例被 GC（降级路径在本方法提前 return，等不到正常消费）
+        const pinned = this._mountSnapshot;
+        if (pinned) {
+          pinned.length = 0;
+        }
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            console.warn(
+              '[@rabjs/react] view: 组件实例在 componentDidMount 中被 freeze，' +
+                '响应式追踪无法开启 —— 该组件将退化为普通组件（不追踪 observable 变化）。'
+            );
+          } catch {
+            // 日志失败同样不得影响挂载
+          }
+        }
+        return;
+      }
+      // 取出首渲染的读取快照（一次性消费）
+      const snapshot = this._mountSnapshot;
+      try {
+        this._mountSnapshot = null;
+      } catch {
+        /* _committed 赋值已成功，此处不可达；防御而已 */
+      }
       if (!this._reactiveRender || this._reactiveRender.unobserved) {
-        this._reactiveRender = this._createReactiveRender();
-        this.forceUpdate();
+        const reaction = this._createReactiveRender();
+        try {
+          this._reactiveRender = reaction;
+        } catch {
+          return;
+        }
+        if (snapshot && isMountSnapshotStale(snapshot)) {
+          // commit 窗口内（自身/子组件 cDM 等）依赖已变化：同步收集渲染的输出
+          // 已不等于刚 commit 的首渲染，「丢弃输出」假设不成立 —— forceUpdate
+          // 让 render 阶段重跑（顺带完成依赖收集），DOM 反映新值。错误按
+          // render 语义抛出（错误边界行为与 master 一致），cDU 触发是正当的
+          // （数据确实在挂载过程中变了），不属于伪 update。
+          this.forceUpdate();
+          return;
+        }
+        if (!snapshot) {
+          // cDM 重放（StrictMode 模拟重挂载 / Suspense·Offscreen 隐藏→显示）
+          // 没有伴随 render，没有快照可比对 —— 隐藏/卸载窗口内的依赖变化
+          // 无从检测。按 master 语义无条件 forceUpdate：render 阶段重跑
+          // （顺带完成复活 reaction 的首次依赖收集），DOM 反映当前值，
+          // 不停留在隐藏前的旧值上。
+          this.forceUpdate();
+          return;
+        }
+        // 不 forceUpdate：窗口内无变化时，首次依赖收集直接同步执行一次
+        // reaction 即可（render 在追踪中再跑一遍，输出与刚 commit 的首渲染
+        // 相同，直接丢弃）。forceUpdate 会把「挂载」变成一次 update commit ——
+        // render 走完整双 commit，且 componentDidUpdate /
+        // getSnapshotBeforeUpdate 会紧随 mount 被触发（prevProps ===
+        // props），未做挂载防护的用户副作用被 spurious 执行。
+        reaction();
       }
     }
 
@@ -216,21 +593,42 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
      * 组件卸载时清理 reaction
      */
     componentWillUnmount(): void {
-      // 先调用用户定义的 componentWillUnmount
-      if (super.componentWillUnmount) {
-        super.componentWillUnmount();
+      // 先调用用户定义的 componentWillUnmount；用户方法抛错也必须释放
+      // reaction —— React 在 cWU 抛错后依然完成卸载，跳过清理就是确定性
+      // 的订阅泄漏（与箭头字段路径的 try/finally 组合一致）
+      try {
+        if (super.componentWillUnmount) {
+          super.componentWillUnmount();
+        }
+      } finally {
+        this._releaseReaction();
       }
-
-      this._releaseReaction();
     }
 
     /**
      * 清理 reaction，释放内存
      */
     private _releaseReaction(): void {
+      // cWU 之后实例未必销毁（StrictMode 模拟卸载 / Suspense·Offscreen 隐藏）：
+      // 重置 _committed，让后续 render 回到 commit 前的探针路径 —— 隐藏树被
+      // props/context 驱动重渲染时若在 committed 路径重建并执行存活 reaction，
+      // 而子树随后在隐藏中被删除（React 不重放 cWU），reaction 永不 unobserve，
+      // 与首渲染泄漏同类。探针渲染不留下任何订阅（render 结束即 unobserve），
+      // reveal 的 cDM 重放再由 _onDidMount 消费其快照。
+      // 冻结实例上写字段会抛 —— 降级尽力而为。
+      try {
+        this._committed = false;
+      } catch {
+        /* frozen instance */
+      }
       if (this._reactiveRender) {
         unobserve(this._reactiveRender);
-        this._reactiveRender = null;
+        // 冻结实例上写字段会抛 —— unobserve 已完成清理目的，置空尽力而为
+        try {
+          this._reactiveRender = null;
+        } catch {
+          /* frozen instance */
+        }
       }
     }
   }

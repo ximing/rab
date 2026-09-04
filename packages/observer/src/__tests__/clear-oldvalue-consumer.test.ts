@@ -139,4 +139,36 @@ describe('#10 clear oldValue is only copied when a debugger consumes it', () => 
     expect(s.size).toBe(0);
     expect(ctorCalls.some(([arg]) => arg === raw)).toBe(false);
   });
+
+  test('debugger 声明 wantsOldValue = false：clear 不做 snapshot（@Memo 同步失效钩子场景）', () => {
+    const raw = new Map<string, number>([['a', 1]]);
+    const m = observable(raw);
+    let dummy: number | undefined;
+    observe(() => (dummy = m.get('a')), {
+      debugger: Object.assign(() => {}, { wantsOldValue: false }),
+    });
+    expect(dummy).toBe(1);
+
+    const RealMap = globalThis.Map;
+    const ctorCalls: Array<Array<unknown>> = [];
+    const SpyMap = function (this: unknown, iterable?: unknown) {
+      ctorCalls.push([iterable]);
+      return iterable === undefined
+        ? new RealMap()
+        : new RealMap(iterable as Iterable<readonly [unknown, unknown]>);
+    } as unknown as MapConstructor;
+    Object.defineProperty(SpyMap, 'prototype', { value: RealMap.prototype });
+    (globalThis as { Map: MapConstructor }).Map = SpyMap;
+    try {
+      m.clear();
+    } finally {
+      (globalThis as { Map: MapConstructor }).Map = RealMap;
+    }
+
+    // reaction 正常触发，集合被清空；不消费 oldValue 的 debugger
+    // 不值得让 clear 付 O(n) 快照成本
+    expect(dummy).toBe(undefined);
+    expect(m.size).toBe(0);
+    expect(ctorCalls.some(([arg]) => arg === raw)).toBe(false);
+  });
 });

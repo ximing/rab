@@ -48,17 +48,20 @@ const PROTOTYPE_SENSITIVE_KEYS = new Set(['__proto__', 'constructor', 'prototype
 
 // 拦截属性读取操作,建立依赖关系并返回响应式的值。
 function get(target: object, key: PropertyKey, receiver: unknown): unknown {
-  // 调用 Reflect.get(target, key, receiver) 获取原始值
-  const result = Reflect.get(target, key, receiver);
   if (typeof key === 'symbol' && wellKnownSymbols.has(key)) {
-    return result;
+    return Reflect.get(target, key, receiver);
   }
   // '__proto__' 直接返回原始原型: 不注册依赖 (不可能有对应通知), 也不包装
   if (key === '__proto__') {
-    return result;
+    return Reflect.get(target, key, receiver);
   }
-  // 如果当前有 reaction 在运行,建立 (target.key -> reaction) 的依赖
+  // 依赖注册必须先于 Reflect.get: accessor getter(@Memo、用户 getter)抛错
+  // 时, 先取值后注册会跳过本次注册, 读取方 reaction 以零依赖收场 —— 之后
+  // 任何变更/notify 都唤不醒它 (#247 根因; @Memo getter 里的 Reflect.has
+  // 预注册只是单消费者补丁, 普通 getter 靠本处兜底)。
   registerRunningReactionForOperation({ target, key, receiver, type: 'get' });
+  // 调用 Reflect.get(target, key, receiver) 获取原始值
+  const result = Reflect.get(target, key, receiver);
 
   // 处理不可配置且不可写的属性
   // Proxy 有一个不变式(invariant):

@@ -2,7 +2,7 @@
  * Memo 装饰器测试
  */
 
-import { observe, unobserve, batch } from '@rabjs/observer';
+import { observe, unobserve, batch, untracked } from '@rabjs/observer';
 import { Service } from '../../service';
 import { Memo, invalidateMemo, cleanupAllMemos } from '../../decorators/memo';
 
@@ -260,7 +260,7 @@ describe('@Memo 装饰器', () => {
       expect(computeCount2).toBe(2);
     });
 
-    it('memo getter 可以依赖另一个 memo getter，但需要注意缓存行为', () => {
+    it('memo getter 依赖另一个 memo getter 时，依赖变化后链式缓存自动失效', () => {
       let computeCount1 = 0;
       let computeCount2 = 0;
 
@@ -287,19 +287,14 @@ describe('@Memo 装饰器', () => {
       expect(computeCount1).toBe(1);
       expect(computeCount2).toBe(1);
 
-      // 修改数据后，quadrupled 的缓存不会自动失效
-      // 因为它依赖的是 doubled 的返回值，而不是 doubled 的缓存状态
+      // 修改数据后链式缓存自动失效（#248 同步失效钩子 + scheduler notify
+      // 链 + 版本快照链校验）：doubled 的 scheduler -> notify(instance,
+      // 'doubled') -> quadrupled 读路径链校验判负 -> 重算。
+      // 不需要「先访问 doubled 再手动 invalidateMemo」的旧用法。
       service.data = 20;
 
-      // 需要先访问 doubled 来更新它的缓存
-      expect(service.doubled).toBe(40);
-      expect(computeCount1).toBe(2);
-
-      // 然后手动失效 quadrupled 的缓存
-      invalidateMemo(service, 'quadrupled');
-
-      // 现在访问 quadrupled 会得到正确的值
       expect(service.quadrupled).toBe(80);
+      expect(computeCount1).toBe(2);
       expect(computeCount2).toBe(2);
     });
   });
@@ -712,6 +707,643 @@ describe('@Memo 装饰器', () => {
       expect(seen).toEqual(['label:1']);
 
       unobserve(reaction);
+    });
+
+    it('symbol 命名的 @Memo 也必须被 cleanupAllMemos 清理并通知', () => {
+      let external = 1;
+      const KEY = Symbol('label');
+
+      class TestService extends Service {
+        @Memo()
+        get [KEY]() {
+          return `s:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      const seen: string[] = [];
+      const reaction = observe(() => {
+        seen.push(service[KEY]);
+      });
+      expect(seen).toEqual(['s:1']);
+
+      external = 2;
+      cleanupAllMemos(service);
+
+      // getOwnPropertyNames 不含 symbol 键 —— 漏扫会让 symbol memo 的
+      // reaction 在 destroy 后仍然存活
+      expect(seen).toEqual(['s:1', 's:2']);
+
+      unobserve(reaction);
+    });
+
+    it('notify flush 中 reaction 抛错不得中断 cleanupAllMemos（清理 API 必须免抛）', () => {
+      let external = 1;
+
+      class TestService extends Service {
+        @Memo()
+        get a() {
+          return `a:${external}`;
+        }
+      }
+
+      const service = new TestService();
+      // 挂载中的观察者：首次正常，cleanup 后重跑时抛错
+      let shouldThrow = false;
+      const reaction = observe(() => {
+        void service.a;
+        if (shouldThrow) {
+          throw new Error('observer-exploded');
+        }
+      });
+
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        external = 2;
+        shouldThrow = true;
+        // flush 会重抛首个 reaction 错误 —— 作为清理 API 不得把它抛给调用方
+        expect(() => cleanupAllMemos(service)).not.toThrow();
+        expect(warnSpy).toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+        unobserve(reaction);
+      }
+    });
+  });
+
+  describe('@Memo 链式依赖 mid-batch 读取（#248 链式补全）', () => {
+    it('A memo 依赖 B memo，batch 内修改 B 的底层依赖后读 A 必须是最新值', () => {
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          return this.items.reduce((a, b) => a + b, 0);
+        }
+
+        @Memo()
+        get label() {
+          return `total=${this.total}`;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.label).toBe('total=0'); // warm both caches
+
+      let midBatch = '';
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.label;
+      });
+
+      expect(midBatch).toBe('total=5');
+      expect(service.label).toBe('total=5');
+    });
+
+    it('三级链 A→B→C，batch 内修改 C 的底层依赖后读 A 必须是最新值', () => {
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get c() {
+          return this.n * 2;
+        }
+
+        @Memo()
+        get b() {
+          return this.c + 1;
+        }
+
+        @Memo()
+        get a() {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(4); // warm: c=2, b=3, a=4
+
+      let midBatch = -1;
+      batch(() => {
+        service.n = 10;
+        midBatch = service.a; // c=20, b=21, a=22
+      });
+
+      expect(midBatch).toBe(22);
+      expect(service.a).toBe(22);
+    });
+
+    it('链式 memo 在 batch 外仍保持缓存语义（不重复计算）', () => {
+      let computeB = 0;
+      let computeA = 0;
+
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get b() {
+          computeB++;
+          return this.n * 2;
+        }
+
+        @Memo()
+        get a() {
+          computeA++;
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(3);
+      expect(service.a).toBe(3);
+      expect(computeA).toBe(1);
+      expect(computeB).toBe(1);
+
+      service.n = 2;
+      expect(service.a).toBe(5);
+      expect(service.a).toBe(5);
+      expect(computeA).toBe(2);
+      expect(computeB).toBe(2);
+    });
+
+    it('getter 依赖对象属性，delete 该属性后重新计算', () => {
+      class TestService extends Service {
+        dict: Record<string, number> = { a: 1 };
+
+        @Memo()
+        get a() {
+          return this.dict.a;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(1);
+
+      delete service.dict.a;
+      expect(service.a).toBeUndefined();
+    });
+
+    it('getter 依赖 Map 元素，map.delete 后重新计算', () => {
+      class TestService extends Service {
+        map = new Map<string, number>([['a', 1]]);
+
+        @Memo()
+        get a() {
+          return this.map.get('a');
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(1);
+
+      service.map.delete('a');
+      expect(service.a).toBeUndefined();
+    });
+
+    it('batch 内 invalidateMemo(B) 后读链式 A 必须是重算后的值', () => {
+      let factor = 1;
+
+      class TestService extends Service {
+        n = 1;
+
+        @Memo()
+        get b() {
+          return this.n * factor;
+        }
+
+        @Memo()
+        get a() {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(2); // warm
+
+      factor = 10;
+      let midBatch = -1;
+      batch(() => {
+        // notify(instance,'b') 会同步打在 A 的 debugger 上 → A 同步失效
+        invalidateMemo(service, 'b');
+        midBatch = service.a; // b=10, a=11
+      });
+
+      expect(midBatch).toBe(11);
+    });
+
+    it('batch 中途重算后，flush 不得强制二次重算（不纯 getter 前后值一致 / 不多算）', () => {
+      let computes = 0;
+
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get total() {
+          computes++;
+          // 末尾拼接计算序号：若 flush 再强制重算一次，值就会发散
+          return this.items.reduce((a, b) => a + b, 0) * 1000 + computes;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.total).toBe(1); // warm: 0*1000+1
+
+      let midBatch = -1;
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.total; // 重算一次: 5*1000+2
+      });
+      const postBatch = service.total;
+
+      expect(midBatch).toBe(5002);
+      // flush 的 scheduler 若盲目 computed=false，这里会变成 5003 —
+      // 值发散 + 一次浪费的 getter 执行
+      expect(postBatch).toBe(5002);
+      expect(computes).toBe(2);
+    });
+
+    it('链式场景：mid-batch 重算不得被上游的 flush notify 二次失效（不纯 getter 前后一致）', () => {
+      // A→B 链。batch 内写 B 的底层依赖后读 A：A 基于重算后的 B 重算。
+      // flush 时 B 的 scheduler 无条件 notify(instance, 'b') —— 若该 notify
+      // 把 A 标脏，batch 后再读 A 会被迫第三次计算，不纯 getter 前后值发散。
+      // 链 notify 由 memoDeps 的版本快照裁决，不走 dirty 记账。
+      let bComputes = 0;
+      let aComputes = 0;
+
+      class TestService extends Service {
+        items: number[] = [];
+
+        @Memo()
+        get b() {
+          bComputes++;
+          return this.items.reduce((acc, x) => acc + x, 0) * 1000 + bComputes;
+        }
+
+        @Memo()
+        get a() {
+          aComputes++;
+          return this.b * 10 + aComputes;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(11); // b=0*1000+1=1, a=1*10+1=11
+
+      let midBatch = -1;
+      batch(() => {
+        service.items.push(5);
+        midBatch = service.a; // B 重算: 5*1000+2=5002; A 重算: 5002*10+2=50022
+      });
+      const postBatch = service.a;
+
+      expect(midBatch).toBe(50022);
+      expect(postBatch).toBe(50022);
+      expect(aComputes).toBe(2);
+      expect(bComputes).toBe(2);
+    });
+
+    it('链式场景：上游在 A 上次计算之后被单独重算，A 不得供出陈旧缓存（版本快照）', () => {
+      // A→B 链。batch 内写 B 依赖后只读 B（B 重算、版本前进），不读 A。
+      // flush 的 notify 不标脏 A（链 notify 跳过）——A 必须靠版本快照
+      // 察觉 B 已重算，否则供出采纳旧版 B 的陈旧缓存。
+      class TestService extends Service {
+        x = 1;
+
+        @Memo()
+        get b() {
+          return this.x * 2;
+        }
+
+        @Memo()
+        get a() {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(3); // A 采纳 B v1 (b=2)
+
+      batch(() => {
+        service.x = 5;
+        void service.b; // B 重算 (b=10)，A 未参与
+      });
+
+      expect(service.a).toBe(11); // 不是陈旧的 3
+    });
+  });
+
+  describe('@Memo 链式中间环节抛错后的自愈', () => {
+    it('B 抛错传播到 A；依赖恢复后 A、B 都自动愈合并返回正确值', () => {
+      class TestService extends Service {
+        x = 1;
+
+        @Memo()
+        get b(): number {
+          if (this.x < 0) {
+            throw new Error('b-boom');
+          }
+          return this.x * 2;
+        }
+
+        @Memo()
+        get a(): number {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(3); // x=1 -> b=2 -> a=3
+
+      // 进入抛错状态
+      service.x = -1;
+      expect(() => service.a).toThrow('b-boom');
+      expect(() => service.b).toThrow('b-boom');
+
+      // 依赖恢复：两个 memo 都应自愈，不需要任何手动失效
+      service.x = 5;
+      expect(service.b).toBe(10);
+      expect(service.a).toBe(11);
+      // 缓存恢复语义：再读不重算
+      expect(service.a).toBe(11);
+    });
+
+    it('batch 内读到抛错中的链，恢复后 batch 外读取仍正确', () => {
+      class TestService extends Service {
+        x = 1;
+
+        @Memo()
+        get b(): number {
+          if (this.x < 0) {
+            throw new Error('b-boom');
+          }
+          return this.x * 2;
+        }
+
+        @Memo()
+        get a(): number {
+          return this.b + 1;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(3);
+
+      let batchReadError: unknown;
+      batch(() => {
+        service.x = -1;
+        try {
+          void service.a;
+        } catch (e) {
+          batchReadError = e;
+        }
+      });
+      expect((batchReadError as Error).message).toBe('b-boom');
+
+      service.x = 7;
+      expect(service.a).toBe(15); // b=14 -> a=15
+    });
+  });
+
+  describe('链式边的归属判定', () => {
+    it('getter 计算窗口内其他 reaction 读到的 memo 不记为本 memo 的链式边', () => {
+      let aComputes = 0;
+
+      class TestService extends Service {
+        x = 1;
+        y = 0;
+        z = 1;
+
+        @Memo()
+        get c() {
+          return this.z * 10;
+        }
+
+        @Memo()
+        get a() {
+          aComputes++;
+          // 不纯 getter：计算期间写 y。y 有存活 observer R（见下），
+          // 写会同步触发 R 重跑 —— R 读 c 的时刻 collectingMemo 仍是
+          // a.state，没有归属校验时 c 会被误记为 a 的链式依赖
+          this.y = this.x;
+          return this.x + 100;
+        }
+      }
+
+      const service = new TestService();
+      // R 依赖 y 和 c：a 的 getter 写 y 时 R 同步重跑并读 c
+      observe(() => {
+        void service.y;
+        void service.c;
+      });
+
+      expect(service.a).toBe(101);
+      expect(aComputes).toBe(1);
+
+      // c 的上游变化：a 并不真的依赖 c（aComputes 不得增加）。
+      // 误记边时，c 重算导致版本快照失配，a 被强制重算
+      service.z = 2;
+      void service.c;
+
+      expect(service.a).toBe(101);
+      expect(aComputes).toBe(1);
+    });
+  });
+
+  describe('untracked 内的链式读取不记账', () => {
+    it('untracked(() => this.memoB) 不构成 A→B 链式边（untracked 语义覆盖 memo 链）', () => {
+      let aComputes = 0;
+      let bComputes = 0;
+
+      class TestService extends Service {
+        x = 1;
+        y = 1;
+
+        @Memo()
+        get b() {
+          bComputes++;
+          return this.x * 10;
+        }
+
+        @Memo()
+        get a() {
+          aComputes++;
+          // 用户显式放弃对 b 的依赖：proxy get trap 已不注册依赖，
+          // 链式边记账（recordMemoDep）也必须遵守同一边界
+          const bv = untracked(() => this.b);
+          return bv + this.y;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.a).toBe(11);
+      expect(aComputes).toBe(1);
+      expect(bComputes).toBe(1);
+
+      // b 的上游变化：a 已 opted out，链校验不得判负强制 a 重算
+      service.x = 2;
+      expect(service.b).toBe(20);
+      expect(bComputes).toBe(2);
+
+      expect(service.a).toBe(11); // 旧缓存——正是 untracked 的语义
+      expect(aComputes).toBe(1);
+
+      // 真正被追踪的依赖 y 变化仍让 a 重算
+      service.y = 5;
+      expect(service.a).toBe(25);
+      expect(aComputes).toBe(2);
+    });
+  });
+
+  describe('链式边的内存持有', () => {
+    // WeakRef 回收断言依赖显式 GC：以 node --expose-gc 运行 jest 才生效，
+    // 常规跑法下跳过（无 gc 时无法确定性触发回收）
+    const gcFn = (globalThis as { gc?: () => void }).gc;
+    const itGc = typeof gcFn === 'function' ? it : it.skip;
+
+    itGc('下游 memo 的链式边不强持有上游实例（上游可被 GC）', async () => {
+      class Upstream extends Service {
+        x = 1;
+
+        @Memo()
+        get b() {
+          return this.x * 10;
+        }
+      }
+
+      class Downstream extends Service {
+        upstream?: Upstream;
+
+        @Memo()
+        get a() {
+          return (this.upstream ? this.upstream.b : 0) + 1;
+        }
+      }
+
+      // 长寿命下游（如 singleton ListService）存活整个测试
+      const downstream = new Downstream();
+      const upstreamRef = (() => {
+        const up = new Upstream();
+        downstream.upstream = up;
+        expect(downstream.a).toBe(11); // 建立 a→b 链式边
+        return new WeakRef(up as unknown as object);
+      })();
+      // 释放用户侧的最后一个强引用；不读 downstream.a，避免重算重置 memoDeps
+      downstream.upstream = undefined;
+
+      gcFn!();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      gcFn!();
+
+      // memoDeps 强引用上游 CacheState（其 owner/reaction 闭包反持实例）时，
+      // 上游实例会被保留到下游重算或销毁为止 —— 此处必须已被回收
+      expect(upstreamRef.deref()).toBeUndefined();
+    });
+  });
+
+  describe('同 description 的 symbol 键 @Memo 清理隔离', () => {
+    it('invalidateMemo 不交叉影响另一个同 description 的 symbol 键', () => {
+      const KEY1 = Symbol('a');
+      const KEY2 = Symbol('a');
+      let c1 = 0;
+      let c2 = 0;
+
+      class TestService extends Service {
+        x = 1;
+
+        @Memo()
+        get [KEY1]() {
+          c1++;
+          return `k1:${this.x}`;
+        }
+
+        @Memo()
+        get [KEY2]() {
+          c2++;
+          return `k2:${this.x}`;
+        }
+      }
+
+      const service = new TestService();
+      expect(service[KEY1]).toBe('k1:1');
+      expect(service[KEY2]).toBe('k2:1');
+      expect(c1).toBe(1);
+      expect(c2).toBe(1);
+
+      invalidateMemo(service, KEY2);
+
+      // KEY1 未被触碰（不得被交叉失效）；KEY2 已失效、重读重算
+      expect(service[KEY1]).toBe('k1:1');
+      expect(c1).toBe(1);
+      expect(service[KEY2]).toBe('k2:1');
+      expect(c2).toBe(2);
+    });
+
+    it('Service.destroy 清理同 description 的第二个 symbol 键（reaction 不残留）', () => {
+      const KEY1 = Symbol('a');
+      const KEY2 = Symbol('a');
+
+      class TestService extends Service {
+        x = 1;
+
+        @Memo()
+        get [KEY1]() {
+          return `k1:${this.x}`;
+        }
+
+        @Memo()
+        get [KEY2]() {
+          return `k2:${this.x}`;
+        }
+      }
+
+      const service = new TestService();
+      let outerRuns = 0;
+      observe(() => {
+        outerRuns++;
+        void service[KEY2];
+      });
+      expect(outerRuns).toBe(1);
+
+      // 清理注册表若以字符串化方法名（__cleanup_memo_Symbol(a)）组织，
+      // 两个 symbol 共享一个闭包 —— destroy 只清掉 KEY1，KEY2 的
+      // reaction 残留，下面的写会通过 notify 唤醒外层 observe
+      service.destroy();
+      const runsAfterDestroy = outerRuns;
+      service.x = 2;
+      expect(outerRuns).toBe(runsAfterDestroy);
+    });
+  });
+
+  describe('isDebugging 重入窗口（用户 debugger 内的嵌套写）', () => {
+    it('用户 debugger 执行期间写 memo 依赖不丢失失效', () => {
+      class TestService extends Service {
+        x = 1;
+        y = 0;
+
+        @Memo()
+        get doubled() {
+          return this.x * 2;
+        }
+      }
+
+      const service = new TestService();
+      expect(service.doubled).toBe(2);
+
+      // 用户 reaction 带 debugger（如 devtools 钩子）：debugger 执行期间
+      // 写 service.x（memo 的依赖）—— 嵌套写落在 isDebugging 重入窗口内。
+      observe(() => void service.y, {
+        debugger: operation => {
+          if (operation.type === 'set' && operation.key === 'y') {
+            service.x = 10;
+          }
+        },
+      });
+
+      service.y = 1;
+      // memo 的同步失效钩子声明了 reentrantSafe（只翻转布尔、不写
+      // observable），重入窗口内仍送达；否则这里供出陈旧缓存 2 且
+      // flush 没有任何兜底
+      expect(service.doubled).toBe(20);
     });
   });
 

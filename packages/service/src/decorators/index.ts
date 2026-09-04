@@ -21,7 +21,7 @@ export type { DebounceOptions } from './debounce';
 export { Throttle, cancelThrottle, cleanupAllThrottles } from './throttle';
 export type { ThrottleOptions } from './throttle';
 export { Memo, invalidateMemo, cleanupAllMemos } from './memo';
-export type { MemoOptions } from './memo';
+export type { MemoOptions, CleanupAllMemosOptions } from './memo';
 export {
   On,
   getEventListenerMetadata,

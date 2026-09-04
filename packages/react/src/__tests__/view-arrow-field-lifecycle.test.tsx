@@ -15,6 +15,8 @@
 import React, { act, Suspense, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import { observable } from '@rabjs/observer';
+import { getConnectionsCount } from '../../../observer/src/internals/reaction-track';
+import { proxyToRaw } from '../../../observer/src/internals/proxy-raw-map';
 import { enableStaticRendering } from '../static-rendering';
 import { view } from '../view';
 
@@ -255,5 +257,98 @@ describe('view 类组件：箭头函数生命周期字段不得遮蔽包装器�
       store.count = 1;
     });
     expect(screen.getByTestId('count')).toHaveTextContent('1');
+  });
+});
+
+describe('view 类组件：密封实例的降级（review followup）', () => {
+  it('构造函数 Object.preventExtensions(this)：包装器构造期不得 crash（密封实例 React 本就无法挂载，但包装器不得成为额外崩溃点）', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      class ClassComp extends React.Component {
+        componentDidMount = () => {};
+
+        constructor(props: any) {
+          super(props);
+          // 已有属性仍可写（箭头字段重绑定可行），但新增属性会抛
+          // TypeError —— view 的内部字段（_reactiveRender/_committed）
+          // 初始化必须守护，否则包装器构造期直接打崩。
+          // 注：密封实例 React 自身也挂不了（_reactInternals 赋值失败），
+          // 这里只钉「view 包装器自身不引入额外崩溃 + dev 警告」。
+          Object.preventExtensions(this);
+        }
+
+        render() {
+          return <span>ok</span>;
+        }
+      }
+      const ReactiveClass = view(ClassComp);
+
+      let instance: any = null;
+      expect(() => {
+        instance = new (ReactiveClass as any)({}, {});
+      }).not.toThrow();
+      expect(instance).toBeTruthy();
+      expect(warnSpy.mock.calls.some(args => String(args[0]).includes('密封'))).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+});
+
+describe('view 类组件：子类 extends view(Base) 的箭头生命周期字段', () => {
+  it('子类箭头字段 cWU 覆盖组合函数时，reaction 仍在卸载时释放', () => {
+    const store = observable({ count: 0 });
+    const raw = (proxyToRaw.get(store) as object) ?? store;
+    const cwuCalls: string[] = [];
+
+    class Base extends React.Component {
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveBase = view(Base);
+
+    // 子类字段初始化在 super() 之后执行，会覆盖包装器构造期重绑的
+    // 组合函数 —— 包装器逻辑必须在 render/cDM 阶段重新组合回来
+    class Sub extends ReactiveBase {
+      componentWillUnmount = () => {
+        cwuCalls.push('sub-cwu');
+      };
+    }
+
+    const { unmount } = render(<Sub />);
+    expect(getConnectionsCount(raw)).toBe(1);
+
+    unmount();
+    // 用户的子类字段逻辑执行，且包装器的 reaction 清理不被跳过
+    expect(cwuCalls).toEqual(['sub-cwu']);
+    expect(getConnectionsCount(raw)).toBe(0);
+  });
+
+  it('子类箭头字段 cDM 覆盖组合函数时，组件仍建立/恢复响应式', () => {
+    const store = observable({ count: 0 });
+    const cdmCalls: string[] = [];
+
+    class Base extends React.Component {
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveBase = view(Base);
+
+    class Sub extends ReactiveBase {
+      componentDidMount = () => {
+        cdmCalls.push('sub-cdm');
+      };
+    }
+
+    const { getByTestId } = render(<Sub />);
+    expect(cdmCalls).toEqual(['sub-cdm']);
+    expect(getByTestId('count').textContent).toBe('0');
+
+    act(() => {
+      store.count = 7;
+    });
+    expect(getByTestId('count').textContent).toBe('7');
   });
 });

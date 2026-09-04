@@ -7,7 +7,13 @@ export { observe, unobserve } from './observer';
 export type { ObserveOptions } from './observer';
 
 // Batch API - Coalesce notifications from a synchronous mutation block
-export { batch, notify } from './internals/reaction-runner';
+export {
+  batch,
+  notify,
+  getRunningReaction,
+  untracked,
+  isUntracked,
+} from './internals/reaction-runner';
 
 // Configuration API - Configure global defaults
 export { configure, resetGlobalConfig } from './configure';
@@ -26,6 +32,16 @@ export type {
 
 // Re-export utility functions
 export { isObservable, raw } from './internals/utils';
+
+// 跨 realm 安全的 Map/Set 判定（issue #92 场景：vm/iframe/RN 远程调试），
+// 与 collection-handler 的 G7 路由同一套 tag + duck-check —— 下游
+// （如 @rabjs/react 的挂载快照）必须用它而非裸 instanceof，否则对
+// 跨 realm 集合的检测与 instrumented 路由不一致。
+export { isRewritableMap, isRewritableSet } from './internals/utils';
+
+// 同理导出 WeakMap/WeakSet 的 tag 判定：collection-handler 对 Weak 集合的
+// get/has 同样注册依赖，下游快照/对比逻辑需要与 instrumented 路由一致的判定
+export { isWeakMapTarget, isWeakSetTarget } from './internals/handlers/collection-handler';
 
 // Re-export handlers for testing
 export { baseProxyHandler as proxyHandlers } from './internals/handlers/base-proxy-handler';

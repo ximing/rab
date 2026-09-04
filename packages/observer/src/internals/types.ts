@@ -18,7 +18,19 @@ export interface Reaction extends Function {
   // 后续重跑抛错则保持存活，依赖回滚到上次成功运行的集合 (G4 / #213)。
   everRan?: boolean;
   scheduler?: ReactionScheduler | Function;
-  debugger?: (operation: Operation) => void;
+  /**
+   * 每个操作同步触发的调试钩子。函数上可挂可选标记：
+   * - `wantsOldValue = false` 声明不消费 operation.oldValue ——
+   *   此时 Map/Set clear() 不必为该 reaction 付 O(n) 旧值快照成本
+   *   （见 reaction-runner.hasOperationOldValueConsumer）。
+   * - `reentrantSafe = true` 声明钩子幂等且绝不写 observable ——
+   *   在 isDebugging 重入窗口内仍然送达（见 reaction-runner.debugOperation）。
+   *   只有确定钩子不会触发任何响应式写时才可声明，否则重入保护失效。
+   */
+  debugger?: ((operation: Operation) => void) & {
+    wantsOldValue?: boolean;
+    reentrantSafe?: boolean;
+  };
 }
 
 export interface ReactionScheduler {

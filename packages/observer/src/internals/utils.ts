@@ -96,7 +96,7 @@ function isNativeLikeFunction(fn: unknown): boolean {
   }
 }
 
-function isRewritableMap(target: object): target is Map<unknown, unknown> {
+export function isRewritableMap(target: object): target is Map<unknown, unknown> {
   if (target instanceof Map) {
     return true;
   }
@@ -115,7 +115,7 @@ function isRewritableMap(target: object): target is Map<unknown, unknown> {
   }
 }
 
-function isRewritableSet(target: object): target is Set<unknown> {
+export function isRewritableSet(target: object): target is Set<unknown> {
   if (target instanceof Set) {
     return true;
   }

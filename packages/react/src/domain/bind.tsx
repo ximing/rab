@@ -129,7 +129,11 @@ export function bindServices<P extends Record<string, any> = any, TRef = any>(
       throw new Error('[RSJS] Strict mode must in Root Provider');
     }
     if (!admRef.current) {
-      const adm = createADM(domainContext?.container);
+      // ?? 与重建路径对齐：DomainContextValue.container 类型上非空，
+      // 传入 null 视为「无 domain 容器」落到全局默认 —— 首挂走
+      // createADM 默认参数只对 undefined 生效，两条路径若判定不同，
+      // 同一组件会在隐藏→reveal 后被静默 re-parent 到另一棵容器树
+      const adm = createADM(domainContext?.container ?? getGlobalContainer());
       admRef.current = adm;
       // 防止 concurrent 模式下内存泄露
       universalFinalizationRegistry.register(admRef, adm, adm);

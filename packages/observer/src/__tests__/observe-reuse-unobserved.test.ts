@@ -4,7 +4,7 @@
  * observe(r)（r 曾被 unobserve）应把 r 重新纳入观察（建立依赖、
  * 后续变更触发），而不是返回一个立即执行一次后静默失效的 reaction（#215）。
  */
-import { observable, observe, unobserve } from '../main';
+import { observable, observe, unobserve, configure, resetGlobalConfig } from '../main';
 
 describe('observe 复用已 unobserve 的 reaction（#215）', () => {
   it('observe(unobserve 过的 reaction) 重新建立依赖，变更继续触发', () => {
@@ -204,5 +204,59 @@ describe('observe 复活保留原配置（review 回归）', () => {
     expect(debuggerOps.length).toBeGreaterThan(0);
 
     scheduled.forEach(run => run());
+  });
+
+  it('裸复活不得钉住「创建时捕获的全局 scheduler」：configure 变更后跟随新全局默认', () => {
+    const state = observable({ a: 1 });
+    const queuedA: Array<() => void> = [];
+    const queuedB: Array<() => void> = [];
+
+    try {
+      // reaction 创建时的全局默认是 A（被捕获到 reaction.scheduler 上）
+      configure({ scheduler: (reaction: unknown) => queuedA.push(reaction as () => void) });
+      const r = observe(() => {
+        void state.a;
+      });
+
+      // 之后全局默认换成 B
+      configure({ scheduler: (reaction: unknown) => queuedB.push(reaction as () => void) });
+
+      unobserve(r);
+      // 裸复活：reaction 上的 scheduler 只是「捕获的旧全局默认」而非用户显式
+      // 配置，应与 master 一样重新读取当前全局默认，而不是继续用 A
+      observe(r);
+
+      state.a = 2;
+      expect(queuedA.length).toBe(0);
+      expect(queuedB.length).toBe(1);
+    } finally {
+      resetGlobalConfig();
+    }
+  });
+
+  it('显式自定义 scheduler 的 reaction 裸复活仍保留自定义 scheduler（不跟随全局变更）', () => {
+    const state = observable({ a: 1 });
+    const queuedCustom: Array<() => void> = [];
+    const queuedGlobal: Array<() => void> = [];
+
+    try {
+      const r = observe(
+        () => {
+          void state.a;
+        },
+        { scheduler: (reaction: unknown) => queuedCustom.push(reaction as () => void) }
+      );
+
+      configure({ scheduler: (reaction: unknown) => queuedGlobal.push(reaction as () => void) });
+
+      unobserve(r);
+      observe(r);
+
+      state.a = 2;
+      expect(queuedCustom.length).toBe(1);
+      expect(queuedGlobal.length).toBe(0);
+    } finally {
+      resetGlobalConfig();
+    }
   });
 });

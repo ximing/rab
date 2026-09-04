@@ -18,6 +18,58 @@ import { toRawIfProxy } from './utils';
 const reactionStack = new Stack<Reaction>();
 
 /*
+ * untracked() 的嵌套深度。>0 时所有读取不注册依赖、不进入任何
+ * reaction 的 debugger（MobX untracked 语义）。深度计数而非屏蔽
+ * reaction：不需要伪造 reaction 压栈，热路径只多一次整数比较。
+ * */
+let untrackedDepth = 0;
+
+/**
+ * 以不追踪方式执行回调：回调内对 observable 的读取不注册为任何
+ * reaction 的依赖（包括当前正在运行的外层 reaction），返回回调返回值。
+ * 仅覆盖同步执行窗口 —— 回调内异步续段的读取不在保护范围内。
+ */
+export function untracked<T>(fn: () => T): T {
+  untrackedDepth++;
+  try {
+    return fn();
+  } finally {
+    untrackedDepth--;
+  }
+}
+
+/**
+ * 当前是否处于 untracked() 窗口内。供上层（如 @rabjs/service 的 @Memo
+ * 链依赖记录）遵守同一「不追踪」边界。
+ */
+export function isUntracked(): boolean {
+  return untrackedDepth > 0;
+}
+
+/*
+ * untracked() 只屏蔽「调用时刻的当前派生」(MobX untracked 语义):
+ * 在 untracked 窗口内被写入同步触发而重跑的 reaction 是独立派生,
+ * 必须正常建立依赖 —— 否则 runAsReaction 在 releaseReaction 之后,
+ * 所有读取都被深度计数器抑制, reaction 以零依赖收场、永久失效。
+ * 因此在 reaction 运行边界将深度清零, 退出时恢复。
+ * */
+function runWithTrackingReset<T extends Function, R>(
+  fn: T,
+  context: unknown,
+  args: ArrayLike<unknown>
+): R {
+  const savedDepth = untrackedDepth;
+  untrackedDepth = 0;
+  try {
+    // 直接接收 (fn, context, args) 而非 () => fn(...) 闭包：
+    // reaction 每次重跑都经过这里，避免每跑一次多分配一个箭头闭包
+    return Reflect.apply(fn, context, args) as R;
+  } finally {
+    untrackedDepth = savedDepth;
+  }
+}
+
+/*
  * 防止调试器本身触发无限递归
  * 确保调试代码不会被重复执行
  * */
@@ -41,7 +93,14 @@ export function hasOperationOldValueConsumer(operation: Operation): boolean {
   }
   const reactions = getReactionsForOperation(operation);
   for (const reaction of reactions) {
-    if (reaction.debugger) {
+    // debugger 可显式声明 wantsOldValue === false（如 @rabjs/service 的
+    // @Memo 同步失效钩子只看 operation.type）—— 不消费 oldValue 的
+    // debugger 不值得让 clear 付 O(n) 快照成本。未声明时保持兼容：
+    // 视为可能消费。
+    if (
+      reaction.debugger &&
+      (reaction.debugger as { wantsOldValue?: boolean }).wantsOldValue !== false
+    ) {
       return true;
     }
   }
@@ -65,6 +124,12 @@ export function runAsReaction<T extends Function, R>(
   // (见下方 registerRunningReactionForOperation), 顶层与嵌套行为一致。
   if (reaction.unobserved) {
     try {
+      // 注意：unobserved 分支不做 untracked 深度重置。重置是为 tracked
+      // reaction 在 untracked 窗口内重跑时重建依赖服务的；本分支的读取
+      // 本就不注册依赖（registerRunningReactionForOperation 的 unobserved
+      // 守卫），若重置深度，untracked(() => unobservedReaction()) 会把
+      // 读取投递给它自己的 debugger，破坏「untracked 窗口内的读取对
+      // 响应式系统完全不可见」的契约。
       reactionStack.push(reaction);
       return Reflect.apply(fn, context, args) as R;
     } finally {
@@ -95,7 +160,7 @@ export function runAsReaction<T extends Function, R>(
       // 执行原始函数 fn
       // 在执行期间,任何对 observable 属性的访问都会被追踪到这个 reaction  (observable.prop -> reaction)
       reactionStack.push(reaction);
-      const result = Reflect.apply(fn, context, args) as R;
+      const result = runWithTrackingReset<T, R>(fn, context, args);
       reaction.everRan = true;
       return result;
     } catch (error) {
@@ -125,10 +190,24 @@ export function runAsReaction<T extends Function, R>(
 }
 
 /*
+ * 内部用：返回当前正在执行的 reaction（无则 null）。
+ * 供上层（如 @rabjs/service 的链式 @Memo）判定一次读取归属于哪个
+ * reaction 的计算窗口 —— 同步嵌套执行的其他 reaction 不得冒名。
+ * */
+export function getRunningReaction(): Reaction | null {
+  return reactionStack.peek() ?? null;
+}
+
+/*
  * 在属性访问时,将当前正在运行的 reaction 注册为该属性的依赖。
  * 在 Proxy 的 get trap 中被调用
  * */
 export function registerRunningReactionForOperation(operation: Operation): void {
+  // untracked() 窗口内的读取对响应式系统完全不可见：
+  // 不注册依赖，也不投递给任何 reaction 的 debugger
+  if (untrackedDepth > 0) {
+    return;
+  }
   // 从 reactionStack 栈顶获取当前正在执行的 reaction
   // 如果栈为空(没有 reaction 在运行),则不做任何事
   const runningReaction = reactionStack.peek();
@@ -209,7 +288,19 @@ export function batch<T>(fn: () => T): T {
         // Error.cause 需要 es2022 lib，这里用窄化断言访问以兼容现有 target
         const fnErrorWithCause = fnError as Error & { cause?: unknown };
         let attached = false;
+        // 回调和 reaction 抛的是同一个 Error 实例（引用身份）：flush 错误
+        // 就是要重抛的回调异常本身 —— 没有错误被丢弃，既不需要附加
+        // cause 也不允许走到下方 warn 的误报路径（严格 console 环境会
+        // 因此误 fail）。原始值的 === 是值比较而非身份比较：回调与
+        // reaction 各自独立 throw 'abort' 之类的相同原始值是两次独立
+        // 失败，不得按「同一错误」静默吞掉 reaction 的失败。
         if (
+          flushError === fnError &&
+          fnError !== null &&
+          (typeof fnError === 'object' || typeof fnError === 'function')
+        ) {
+          attached = true;
+        } else if (
           fnError instanceof Error &&
           flushError instanceof Error &&
           fnErrorWithCause.cause === undefined
@@ -452,14 +543,32 @@ export function queueReactionsForOperation(operation: Operation): void {
 
 /*
  * 调用 reaction 的调试器,记录操作信息。
+ * isDebugging 重入保护：debugger 自身写 observable 会让嵌套的
+ * queueReactionsForOperation 再次进入本函数 —— 跳过以防无限递归。
+ * 例外：debugger 上声明 reentrantSafe = true 的钩子（如 @Memo 的同步
+ * 失效钩子，只翻转布尔标记、绝不写 observable）在重入窗口内仍然
+ * 送达 —— 否则窗口内打在钩子依赖上的写会静默丢失失效记账，
+ * 且没有任何 flush 兜底（钩子标记与 scheduler 的 dirtySinceCompute
+ * 是同一信号源）。
  * */
 function debugOperation(reaction: Reaction, operation: Operation): void {
-  if (reaction.debugger && !isDebugging) {
-    try {
-      isDebugging = true;
-      reaction.debugger(operation);
-    } finally {
-      isDebugging = false;
-    }
+  const debuggerFn = reaction.debugger;
+  if (!debuggerFn) {
+    return;
+  }
+  if (isDebugging && !debuggerFn.reentrantSafe) {
+    return;
+  }
+  if (isDebugging) {
+    // reentrantSafe：不重设 isDebugging（保持 true），钩子保证不写
+    // observable，不会再生嵌套操作
+    debuggerFn(operation);
+    return;
+  }
+  try {
+    isDebugging = true;
+    debuggerFn(operation);
+  } finally {
+    isDebugging = false;
   }
 }

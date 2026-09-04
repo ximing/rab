@@ -35,17 +35,18 @@ const wellKnownSymbols = new Set(
 
 // 拦截属性读取操作，建立依赖关系但不进行深层包装
 function get(target: object, key: PropertyKey, receiver: unknown): unknown {
-  // 调用 Reflect.get(target, key, receiver) 获取原始值
-  const result = Reflect.get(target, key, receiver);
   if (typeof key === 'symbol' && wellKnownSymbols.has(key)) {
-    return result;
+    return Reflect.get(target, key, receiver);
   }
   // '__proto__' 直接返回原始原型 (原因见 base-proxy-handler 同名处理)
   if (key === '__proto__') {
-    return result;
+    return Reflect.get(target, key, receiver);
   }
-  // 如果当前有 reaction 在运行，建立 (target.key -> reaction) 的依赖
+  // 依赖注册必须先于 Reflect.get: getter 抛错时先取值后注册会让读取方
+  // reaction 零依赖收场 (#247 根因, 与 base-proxy-handler 同一修复)
   registerRunningReactionForOperation({ target, key, receiver, type: 'get' });
+  // 调用 Reflect.get(target, key, receiver) 获取原始值
+  const result = Reflect.get(target, key, receiver);
 
   // 数组变异方法包进 batch, 一次调用内部的多条 trap 写入只通知一次 (#93)
   if (typeof result === 'function') {

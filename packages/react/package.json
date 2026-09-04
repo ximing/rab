@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/react",
-  "version": "9.3.5",
+  "version": "9.4.0",
   "description": "AI-first reactive state for React — observable Service instances shared by UI, tests, DevTools, and AI agents (Web MCP)",
   "main": "lib/cjs/main.js",
   "module": "lib/esm/main.js",
@@ -18,7 +18,8 @@
     "clean": "rm -rf lib build dist coverage",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:release": "jest"
   },
   "keywords": [
     "react",

@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/observer",
-  "version": "9.3.5",
+  "version": "9.4.0",
   "description": "Fine-grained reactivity — observable state, computed values, and reactions for the rab state architecture",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
@@ -19,7 +19,8 @@
     "clean": "rm -rf lib build dist coverage",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:release": "RAB_PROPERTY_RUNS=2000 NODE_OPTIONS=--expose-gc jest"
   },
   "keywords": [
     "reactive",
@@ -36,6 +37,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
     "esbuild": "^0.28.2",
+    "fast-check": "^4.9.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "ts-jest": "^29.4.12",

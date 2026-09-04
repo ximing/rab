@@ -1,6 +1,6 @@
 {
   "name": "@rabjs/service",
-  "version": "9.3.5",
+  "version": "9.4.0",
   "description": "Observable Service containers, lifecycle, and method models (loading/error) for the rab AI-first state architecture",
   "main": "lib/main.cjs",
   "module": "lib/main.js",
@@ -19,7 +19,8 @@
     "clean": "rm -rf lib build dist coverage",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:release": "NODE_OPTIONS=--expose-gc jest"
   },
   "keywords": [
     "reactive",
