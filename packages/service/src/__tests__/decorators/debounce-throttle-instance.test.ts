@@ -480,7 +480,7 @@ describe('@Debounce / @Throttle 无幽灵尾调用', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('@Debounce maxWait：单次调用强制触发后不再重放', () => {
+  it('@Debounce maxWait：单次调用经 trailing 触发后不再重放', () => {
     const calls: Array<{ self: unknown; args: unknown[] }> = [];
 
     class SaveService extends Service {
@@ -492,9 +492,14 @@ describe('@Debounce / @Throttle 无幽灵尾调用', () => {
 
     const s = new SaveService();
     s.save('f1');
-    expect(calls).toHaveLength(1);
+    // leading 默认 false：首次调用不得同步执行（旧实现经 maxWait 分支
+    // 误把 lastInvokeTime===0 当「超过最大等待」同步触发）
+    expect(calls).toHaveLength(0);
 
-    jest.advanceTimersByTime(300);
+    jest.advanceTimersByTime(50); // trailing 到点触发
+    expect(calls).toEqual([{ self: s, args: ['f1'] }]);
+
+    jest.advanceTimersByTime(300); // maxWait 兜底与幽灵重放都不存在
     expect(calls).toHaveLength(1);
   });
 

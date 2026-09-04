@@ -493,6 +493,13 @@ export function view<P = any, S = any>(Comp: ComponentType<P>): ComponentType<P>
       try {
         this._committed = true;
       } catch {
+        // 冻结实例：字段写不进去，但快照数组本身未被冻结 —— 就地清空，
+        // 否则首渲染读到的每个 observable target/value 被实例字段钉住，
+        // 直到实例被 GC（降级路径在本方法提前 return，等不到正常消费）
+        const pinned = this._mountSnapshot;
+        if (pinned) {
+          pinned.length = 0;
+        }
         if (process.env.NODE_ENV !== 'production') {
           try {
             console.warn(

@@ -222,4 +222,38 @@ describe('view 类组件：cDM 内 freeze 实例的降级必须可观测', () =>
       warnSpy.mockRestore();
     }
   });
+
+  it('componentDidMount 里 Object.freeze(this)：挂载快照内容必须被释放', () => {
+    // 冻结降级路径在「消费挂载快照」之前 return：字段写不进去（frozen），
+    // 快照数组若不就地清空，首渲染读到的每个 observable target/value 会被
+    // 实例字段钉住，直到实例被 GC。
+    const store = observable({ count: 0 });
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const ref = React.createRef<any>();
+
+    class ClassComp extends React.Component {
+      componentDidMount() {
+        Object.freeze(this);
+      }
+
+      render() {
+        return <span data-testid="count">{store.count}</span>;
+      }
+    }
+    const ReactiveClass = view(ClassComp);
+
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    try {
+      act(() => {
+        // view 的重载类型不含 ref 转发声明（该测试文件的既有风格：直接 as any）
+        root.render(React.createElement(ReactiveClass as any, { ref }));
+      });
+      expect(container.textContent).toBe('0');
+      const snapshot = (ref.current as any)._mountSnapshot;
+      expect(snapshot === null || snapshot.length === 0).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });

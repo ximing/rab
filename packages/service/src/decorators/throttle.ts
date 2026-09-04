@@ -97,6 +97,11 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
        * undefined this、空参数幽灵重放用户方法。
        */
       hasPendingCall: boolean;
+      /**
+       * 方法体正在执行中。重入调用不得同步嵌套 invoke（防栈溢出），
+       * 降级为记录 pending + 武装 trailing 定时器。
+       */
+      invoking: boolean;
     }
     const states = createInstanceStateStore<ThrottleState>(() => ({
       lastInvokeTime: 0,
@@ -105,6 +110,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       lastThis: undefined,
       result: undefined,
       hasPendingCall: false,
+      invoking: false,
     }));
 
     // 清理函数
@@ -120,6 +126,23 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       state.hasPendingCall = false;
     };
 
+    // 取消定时器
+    const cancelTimer = (state: ThrottleState) => {
+      if (state.timerId !== null) {
+        clearTimeout(state.timerId);
+        state.timerId = null;
+      }
+    };
+
+    // 释放 pending 调用的 payload 引用（args/this + pending 标记）。
+    // 被抑制/已消费的调用必须及时释放：实例状态把 payload 钉到下一次
+    // invoke，detached 哨兵状态更是驻留到进程结束
+    const releasePayload = (state: ThrottleState) => {
+      state.lastArgs = [];
+      state.lastThis = undefined;
+      state.hasPendingCall = false;
+    };
+
     // 执行函数
     const invokeFunc = (state: ThrottleState) => {
       state.lastInvokeTime = Date.now();
@@ -129,40 +152,35 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       // 清理会让那笔重入调用被静默丢弃（定时器空转）。
       const invokedArgs = state.lastArgs;
       const invokedThis = state.lastThis;
+      state.invoking = true;
       try {
         state.result = originalMethod.apply(state.lastThis, state.lastArgs);
       } finally {
-        // 触发后即释放对参数/this 的引用：detached 哨兵状态由装饰器闭包
-        // 强引用、进程级驻留，不清理会把用户 payload 保留到进程结束。
-        // result 保留 —— 窗口内的后续调用按节流语义返回最近一次的结果。
+        state.invoking = false;
+        // result 保留 —— 窗口内的后续调用按节流语义返回最近一次的结果
         if (state.lastArgs === invokedArgs && state.lastThis === invokedThis) {
-          state.lastArgs = [];
-          state.lastThis = undefined;
           // 消费掉 pending 标记：trailing 定时器只补「invoke 之后的新调用」
-          state.hasPendingCall = false;
+          releasePayload(state);
         } else if (!trailing && state.timerId === null) {
           // 重入写入的新 pending 在 trailing:false 下永远不会执行
           // （startTimer 不武装），没有定时器到点释放兜底 —— 立即释放，
           // 别把 payload 钉到下一次 invoke
-          state.lastArgs = [];
-          state.lastThis = undefined;
-          state.hasPendingCall = false;
+          releasePayload(state);
         }
       }
       return state.result;
     };
 
-    // 取消定时器
-    const cancelTimer = (state: ThrottleState) => {
-      if (state.timerId !== null) {
-        clearTimeout(state.timerId);
-        state.timerId = null;
-      }
-    };
-
     // 设置 trailing 定时器
     const startTimer = (state: ThrottleState) => {
-      cancelTimer(state);
+      // 已有 pending 定时器时不重排：节流窗口以「武装时刻」为界，若每次
+      // 窗口内调用都把定时器顺延一个 wait，间隔 < wait 的持续调用流会让
+      // 定时器永远不到点 —— leading:false 时方法被无限期饿死。
+      // 窗口过期/首次调用路径已先行 cancelTimer/invoke，timerId 为 null，
+      // 这里才武装新窗口。
+      if (state.timerId !== null) {
+        return;
+      }
       if (trailing) {
         state.timerId = setTimeout(() => {
           state.timerId = null;
@@ -171,9 +189,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
           } else {
             // 到点未触发（时钟未走过窗口：legacy fake timers / 系统时钟回拨）：
             // 该 pending 按现有语义被丢弃（不重排），但必须释放 payload 引用
-            state.lastArgs = [];
-            state.lastThis = undefined;
-            state.hasPendingCall = false;
+            releasePayload(state);
           }
         }, wait);
       }
@@ -189,6 +205,15 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
       state.lastThis = this;
       state.hasPendingCall = true;
 
+      // 方法体内重入：不得同步嵌套 invoke（wait:0 / 窗口恰好在执行期内
+      // 过期时会无限同步递归直至栈溢出）—— 降级为记录 pending，由
+      // trailing 定时器补刀（trailing:false 时由 invokeFunc 的 finally
+      // 释放 payload）
+      if (state.invoking) {
+        startTimer(state);
+        return state.result;
+      }
+
       // 首次调用
       if (isFirstCall) {
         if (leading) {
@@ -197,9 +222,7 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
         startTimer(state);
         if (!trailing && !leading) {
           // leading/trailing 都关闭：该调用永远不会执行，立即释放 payload
-          state.lastArgs = [];
-          state.lastThis = undefined;
-          state.hasPendingCall = false;
+          releasePayload(state);
         }
         return state.result;
       }
@@ -211,16 +234,17 @@ export function Throttle(wait: number, options?: Omit<ThrottleOptions, 'wait'>):
         if (!trailing) {
           // trailing 关闭时窗口内调用永远不会执行 —— 立即释放 payload，
           // 不把引用钉到下一次 invoke
-          state.lastArgs = [];
-          state.lastThis = undefined;
-          state.hasPendingCall = false;
+          releasePayload(state);
         }
         return state.result;
       }
 
-      // 超过时间窗口，可以执行
+      // 超过时间窗口：leading 开启才允许同步执行（leading:false 的任何
+      // 调用都不得同步执行 —— 由 trailing 定时器到点补刀）
       cancelTimer(state);
-      state.result = invokeFunc(state);
+      if (leading) {
+        state.result = invokeFunc(state);
+      }
       startTimer(state);
       return state.result;
     };
