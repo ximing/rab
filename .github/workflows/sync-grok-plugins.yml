@@ -1,0 +1,63 @@
+# When skills change, vendor them into ximing/grok-plugins.
+# Secret: GROK_PLUGINS_DEPLOY_KEY (write deploy key for ximing/grok-plugins).
+
+name: Sync grok-plugins
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "skills/**"
+      - ".claude-plugin/plugin.json"
+      - ".grok-plugin/plugin.json"
+      - "LICENSE"
+  workflow_dispatch:
+
+env:
+  PLUGIN_NAME: rab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Check out grok-plugins
+        uses: actions/checkout@v4
+        with:
+          repository: ximing/grok-plugins
+          ref: main
+          path: marketplace
+          ssh-key: ${{ secrets.GROK_PLUGINS_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Vendor this plugin
+        working-directory: marketplace
+        run: |
+          python3 scripts/sync.py --only "$PLUGIN_NAME" --from-local "$GITHUB_WORKSPACE/source"
+          python3 scripts/validate.py
+
+      - name: Commit and push
+        working-directory: marketplace
+        run: |
+          git config user.name "grok-plugins-sync"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add plugins .grok-plugin
+          if git diff --cached --quiet; then
+            echo "No plugin changes"
+            exit 0
+          fi
+          git commit -m "sync(${PLUGIN_NAME}): ${GITHUB_SHA}"
+          for i in 1 2 3; do
+            git pull --rebase origin main || true
+            git push && exit 0
+            sleep $((i * 3))
+          done
+          echo "push failed after retries" >&2
+          exit 1
