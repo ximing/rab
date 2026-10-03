@@ -1,5 +1,13 @@
 # @rabjs/react
 
+## 9.4.1
+
+### Patch Changes
+
+- Updated dependencies [7f173ec]
+  - @rabjs/service@9.4.1
+  - @rabjs/observer@9.4.1
+
 ## 9.4.0
 
 ### Minor Changes
