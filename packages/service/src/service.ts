@@ -1,4 +1,4 @@
-import { observable } from '@rabjs/observer';
+import { observable, raw } from '@rabjs/observer';
 
 import { cleanupAllDebounces } from './decorators/debounce';
 import { cleanupAllMemos } from './decorators/memo';
@@ -267,7 +267,7 @@ export class Service {
       handler: handler as (...args: any[]) => void,
       scope,
       once: false,
-      container: this._container,
+      container: raw(this._container),
       source: 'manual',
     });
     return this;
@@ -309,7 +309,7 @@ export class Service {
       handler: handler as (...args: any[]) => void,
       scope,
       once: true,
-      container: this._container,
+      container: raw(this._container),
       source: 'manual',
     });
     return this;
@@ -384,7 +384,7 @@ export class Service {
    * ```
    */
   public emit<T = any>(eventName: string, data?: T, scope: EventScope = 'container'): this {
-    const emitter = EventSystem.getEmitter(scope, this._container);
+    const emitter = EventSystem.getEmitter(scope, raw(this._container));
     emitter.emit(eventName, data);
     return this;
   }
@@ -444,7 +444,11 @@ export class Service {
       );
     }
 
-    return this._container.resolve<T>(identifier as any);
+    // 必须就地解包：this._container 经代理读取会被包装成容器代理，往下传递
+    // 会让 definition 也成为代理，其 set trap 把待缓存的实例 toRawIfProxy
+    // 解包成 raw target——单例缓存住失去响应式的实例，组件读它永远不更新。
+    // （不能封装成 getter 返回 raw 容器：getter 的返回值会再次被 get trap 包装。）
+    return raw(this._container).resolve<T>(identifier as any);
   }
 
   /**
